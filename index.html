@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<link rel="canonical" href="shop.html">
+<title>Cox's Dream Moment | কক্সবাজার প্রপোজাল ও ডেকোরেশন বুকিং</title>
+<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+<p>লোড হচ্ছে… <a href="shop.html">এখানে ক্লিক করুন</a>।</p>
+<script>
+  // A Netlify Identity invite/recovery link lands here with a token in the
+  // URL hash - let the widget handle it (and send the user to /admin/)
+  // instead of immediately bouncing to the shop page.
+  var hasIdentityToken = /invite_token|recovery_token|confirmation_token|access_token/.test(location.hash);
+
+  if (window.netlifyIdentity) {
+    window.netlifyIdentity.on('init', function (user) {
+      if (!user) {
+        window.netlifyIdentity.on('login', function () {
+          document.location.href = '/admin/';
+        });
+      }
+    });
+  }
+
+  if (!hasIdentityToken) {
+    location.replace('shop.html');
+  }
+</script>
+</body>
+</html>

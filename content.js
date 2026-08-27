@@ -1,0 +1,248 @@
+// ==========================================================================
+// Loads live content from /content/*.json (edited through the /admin CMS)
+// and fills it into the static HTML. If the fetch fails (offline, JS
+// disabled, opened as a local file), the pages fall back to whatever
+// content was last baked into the HTML - nothing breaks.
+// ==========================================================================
+
+const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+const HEART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>';
+
+function fetchJSON(path) {
+  return fetch(path, { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+}
+
+function productCardHTML(pkg) {
+  return (
+    `<div class="product-card" data-cat="${pkg.categories.join(' ')}">` +
+    `<a href="${pkg.file}"><div class="product-thumb">` +
+    `<span class="product-badge">${pkg.badge}</span>` +
+    `<span class="product-discount">${pkg.discount}</span>` +
+    `<img src="${pkg.main_image}" alt="${pkg.name}"></div></a>` +
+    `<div class="product-body">` +
+    `<a href="${pkg.file}"><h3 class="product-name">${pkg.name}</h3></a>` +
+    `<div class="product-loc">${PIN_SVG}কক্সবাজার</div>` +
+    `<div class="product-price"><span class="from">শুরু</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
+    `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
+    `<a href="${pkg.file}" class="book-btn">Book Now</a></div></div></div>`
+  );
+}
+
+function relatedCardHTML(pkg) {
+  return (
+    `<div class="product-card">` +
+    `<a href="${pkg.file}"><div class="product-thumb">` +
+    `<span class="product-badge">${pkg.badge}</span>` +
+    `<span class="product-discount">${pkg.discount}</span>` +
+    `<img src="${pkg.main_image}" alt="${pkg.name}"></div></a>` +
+    `<div class="product-body">` +
+    `<a href="${pkg.file}"><h3 class="product-name">${pkg.name}</h3></a>` +
+    `<div class="product-loc">${PIN_SVG}কক্সবাজার</div>` +
+    `<div class="product-price"><span class="from">শুরু</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
+    `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
+    `<a href="${pkg.file}" class="book-btn">Book Now</a></div></div></div>`
+  );
+}
+
+// ---------------------------------------------------------------- settings (every page)
+function applySettings(settings) {
+  if (!settings) return;
+
+  const topbarSpan = document.querySelector('.topbar .container span');
+  if (topbarSpan) topbarSpan.textContent = settings.topbar_announcement;
+  const topbarLink = document.querySelector('.topbar .container a');
+  if (topbarLink) {
+    topbarLink.textContent = settings.phone_display;
+    topbarLink.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`);
+  }
+
+  document.querySelectorAll('a.float-wa').forEach(a => a.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`));
+
+  const footerDesc = document.querySelector('.footer-desc');
+  if (footerDesc) footerDesc.textContent = settings.footer_desc;
+
+  document.querySelectorAll('.footer-col a[href^="tel:"]').forEach(a => {
+    a.setAttribute('href', `tel:+${settings.whatsapp_number}`);
+    a.textContent = settings.phone_display;
+  });
+  document.querySelectorAll('.footer-col a[href^="mailto:"]').forEach(a => {
+    a.setAttribute('href', `mailto:${settings.email}`);
+    a.textContent = settings.email;
+  });
+  document.querySelectorAll('.footer-col p').forEach(p => {
+    if (!p.closest('.footer-col').querySelector('h4') ||
+        p.closest('.footer-col').querySelector('h4').textContent.trim() !== 'যোগাযোগ') return;
+    p.textContent = settings.address;
+  });
+}
+
+function applyHero(hero) {
+  if (!hero) return;
+  const eyebrow = document.getElementById('hero-eyebrow');
+  const heading = document.getElementById('hero-heading');
+  const sub = document.getElementById('hero-sub');
+  const cta = document.getElementById('hero-cta');
+  const img = document.getElementById('hero-image');
+  if (eyebrow) eyebrow.textContent = hero.eyebrow;
+  if (heading) heading.innerHTML = hero.heading;
+  if (sub) sub.textContent = hero.subheading;
+  if (cta) cta.textContent = hero.cta_text;
+  if (img) img.setAttribute('src', hero.image);
+}
+
+// ---------------------------------------------------------------- nav / mobile-menu / footer package links
+function applyPackageLinks(packages) {
+  packages.forEach(pkg => {
+    document.querySelectorAll(`a[href="${pkg.file}"]`).forEach(a => {
+      const span = a.querySelector(':scope > span');
+      const em = a.querySelector(':scope > em');
+      if (span && em) {
+        span.textContent = pkg.name;
+        em.textContent = pkg.price;
+      } else if (a.classList.contains('mm-sub') || a.closest('.footer-col')) {
+        a.textContent = pkg.name;
+      }
+    });
+  });
+}
+
+// ---------------------------------------------------------------- shop grid
+function applyShopGrid(packages) {
+  if (!document.getElementById('results-count')) return;
+  const realGrid = document.querySelector('section.container > .product-grid');
+  if (!realGrid) return;
+
+  realGrid.innerHTML = packages.map(productCardHTML).join('');
+  window.initWishButtons();
+  window.initShopFilters();
+}
+
+// ---------------------------------------------------------------- product detail page
+function applyProductDetail(packages) {
+  const slug = document.body.getAttribute('data-package');
+  if (!slug) return;
+  const pkg = packages.find(p => p.slug === slug);
+  if (!pkg) return;
+
+  document.title = document.title.replace(/^[^|]+/, pkg.name + ' ');
+
+  document.querySelectorAll('.page-banner h1, .pd-info h1').forEach(h1 => (h1.textContent = pkg.name));
+  const crumb = document.querySelector('.crumb-current');
+  if (crumb) crumb.textContent = pkg.name;
+
+  const trustText = document.querySelector('.pd-trust-text');
+  if (trustText) trustText.textContent = `${pkg.trust_extra} · ${pkg.discount} · কক্সবাজার`;
+
+  const inclusionsList = document.querySelector('.pd-inclusions');
+  if (inclusionsList) inclusionsList.innerHTML = pkg.inclusions.map(li => `<li>${li}</li>`).join('');
+
+  const mainImg = document.querySelector('.pd-main-img img');
+  if (mainImg) {
+    mainImg.setAttribute('src', pkg.main_image);
+    mainImg.setAttribute('alt', pkg.name);
+  }
+  const thumbs = document.querySelector('.pd-thumbs');
+  if (thumbs) {
+    thumbs.innerHTML = pkg.thumbnails.map((t, i) =>
+      `<div class="pd-thumb${i === 0 ? ' active' : ''}"><img src="${t.image}" alt="${t.alt}"></div>`
+    ).join('');
+    window.initPdThumbs();
+  }
+
+  const priceValue = document.querySelector('.bb-price-value');
+  if (priceValue) priceValue.innerHTML = `<span class="old">${pkg.old_price}</span>${pkg.price}`;
+  const totalValue = document.querySelector('.bb-total-value');
+  if (totalValue) totalValue.textContent = pkg.price;
+
+  const descP = document.querySelector('.pd-tab-content[data-tab-content="desc"] p');
+  if (descP) descP.textContent = pkg.description;
+  const policyP = document.querySelector('.pd-tab-content[data-tab-content="policy"] p');
+  if (policyP) policyP.textContent = pkg.booking_policy;
+  const faqP = document.querySelector('.pd-tab-content[data-tab-content="faq"] p');
+  if (faqP) faqP.textContent = pkg.faq;
+
+  const relatedGrid = document.querySelector('.related-section .product-grid');
+  if (relatedGrid) {
+    const others = packages.filter(p => p.slug !== slug);
+    relatedGrid.innerHTML = others.map(relatedCardHTML).join('');
+    window.initWishButtons();
+  }
+}
+
+// ---------------------------------------------------------------- gallery page
+function applyGallery(gallery) {
+  const grid = document.querySelector('.gallery-grid');
+  if (!grid || !gallery) return;
+  grid.innerHTML = gallery.items.map(item =>
+    `<figure class="gal-item${item.size ? ' ' + item.size : ''}">` +
+    `<img src="${item.image}" alt="${item.alt}" loading="lazy">` +
+    `<figcaption>${item.caption}</figcaption></figure>`
+  ).join('');
+  const note = document.querySelector('.gallery-note');
+  if (note && gallery.note) note.textContent = gallery.note;
+}
+
+// ---------------------------------------------------------------- contact page
+function applyContactPage(settings) {
+  const cards = document.querySelector('.contact-cards');
+  if (!cards || !settings) return;
+
+  const waLink = cards.querySelector('a[href^="https://wa.me/"]');
+  if (waLink) {
+    waLink.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`);
+    waLink.textContent = settings.phone_display;
+  }
+  const fbLink = cards.querySelector('a[href*="facebook.com"]');
+  if (fbLink) {
+    fbLink.setAttribute('href', settings.facebook_url);
+    fbLink.textContent = settings.facebook_label;
+  }
+  const phoneLink = cards.querySelector('a[href^="tel:"]');
+  if (phoneLink) {
+    phoneLink.setAttribute('href', `tel:+${settings.whatsapp_number}`);
+    phoneLink.textContent = settings.phone_display;
+  }
+  const mailLink = cards.querySelector('a[href^="mailto:"]');
+  if (mailLink) {
+    mailLink.setAttribute('href', `mailto:${settings.email}`);
+    mailLink.textContent = settings.email;
+  }
+  const serviceArea = cards.querySelector('.cc-plain');
+  if (serviceArea) serviceArea.textContent = settings.service_area;
+
+  const sideWaBtn = document.querySelector('.side-wa-btn');
+  if (sideWaBtn) sideWaBtn.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`);
+
+  const hoursRows = document.querySelectorAll('.hours-card p:not(.hours-note)');
+  settings.hours.forEach((h, i) => {
+    if (!hoursRows[i]) return;
+    const spans = hoursRows[i].querySelectorAll('span');
+    if (spans[0]) spans[0].textContent = h.days;
+    if (spans[1]) spans[1].textContent = h.time;
+  });
+  const hoursNote = document.querySelector('.hours-card .hours-note');
+  if (hoursNote) hoursNote.textContent = settings.hours_note;
+}
+
+// ---------------------------------------------------------------- boot
+document.addEventListener('DOMContentLoaded', function () {
+  Promise.all([
+    fetchJSON('content/settings.json'),
+    fetchJSON('content/packages.json'),
+    fetchJSON('content/gallery.json'),
+  ]).then(([settings, packagesData, gallery]) => {
+    const packages = packagesData ? packagesData.packages : null;
+
+    if (settings) {
+      applySettings(settings);
+      applyHero(settings.hero);
+      applyContactPage(settings);
+    }
+    if (packages) {
+      applyPackageLinks(packages);
+      applyShopGrid(packages);
+      applyProductDetail(packages);
+    }
+    if (gallery) applyGallery(gallery);
+  });
+});
