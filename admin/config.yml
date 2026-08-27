@@ -58,10 +58,9 @@ collections:
             widget: "list"
             summary: "{{fields.name}} — {{fields.price}}"
             fields:
-              - { label: "Slug (পরিবর্তন করবেন না)", name: "slug", widget: "string", hint: "এই আইডি বদলাবেন না, পেজের সাথে যুক্ত" }
-              - { label: "পেজ ফাইলের নাম (পরিবর্তন করবেন না)", name: "file", widget: "string", hint: "উদাহরণঃ product-simple.html" }
+              - { label: "Slug (অবশ্যই ইউনিক, শুধু ইংরেজি ছোট হাতের অক্ষর/সংখ্যা/হাইফেন, স্পেস নেই)", name: "slug", widget: "string", hint: "এটাই প্যাকেজের URL ঠিকানা তৈরি করে (product.html?slug=এই-লেখা)। পুরনো প্যাকেজের slug কখনো বদলাবেন না, নতুন প্যাকেজে নতুন ও অনন্য একটা লিখুন। উদাহরণঃ beach-picnic" }
               - { label: "প্যাকেজের নাম", name: "name", widget: "string" }
-              - { label: "ব্যাজ (যেমনঃ বেসিক / জনপ্রিয়)", name: "badge", widget: "string" }
+              - { label: "ব্যাজ (যেমনঃ বেসিক / জনপ্রিয়)", name: "badge", widget: "string", default: "নতুন" }
               - { label: "ট্রাস্ট লাইনের টেক্সট", name: "trust_extra", widget: "string" }
               - { label: "দাম", name: "price", widget: "string" }
               - { label: "আগের দাম (কাটা দাম হিসেবে দেখাবে)", name: "old_price", widget: "string" }
@@ -70,7 +69,8 @@ collections:
                 name: "categories"
                 widget: "select"
                 multiple: true
-                options: ["proposal", "dinner"]
+                default: ["proposal"]
+                options: ["proposal", "dinner", "gift"]
               - { label: "প্রধান ছবি", name: "main_image", widget: "image" }
               - label: "থাম্বনেইল ছবি (৪টি)"
                 name: "thumbnails"

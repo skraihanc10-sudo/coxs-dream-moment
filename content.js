@@ -1,48 +1,55 @@
 // ==========================================================================
 // Loads live content from /content/*.json (edited through the /admin CMS)
-// and fills it into the static HTML. If the fetch fails (offline, JS
-// disabled, opened as a local file), the pages fall back to whatever
-// content was last baked into the HTML - nothing breaks.
+// and fills it into the pages. Packages are fully data-driven: adding or
+// removing an entry in content/packages.json adds/removes it everywhere
+// (shop grid, nav dropdowns, mobile menu, footer, related sections) and
+// its detail page is served generically by product.html?slug=<slug> - no
+// per-package HTML file needed. If the fetch fails (offline, JS disabled,
+// opened as a local file), pages fall back to whatever was last baked
+// into the HTML - nothing breaks.
 // ==========================================================================
 
 const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 const HEART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>';
+const CARET_SVG = '<svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>';
+
+// Top-level shop categories. A category with zero matching packages stays
+// a plain link instead of an (empty) dropdown - see navCategoryHTML.
+const CATEGORIES = [
+  { slug: 'proposal', label: 'প্রপোজাল ডেকোরেশন' },
+  { slug: 'dinner', label: 'ক্যান্ডেললাইট ডিনার' },
+  { slug: 'gift', label: 'গিফট ও হ্যাম্পার' },
+];
 
 function fetchJSON(path) {
   return fetch(path, { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).catch(() => null);
 }
 
+function packageUrl(pkg) {
+  return `product.html?slug=${encodeURIComponent(pkg.slug)}`;
+}
+
 function productCardHTML(pkg) {
+  const url = packageUrl(pkg);
   return (
     `<div class="product-card" data-cat="${pkg.categories.join(' ')}">` +
-    `<a href="${pkg.file}"><div class="product-thumb">` +
+    `<a href="${url}"><div class="product-thumb">` +
     `<span class="product-badge">${pkg.badge}</span>` +
     `<span class="product-discount">${pkg.discount}</span>` +
     `<img src="${pkg.main_image}" alt="${pkg.name}"></div></a>` +
     `<div class="product-body">` +
-    `<a href="${pkg.file}"><h3 class="product-name">${pkg.name}</h3></a>` +
+    `<a href="${url}"><h3 class="product-name">${pkg.name}</h3></a>` +
     `<div class="product-loc">${PIN_SVG}কক্সবাজার</div>` +
     `<div class="product-price"><span class="from">শুরু</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
-    `<a href="${pkg.file}" class="book-btn">Book Now</a></div></div></div>`
+    `<a href="${url}" class="book-btn">Book Now</a></div></div></div>`
   );
 }
 
-function relatedCardHTML(pkg) {
-  return (
-    `<div class="product-card">` +
-    `<a href="${pkg.file}"><div class="product-thumb">` +
-    `<span class="product-badge">${pkg.badge}</span>` +
-    `<span class="product-discount">${pkg.discount}</span>` +
-    `<img src="${pkg.main_image}" alt="${pkg.name}"></div></a>` +
-    `<div class="product-body">` +
-    `<a href="${pkg.file}"><h3 class="product-name">${pkg.name}</h3></a>` +
-    `<div class="product-loc">${PIN_SVG}কক্সবাজার</div>` +
-    `<div class="product-price"><span class="from">শুরু</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
-    `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
-    `<a href="${pkg.file}" class="book-btn">Book Now</a></div></div></div>`
-  );
-}
+// Same markup as productCardHTML - kept as a separate name because the
+// two spots (shop grid vs. related section) are easy to diverge on
+// purpose later.
+const relatedCardHTML = productCardHTML;
 
 // ---------------------------------------------------------------- settings (every page)
 function applySettings(settings) {
@@ -69,10 +76,10 @@ function applySettings(settings) {
     a.setAttribute('href', `mailto:${settings.email}`);
     a.textContent = settings.email;
   });
-  document.querySelectorAll('.footer-col p').forEach(p => {
-    if (!p.closest('.footer-col').querySelector('h4') ||
-        p.closest('.footer-col').querySelector('h4').textContent.trim() !== 'যোগাযোগ') return;
-    p.textContent = settings.address;
+  document.querySelectorAll('.footer-col').forEach(col => {
+    const h4 = col.querySelector('h4');
+    const p = col.querySelector('p');
+    if (h4 && p && h4.textContent.trim() === 'যোগাযোগ') p.textContent = settings.address;
   });
 }
 
@@ -90,19 +97,47 @@ function applyHero(hero) {
   if (img) img.setAttribute('src', hero.image);
 }
 
-// ---------------------------------------------------------------- nav / mobile-menu / footer package links
-function applyPackageLinks(packages) {
-  packages.forEach(pkg => {
-    document.querySelectorAll(`a[href="${pkg.file}"]`).forEach(a => {
-      const span = a.querySelector(':scope > span');
-      const em = a.querySelector(':scope > em');
-      if (span && em) {
-        span.textContent = pkg.name;
-        em.textContent = pkg.price;
-      } else if (a.classList.contains('mm-sub') || a.closest('.footer-col')) {
-        a.textContent = pkg.name;
-      }
-    });
+// ---------------------------------------------------------------- nav dropdowns / mobile menu / footer links
+// These three are fully rebuilt from the current package list (not just
+// text-patched) so adding or deleting a package via the CMS changes the
+// count of links here too, on every page, automatically.
+function navCategoryHTML(cat, packages) {
+  const items = packages.filter(p => (p.categories || []).indexOf(cat.slug) !== -1);
+  if (!items.length) {
+    return `<a href="shop.html?cat=${cat.slug}" class="nav-link" data-cat="${cat.slug}">${cat.label}</a>`;
+  }
+  const links = items.map(p =>
+    `<a href="${packageUrl(p)}"><span>${p.name}</span><em>${p.price}</em></a>`
+  ).join('');
+  return (
+    `<div class="nav-item">` +
+    `<a href="shop.html?cat=${cat.slug}" class="nav-link" data-cat="${cat.slug}">${cat.label}${CARET_SVG}</a>` +
+    `<div class="nav-drop">${links}<a class="nav-drop-all" href="shop.html?cat=${cat.slug}">সব দেখুন →</a></div>` +
+    `</div>`
+  );
+}
+
+function buildNavDropdowns(packages) {
+  const wrap = document.getElementById('nav-categories');
+  if (!wrap) return;
+  wrap.innerHTML = CATEGORIES.map(c => navCategoryHTML(c, packages)).join('');
+  window.initNavTouch();
+}
+
+function buildMobileMenu(packages) {
+  const wrap = document.getElementById('mm-categories');
+  if (!wrap) return;
+  wrap.innerHTML = CATEGORIES.map(cat => {
+    const items = packages.filter(p => (p.categories || []).indexOf(cat.slug) !== -1);
+    const sub = items.map(p => `<a class="mm-sub" href="${packageUrl(p)}">${p.name}</a>`).join('');
+    return `<a href="shop.html?cat=${cat.slug}">${cat.label}</a>${sub}`;
+  }).join('');
+  window.initMobileMenu();
+}
+
+function buildFooterPackageLinks(packages) {
+  document.querySelectorAll('#footer-packages').forEach(wrap => {
+    wrap.innerHTML = packages.map(p => `<a href="${packageUrl(p)}">${p.name}</a>`).join('');
   });
 }
 
@@ -117,14 +152,23 @@ function applyShopGrid(packages) {
   window.initShopFilters();
 }
 
-// ---------------------------------------------------------------- product detail page
+// ---------------------------------------------------------------- product detail page (product.html?slug=...)
 function applyProductDetail(packages) {
-  const slug = document.body.getAttribute('data-package');
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('slug') || document.body.getAttribute('data-package');
   if (!slug) return;
-  const pkg = packages.find(p => p.slug === slug);
-  if (!pkg) return;
 
-  document.title = document.title.replace(/^[^|]+/, pkg.name + ' ');
+  const pkg = packages.find(p => p.slug === slug);
+  if (!pkg) {
+    // Package no longer exists (deleted via CMS, or a stale/typo'd link) -
+    // send visitors somewhere useful instead of a blank page.
+    window.location.replace('shop.html');
+    return;
+  }
+
+  document.title = `${pkg.name} | Cox's Dream Moment`;
+  const metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', pkg.description.slice(0, 155));
 
   document.querySelectorAll('.page-banner h1, .pd-info h1').forEach(h1 => (h1.textContent = pkg.name));
   const crumb = document.querySelector('.crumb-current');
@@ -157,9 +201,9 @@ function applyProductDetail(packages) {
   const descP = document.querySelector('.pd-tab-content[data-tab-content="desc"] p');
   if (descP) descP.textContent = pkg.description;
   const policyP = document.querySelector('.pd-tab-content[data-tab-content="policy"] p');
-  if (policyP) policyP.textContent = pkg.booking_policy;
+  if (policyP && pkg.booking_policy) policyP.textContent = pkg.booking_policy;
   const faqP = document.querySelector('.pd-tab-content[data-tab-content="faq"] p');
-  if (faqP) faqP.textContent = pkg.faq;
+  if (faqP && pkg.faq) faqP.textContent = pkg.faq;
 
   const relatedGrid = document.querySelector('.related-section .product-grid');
   if (relatedGrid) {
@@ -239,7 +283,9 @@ document.addEventListener('DOMContentLoaded', function () {
       applyContactPage(settings);
     }
     if (packages) {
-      applyPackageLinks(packages);
+      buildNavDropdowns(packages);
+      buildMobileMenu(packages);
+      buildFooterPackageLinks(packages);
       applyShopGrid(packages);
       applyProductDetail(packages);
     }

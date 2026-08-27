@@ -1,16 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-  // Mobile menu
-  const toggle = document.querySelector('.nav-toggle');
-  const mobileMenu = document.querySelector('.mobile-menu');
-  const closeBtn = document.querySelector('.mobile-menu .close-btn');
-  if (toggle && mobileMenu) {
-    toggle.addEventListener('click', () => mobileMenu.classList.add('open'));
-    closeBtn.addEventListener('click', () => mobileMenu.classList.remove('open'));
-    mobileMenu.querySelectorAll('a').forEach(a =>
-      a.addEventListener('click', () => mobileMenu.classList.remove('open'))
-    );
-  }
-
+  window.initMobileMenu();
   window.initPdThumbs();
 
   // Tabs
@@ -59,18 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   window.initWishButtons();
   window.initShopFilters();
-
-  // Mobile: tapping a nav parent opens its dropdown instead of navigating
-  document.querySelectorAll('.nav-item').forEach(item => {
-    const link = item.querySelector('.nav-link');
-    if (!link) return;
-    link.addEventListener('click', e => {
-      if (window.matchMedia('(hover: none)').matches && !item.classList.contains('open')) {
-        e.preventDefault();
-        item.classList.add('open');
-      }
-    });
-  });
+  window.initNavTouch();
 
   // Category rail arrows (simple scroll)
   const rail = document.querySelector('.cat-rail');
@@ -82,8 +60,50 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-// Re-bindable pieces: content.js calls these again after it rebuilds the
-// product-grid / thumbnail markup from the live CMS content.
+// ---------------------------------------------------------------------
+// Everything below is re-bindable: content.js rebuilds the product-grid,
+// nav dropdowns, mobile-menu category links and thumbnails from the live
+// CMS content (packages can be added/removed), then calls these again so
+// the freshly-created elements get their click handlers. Each one guards
+// itself with a dataset.wired flag so re-running never double-binds.
+// ---------------------------------------------------------------------
+
+window.initMobileMenu = function () {
+  const toggle = document.querySelector('.nav-toggle');
+  const mobileMenu = document.querySelector('.mobile-menu');
+  const closeBtn = document.querySelector('.mobile-menu .close-btn');
+  if (!toggle || !mobileMenu) return;
+
+  if (!toggle.dataset.wired) {
+    toggle.dataset.wired = '1';
+    toggle.addEventListener('click', () => mobileMenu.classList.add('open'));
+  }
+  if (closeBtn && !closeBtn.dataset.wired) {
+    closeBtn.dataset.wired = '1';
+    closeBtn.addEventListener('click', () => mobileMenu.classList.remove('open'));
+  }
+  mobileMenu.querySelectorAll('a').forEach(a => {
+    if (a.dataset.wired) return;
+    a.dataset.wired = '1';
+    a.addEventListener('click', () => mobileMenu.classList.remove('open'));
+  });
+};
+
+// Mobile: tapping a nav parent opens its dropdown instead of navigating
+window.initNavTouch = function () {
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const link = item.querySelector('.nav-link');
+    if (!link || link.dataset.wiredTouch) return;
+    link.dataset.wiredTouch = '1';
+    link.addEventListener('click', e => {
+      if (window.matchMedia('(hover: none)').matches && !item.classList.contains('open')) {
+        e.preventDefault();
+        item.classList.add('open');
+      }
+    });
+  });
+};
+
 window.initWishButtons = function () {
   document.querySelectorAll('.wish-btn').forEach(btn => {
     if (btn.dataset.wired) return;

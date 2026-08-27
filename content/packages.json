@@ -2,20 +2,33 @@
   "packages": [
     {
       "slug": "simple",
-      "file": "product-simple.html",
       "name": "Sweet Beginnings Package",
       "badge": "বেসিক",
       "trust_extra": "বেসিক প্যাকেজ",
       "price": "৳৪,৯৯৯",
       "old_price": "৳৮,০০০",
       "discount": "৩৮% ছাড়",
-      "categories": ["proposal"],
+      "categories": [
+        "proposal"
+      ],
       "main_image": "images/setup-arch.jpg",
       "thumbnails": [
-        { "image": "images/setup-arch.jpg", "alt": "পুরো সেটআপ" },
-        { "image": "images/neon-sign.jpg", "alt": "নিয়ন সাইন" },
-        { "image": "images/flower-bouquet.jpg", "alt": "ফুলের সাজ" },
-        { "image": "images/sunset-sea.jpg", "alt": "সৈকতের সন্ধ্যা" }
+        {
+          "image": "images/setup-arch.jpg",
+          "alt": "পুরো সেটআপ"
+        },
+        {
+          "image": "images/neon-sign.jpg",
+          "alt": "নিয়ন সাইন"
+        },
+        {
+          "image": "images/flower-bouquet.jpg",
+          "alt": "ফুলের সাজ"
+        },
+        {
+          "image": "images/sunset-sea.jpg",
+          "alt": "সৈকতের সন্ধ্যা"
+        }
       ],
       "inclusions": [
         "বেসিক ফুলের ডেকোরেশন",
@@ -30,20 +43,34 @@
     },
     {
       "slug": "sunset",
-      "file": "product-sunset.html",
       "name": "Golden Sunset Package",
       "badge": "জনপ্রিয়",
       "trust_extra": "সবচেয়ে জনপ্রিয়",
       "price": "৳৬,৯৯৯",
       "old_price": "৳১৪,০০০",
       "discount": "৫০% ছাড়",
-      "categories": ["proposal", "dinner"],
+      "categories": [
+        "proposal",
+        "dinner"
+      ],
       "main_image": "images/full-setup.jpg",
       "thumbnails": [
-        { "image": "images/full-setup.jpg", "alt": "পুরো সেটআপ" },
-        { "image": "images/petal-walkway.jpg", "alt": "রোজ পেটাল ওয়াকওয়ে" },
-        { "image": "images/neon-sign.jpg", "alt": "নিয়ন সাইন" },
-        { "image": "images/fairy-lights.jpg", "alt": "ফেয়ারি লাইট" }
+        {
+          "image": "images/full-setup.jpg",
+          "alt": "পুরো সেটআপ"
+        },
+        {
+          "image": "images/petal-walkway.jpg",
+          "alt": "রোজ পেটাল ওয়াকওয়ে"
+        },
+        {
+          "image": "images/neon-sign.jpg",
+          "alt": "নিয়ন সাইন"
+        },
+        {
+          "image": "images/fairy-lights.jpg",
+          "alt": "ফেয়ারি লাইট"
+        }
       ],
       "inclusions": [
         "সম্পূর্ণ ফুলের আর্চ + ওয়াকওয়ে",
@@ -60,20 +87,34 @@
     },
     {
       "slug": "luxury",
-      "file": "product-luxury.html",
       "name": "Forever Luxury Package",
       "badge": "প্রিমিয়াম",
       "trust_extra": "প্রিমিয়াম অভিজ্ঞতা",
       "price": "৳১৪,৯৯৯",
       "old_price": "৳২২,০০০",
       "discount": "৩২% ছাড়",
-      "categories": ["proposal", "dinner"],
+      "categories": [
+        "proposal",
+        "dinner"
+      ],
       "main_image": "images/dinner-table.jpg",
       "thumbnails": [
-        { "image": "images/dinner-table.jpg", "alt": "ক্যান্ডেললাইট ডিনার" },
-        { "image": "images/candle-jars.jpg", "alt": "হ্যাঙ্গিং ক্যান্ডেল" },
-        { "image": "images/seating-area.jpg", "alt": "সিটিং এরিয়া" },
-        { "image": "images/sunset-sea.jpg", "alt": "সানসেট ভিউ" }
+        {
+          "image": "images/dinner-table.jpg",
+          "alt": "ক্যান্ডেললাইট ডিনার"
+        },
+        {
+          "image": "images/candle-jars.jpg",
+          "alt": "হ্যাঙ্গিং ক্যান্ডেল"
+        },
+        {
+          "image": "images/seating-area.jpg",
+          "alt": "সিটিং এরিয়া"
+        },
+        {
+          "image": "images/sunset-sea.jpg",
+          "alt": "সানসেট ভিউ"
+        }
       ],
       "inclusions": [
         "প্রিমিয়াম ফুলের আর্চ",
@@ -90,20 +131,34 @@
     },
     {
       "slug": "royal",
-      "file": "product-royal.html",
       "name": "Royal Luxury Package",
       "badge": "লাক্সারি",
       "trust_extra": "রয়্যাল অভিজ্ঞতা",
       "price": "৳১৮,৯৯৯",
       "old_price": "৳৩০,০০০",
       "discount": "৩৭% ছাড়",
-      "categories": ["proposal", "dinner"],
+      "categories": [
+        "proposal",
+        "dinner"
+      ],
       "main_image": "images/candle-jars.jpg",
       "thumbnails": [
-        { "image": "images/candle-jars.jpg", "alt": "হ্যাঙ্গিং ক্যান্ডেল" },
-        { "image": "images/dinner-table.jpg", "alt": "ক্যান্ডেললাইট ডিনার" },
-        { "image": "images/flower-bouquet.jpg", "alt": "প্রিমিয়াম ফুলের সাজ" },
-        { "image": "images/fairy-lights.jpg", "alt": "ফেয়ারি লাইট" }
+        {
+          "image": "images/candle-jars.jpg",
+          "alt": "হ্যাঙ্গিং ক্যান্ডেল"
+        },
+        {
+          "image": "images/dinner-table.jpg",
+          "alt": "ক্যান্ডেললাইট ডিনার"
+        },
+        {
+          "image": "images/flower-bouquet.jpg",
+          "alt": "প্রিমিয়াম ফুলের সাজ"
+        },
+        {
+          "image": "images/fairy-lights.jpg",
+          "alt": "ফেয়ারি লাইট"
+        }
       ],
       "inclusions": [
         "সম্পূর্ণ প্রিমিয়াম ফুলের ডেকোরেশন ও রাজকীয় থিম",
