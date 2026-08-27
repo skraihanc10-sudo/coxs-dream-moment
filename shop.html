@@ -82,70 +82,8 @@
   </div>
 </section>
 
-<!-- ===================== CATEGORY RAIL ===================== -->
-<section class="cat-rail-section">
-  <div class="container" style="display:flex; align-items:center; gap:14px;">
-    <button class="rail-arrow" data-dir="prev" style="background:none;border:1px solid var(--gray-line);border-radius:50%;width:32px;height:32px;flex-shrink:0;">‹</button>
-    <div class="cat-rail" id="shop-grid">
-      <div class="cat-item" data-cat="proposal">
-        <div class="cat-circle"><img src="images/cat-proposal.jpg" alt="প্রপোজাল ডেকোরেশন"></div>
-        <span>প্রপোজাল ডেকোরেশন</span>
-      </div>
-      <div class="cat-item" data-cat="dinner">
-        <div class="cat-circle"><img src="images/cat-dinner.jpg" alt="ক্যান্ডেললাইট ডিনার"></div>
-        <span>ক্যান্ডেললাইট ডিনার</span>
-      </div>
-      <div class="cat-item" data-cat="proposal">
-        <div class="cat-circle"><img src="images/cat-bouquet.jpg" alt="ফুলের বুকে"></div>
-        <span>ফুলের বুকে</span>
-      </div>
-      <div class="cat-item" data-cat="proposal">
-        <div class="cat-circle"><img src="images/cat-heart.jpg" alt="হার্ট সেটআপ"></div>
-        <span>হার্ট সেটআপ</span>
-      </div>
-      <div class="cat-item" data-cat="gift">
-        <div class="cat-circle"><img src="images/cat-gift.jpg" alt="গিফট হ্যাম্পার"></div>
-        <span>গিফট হ্যাম্পার</span>
-      </div>
-      <div class="cat-item" data-cat="dinner">
-        <div class="cat-circle"><img src="images/cat-photo.jpg" alt="ফটোগ্রাফি"></div>
-        <span>ফটোগ্রাফি</span>
-      </div>
-    </div>
-    <button class="rail-arrow" data-dir="next" style="background:none;border:1px solid var(--gray-line);border-radius:50%;width:32px;height:32px;flex-shrink:0;">›</button>
-  </div>
-</section>
-
-<!-- ===================== FILTER BAR ===================== -->
-<section class="container">
-  <div class="filter-bar">
-    <div class="filter-left">
-      <select class="filter-select" id="cat-filter">
-        <option value="all">যা খুঁজছেন</option>
-        <option value="proposal">প্রপোজাল ডেকোরেশন</option>
-        <option value="dinner">ক্যান্ডেললাইট ডিনার</option>
-        <option value="gift">গিফট ও হ্যাম্পার</option>
-      </select>
-      <select class="filter-select">
-        <option>মূল্য</option>
-        <option>৳৫,০০০ এর নিচে</option>
-        <option>৳৫,০০০ - ১০,০০০</option>
-        <option>৳১০,০০০ এর বেশি</option>
-      </select>
-    </div>
-    <div style="display:flex; align-items:center; gap:16px;">
-      <span class="results-count" id="results-count">৪টি প্যাকেজ পাওয়া গেছে</span>
-      <select class="filter-select">
-        <option>সাজান: জনপ্রিয়</option>
-        <option>মূল্য: কম থেকে বেশি</option>
-        <option>মূল্য: বেশি থেকে কম</option>
-      </select>
-    </div>
-  </div>
-</section>
-
 <!-- ===================== PRODUCT GRID ===================== -->
-<section class="container">
+<section class="container" id="shop-grid">
   <div class="product-grid">
     <div class="product-card" data-cat="proposal">
       <a href="product-simple.html">
