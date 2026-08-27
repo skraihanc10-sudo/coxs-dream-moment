@@ -1,0 +1,17 @@
+{
+  "name": "coxs-dream-moment",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cox's Dream Moment - Cox's Bazar proposal & decor booking site with a self-hosted admin panel",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.1",
+    "cookie-parser": "^1.4.6"
+  }
+}

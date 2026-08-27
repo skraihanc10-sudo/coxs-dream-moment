@@ -1,0 +1,141 @@
+:root{
+  --red:#c0392b; --red-dark:#a5301f; --navy:#1b2848; --ink:#242222;
+  --gray-text:#6b6b6b; --gray-line:#e2e2e2; --bg:#f5f5f6; --white:#fff;
+  --green:#1f8a4c; --radius:8px;
+  --shadow:0 2px 10px rgba(0,0,0,0.06);
+}
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+body{margin:0; font-family:'Segoe UI', Arial, sans-serif; background:var(--bg); color:var(--ink);}
+button{cursor:pointer; font-family:inherit;}
+input, textarea, select{font-family:inherit; font-size:13.5px;}
+
+/* ---------------- login ---------------- */
+.login-screen{
+  min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--navy);
+}
+.login-box{
+  background:#fff; padding:36px 32px; border-radius:var(--radius); width:320px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.3);
+}
+.login-brand{display:flex; align-items:center; gap:12px; margin-bottom:24px;}
+.brand-mark{
+  width:38px; height:38px; border-radius:50%; background:var(--red); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0;
+}
+.login-title{font-weight:700; font-size:15px;}
+.login-sub{font-size:12px; color:var(--gray-text);}
+.login-box label{display:block; font-size:12.5px; font-weight:600; margin-bottom:6px;}
+.login-box input{
+  width:100%; padding:10px 12px; border:1px solid var(--gray-line); border-radius:6px; margin-bottom:16px;
+}
+.login-box button{
+  width:100%; background:var(--red); color:#fff; border:none; padding:11px; border-radius:6px;
+  font-weight:600; font-size:14px;
+}
+.login-box button:hover{background:var(--red-dark);}
+.error-text{color:var(--red); font-size:12.5px; margin-top:10px;}
+
+/* ---------------- dashboard shell ---------------- */
+.admin-header{
+  display:flex; align-items:center; justify-content:space-between;
+  background:#fff; padding:14px 24px; border-bottom:1px solid var(--gray-line);
+  position:sticky; top:0; z-index:10;
+}
+.admin-header-brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:14.5px;}
+.admin-header-actions{display:flex; gap:10px;}
+.btn-ghost-sm{
+  background:none; border:1px solid var(--gray-line); padding:7px 14px; border-radius:6px;
+  font-size:12.5px; color:var(--ink); text-decoration:none;
+}
+.btn-ghost-sm:hover{border-color:var(--red); color:var(--red);}
+.btn-primary-sm{
+  background:var(--red); color:#fff; border:none; padding:8px 16px; border-radius:6px;
+  font-size:12.5px; font-weight:600; margin-left:8px;
+}
+.btn-primary-sm:hover{background:var(--red-dark);}
+.btn-danger-sm{
+  background:#fff; color:var(--red); border:1px solid var(--red); padding:6px 12px; border-radius:6px;
+  font-size:12px; font-weight:600;
+}
+.btn-danger-sm:hover{background:var(--red); color:#fff;}
+
+.admin-tabs{
+  display:flex; gap:4px; background:#fff; padding:0 24px; border-bottom:1px solid var(--gray-line);
+}
+.admin-tab{
+  background:none; border:none; padding:14px 16px; font-size:13.5px; font-weight:600; color:var(--gray-text);
+  border-bottom:2px solid transparent;
+}
+.admin-tab.active{color:var(--red); border-color:var(--red);}
+
+.admin-main{max-width:980px; margin:0 auto; padding:24px;}
+.panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
+.panel-head h2{font-size:18px; margin:0;}
+
+.toast{
+  position:fixed; top:16px; right:16px; background:var(--ink); color:#fff; padding:12px 20px;
+  border-radius:6px; font-size:13px; z-index:100; box-shadow:var(--shadow);
+}
+.toast.error{background:var(--red);}
+.toast.success{background:var(--green);}
+
+/* ---------------- form grid (settings) ---------------- */
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.form-grid .full{grid-column:1 / -1;}
+.field label{display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:#444;}
+.field input, .field textarea{
+  width:100%; padding:9px 11px; border:1px solid var(--gray-line); border-radius:6px; background:#fff;
+}
+.field textarea{min-height:64px; resize:vertical;}
+.field{margin-bottom:4px;}
+.section-title{
+  grid-column:1/-1; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+  color:var(--red); margin:18px 0 4px; padding-top:14px; border-top:1px solid var(--gray-line);
+}
+.section-title:first-child{border-top:none; padding-top:0; margin-top:0;}
+
+/* ---------------- package cards ---------------- */
+.package-card{
+  background:#fff; border:1px solid var(--gray-line); border-radius:var(--radius);
+  box-shadow:var(--shadow); margin-bottom:16px; overflow:hidden;
+}
+.package-card-head{
+  display:flex; align-items:center; justify-content:space-between; padding:14px 18px;
+  background:#faf9f8; cursor:pointer; user-select:none;
+}
+.package-card-head-title{font-weight:700; font-size:14px; display:flex; align-items:center; gap:10px;}
+.package-card-head-title .slug-badge{
+  font-size:10.5px; font-weight:600; color:var(--gray-text); background:#eee; padding:2px 8px; border-radius:10px;
+}
+.package-card-body{padding:18px; display:none;}
+.package-card.open .package-card-body{display:block;}
+.package-card-toggle{font-size:12px; color:var(--gray-text);}
+
+.chip-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;}
+.chip-check{display:flex; align-items:center; gap:6px; font-size:12.5px; background:#f2f2f2; padding:6px 12px; border-radius:16px;}
+
+.repeater-item{
+  display:flex; gap:8px; align-items:flex-start; margin-bottom:8px; padding:10px; background:#faf9f8; border-radius:6px;
+}
+.repeater-item input, .repeater-item textarea{flex:1;}
+.repeater-item .remove-btn{
+  background:none; border:none; color:var(--red); font-size:16px; padding:4px 8px; line-height:1;
+}
+.add-row-btn{
+  background:none; border:1px dashed var(--gray-line); color:var(--gray-text); padding:8px 14px;
+  border-radius:6px; font-size:12.5px; width:100%; text-align:center; margin-top:4px;
+}
+.add-row-btn:hover{border-color:var(--red); color:var(--red);}
+
+.image-field{display:flex; align-items:center; gap:12px; margin-bottom:10px;}
+.image-preview{
+  width:64px; height:48px; object-fit:cover; border-radius:6px; background:#eee; border:1px solid var(--gray-line);
+}
+.image-field-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.image-path{font-size:11.5px; color:var(--gray-text); word-break:break-all;}
+
+@media (max-width:700px){
+  .form-grid{grid-template-columns:1fr;}
+  .admin-main{padding:16px;}
+}
