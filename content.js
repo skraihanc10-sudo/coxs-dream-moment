@@ -2,24 +2,15 @@
 // Loads live content from /content/*.json (edited through the /admin CMS)
 // and fills it into the pages. Packages are fully data-driven: adding or
 // removing an entry in content/packages.json adds/removes it everywhere
-// (shop grid, nav dropdowns, mobile menu, footer, related sections) and
-// its detail page is served generically by product.html?slug=<slug> - no
-// per-package HTML file needed. If the fetch fails (offline, JS disabled,
-// opened as a local file), pages fall back to whatever was last baked
-// into the HTML - nothing breaks.
+// (shop grid, mobile menu, footer, related sections) and its detail page
+// is served generically by product.html?slug=<slug> - no per-package HTML
+// file needed. If the fetch fails (offline, JS disabled, opened as a local
+// file), pages fall back to whatever was last baked into the HTML -
+// nothing breaks.
 // ==========================================================================
 
 const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 const HEART_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>';
-const CARET_SVG = '<svg class="nav-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>';
-
-// Top-level shop categories. A category with zero matching packages stays
-// a plain link instead of an (empty) dropdown - see navCategoryHTML.
-const CATEGORIES = [
-  { slug: 'proposal', label: 'প্রপোজাল ডেকোরেশন' },
-  { slug: 'dinner', label: 'ক্যান্ডেললাইট ডিনার' },
-  { slug: 'gift', label: 'গিফট ও হ্যাম্পার' },
-];
 
 function fetchJSON(path) {
   return fetch(path, { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).catch(() => null);
@@ -97,41 +88,14 @@ function applyHero(hero) {
   if (img) img.setAttribute('src', hero.image);
 }
 
-// ---------------------------------------------------------------- nav dropdowns / mobile menu / footer links
-// These three are fully rebuilt from the current package list (not just
+// ---------------------------------------------------------------- mobile menu / footer links
+// Both are fully rebuilt from the current package list (not just
 // text-patched) so adding or deleting a package via the CMS changes the
 // count of links here too, on every page, automatically.
-function navCategoryHTML(cat, packages) {
-  const items = packages.filter(p => (p.categories || []).indexOf(cat.slug) !== -1);
-  if (!items.length) {
-    return `<a href="shop.html?cat=${cat.slug}" class="nav-link" data-cat="${cat.slug}">${cat.label}</a>`;
-  }
-  const links = items.map(p =>
-    `<a href="${packageUrl(p)}"><span>${p.name}</span><em>${p.price}</em></a>`
-  ).join('');
-  return (
-    `<div class="nav-item">` +
-    `<a href="shop.html?cat=${cat.slug}" class="nav-link" data-cat="${cat.slug}">${cat.label}${CARET_SVG}</a>` +
-    `<div class="nav-drop">${links}<a class="nav-drop-all" href="shop.html?cat=${cat.slug}">সব দেখুন →</a></div>` +
-    `</div>`
-  );
-}
-
-function buildNavDropdowns(packages) {
-  const wrap = document.getElementById('nav-categories');
-  if (!wrap) return;
-  wrap.innerHTML = CATEGORIES.map(c => navCategoryHTML(c, packages)).join('');
-  window.initNavTouch();
-}
-
 function buildMobileMenu(packages) {
   const wrap = document.getElementById('mm-categories');
   if (!wrap) return;
-  wrap.innerHTML = CATEGORIES.map(cat => {
-    const items = packages.filter(p => (p.categories || []).indexOf(cat.slug) !== -1);
-    const sub = items.map(p => `<a class="mm-sub" href="${packageUrl(p)}">${p.name}</a>`).join('');
-    return `<a href="shop.html?cat=${cat.slug}">${cat.label}</a>${sub}`;
-  }).join('');
+  wrap.innerHTML = packages.map(p => `<a class="mm-sub" href="${packageUrl(p)}">${p.name}</a>`).join('');
   window.initMobileMenu();
 }
 
@@ -143,8 +107,9 @@ function buildFooterPackageLinks(packages) {
 
 // ---------------------------------------------------------------- shop grid
 function applyShopGrid(packages) {
-  if (!document.getElementById('results-count')) return;
-  const realGrid = document.querySelector('section.container > .product-grid');
+  // #shop-grid is the shop page's own grid section - scoping to it keeps
+  // this from ever touching the related-products grid on product.html.
+  const realGrid = document.querySelector('#shop-grid > .product-grid');
   if (!realGrid) return;
 
   realGrid.innerHTML = packages.map(productCardHTML).join('');
@@ -283,7 +248,6 @@ document.addEventListener('DOMContentLoaded', function () {
       applyContactPage(settings);
     }
     if (packages) {
-      buildNavDropdowns(packages);
       buildMobileMenu(packages);
       buildFooterPackageLinks(packages);
       applyShopGrid(packages);

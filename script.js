@@ -48,24 +48,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   window.initWishButtons();
   window.initShopFilters();
-  window.initNavTouch();
-
-  // Category rail arrows (simple scroll)
-  const rail = document.querySelector('.cat-rail');
-  document.querySelectorAll('.rail-arrow').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const dir = btn.getAttribute('data-dir') === 'next' ? 1 : -1;
-      if (rail) rail.scrollBy({ left: dir * 240, behavior: 'smooth' });
-    });
-  });
 });
 
 // ---------------------------------------------------------------------
 // Everything below is re-bindable: content.js rebuilds the product-grid,
-// nav dropdowns, mobile-menu category links and thumbnails from the live
-// CMS content (packages can be added/removed), then calls these again so
-// the freshly-created elements get their click handlers. Each one guards
-// itself with a dataset.wired flag so re-running never double-binds.
+// mobile-menu package links and thumbnails from the live CMS content
+// (packages can be added/removed), then calls these again so the freshly
+// created elements get their click handlers. Each one guards itself with
+// a dataset.wired flag so re-running never double-binds.
 // ---------------------------------------------------------------------
 
 window.initMobileMenu = function () {
@@ -86,21 +76,6 @@ window.initMobileMenu = function () {
     if (a.dataset.wired) return;
     a.dataset.wired = '1';
     a.addEventListener('click', () => mobileMenu.classList.remove('open'));
-  });
-};
-
-// Mobile: tapping a nav parent opens its dropdown instead of navigating
-window.initNavTouch = function () {
-  document.querySelectorAll('.nav-item').forEach(item => {
-    const link = item.querySelector('.nav-link');
-    if (!link || link.dataset.wiredTouch) return;
-    link.dataset.wiredTouch = '1';
-    link.addEventListener('click', e => {
-      if (window.matchMedia('(hover: none)').matches && !item.classList.contains('open')) {
-        e.preventDefault();
-        item.classList.add('open');
-      }
-    });
   });
 };
 
@@ -127,71 +102,21 @@ window.initPdThumbs = function () {
 };
 
 // ---------------------------------------------------------------
-// Category filtering (shop page)
-// Categories come from ?cat=<slug> so nav links work across pages;
-// the rail and the dropdown filter in place without a reload.
+// Category filtering (shop page).
+// The nav no longer surfaces categories, but packages still carry them
+// in the CMS, so a shared shop.html?cat=<slug> link keeps working.
 // ---------------------------------------------------------------
 window.initShopFilters = function () {
-  const grid = document.querySelector('.product-grid');
+  const grid = document.querySelector('#shop-grid > .product-grid');
   const cards = grid ? Array.from(grid.querySelectorAll('.product-card[data-cat]')) : [];
   if (!cards.length) return;
 
-  const emptyState = document.querySelector('#shop-empty');
-  const countEl = document.querySelector('#results-count');
-  const catSelect = document.querySelector('#cat-filter');
-  const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get('cat') || 'all';
+  if (cat === 'all') return;
 
-  function toBengali(n) {
-    return String(n).split('').map(d => bnDigits[+d]).join('');
-  }
-
-  function applyFilter(cat, push) {
-    cat = cat || 'all';
-    let shown = 0;
-    cards.forEach(card => {
-      const cats = (card.getAttribute('data-cat') || '').split(/\s+/);
-      const match = cat === 'all' || cats.indexOf(cat) !== -1;
-      card.hidden = !match;
-      if (match) shown++;
-    });
-
-    if (emptyState) emptyState.hidden = shown !== 0;
-    if (countEl) countEl.textContent = toBengali(shown) + 'টি প্যাকেজ পাওয়া গেছে';
-    if (catSelect) catSelect.value = cat;
-
-    document.querySelectorAll('.nav-link[data-cat]').forEach(a => {
-      a.classList.toggle('active', a.getAttribute('data-cat') === cat);
-    });
-    document.querySelectorAll('.cat-item[data-cat]').forEach(item => {
-      item.classList.toggle('is-active', item.getAttribute('data-cat') === cat);
-    });
-
-    if (push && window.history && history.replaceState) {
-      history.replaceState(null, '', cat === 'all' ? 'shop.html' : 'shop.html?cat=' + cat);
-    }
-  }
-
-  function currentCat() {
-    const q = new URLSearchParams(window.location.search).get('cat');
-    if (q) return q;
-    const h = window.location.hash.match(/cat=([\w-]+)/); // fallback when opened as a file
-    return h ? h[1] : 'all';
-  }
-
-  applyFilter(currentCat(), false);
-
-  document.querySelectorAll('.nav-link[data-cat], .cat-item[data-cat]').forEach(el => {
-    if (el.dataset.wired) return;
-    el.dataset.wired = '1';
-    el.addEventListener('click', e => {
-      e.preventDefault();
-      applyFilter(el.getAttribute('data-cat'), true);
-      window.scrollTo({ top: grid.offsetTop - 160, behavior: 'smooth' });
-    });
+  cards.forEach(card => {
+    const cats = (card.getAttribute('data-cat') || '').split(/\s+/);
+    card.hidden = cats.indexOf(cat) === -1;
   });
-
-  if (catSelect && !catSelect.dataset.wired) {
-    catSelect.dataset.wired = '1';
-    catSelect.addEventListener('change', () => applyFilter(catSelect.value, true));
-  }
 };
