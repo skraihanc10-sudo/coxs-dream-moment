@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function buildMessage() {
     const productName = document.querySelector('.pd-info h1') ? document.querySelector('.pd-info h1').textContent.trim() : 'প্যাকেজ';
+    const packageCode = document.body.dataset.packageCode || '';
     const location = document.querySelector('#bb-location') ? document.querySelector('#bb-location').value : "Cox's Bazar";
     const date = document.querySelector('#bb-date') ? document.querySelector('#bb-date').value : '';
     const guests = document.querySelector('#bb-guests') ? document.querySelector('#bb-guests').value : '2';
@@ -28,7 +29,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const occasion = document.querySelector('#bb-occasion') ? document.querySelector('#bb-occasion').value : '';
     const total = document.querySelector('.bb-total-value') ? document.querySelector('.bb-total-value').textContent.trim() : '';
 
-    return `আসসালামু আলাইকুম, আমি বুকিং করতে চাই।%0A%0A🎁 প্যাকেজ: ${encodeURIComponent(productName)}%0A📍 লোকেশন: ${encodeURIComponent(location)}%0A📅 তারিখ: ${encodeURIComponent(date)}%0A👥 গেস্ট: ${encodeURIComponent(guests)}%0A⏰ স্লট: ${encodeURIComponent(slot)}%0A💐 উপলক্ষ: ${encodeURIComponent(occasion)}%0A💰 টোটাল: ${encodeURIComponent(total)}`;
+    const codeLine = packageCode ? `%0A🔖 প্যাকেজ কোড: ${encodeURIComponent(packageCode)}` : '';
+
+    return `আসসালামু আলাইকুম, আমি বুকিং করতে চাই।%0A%0A🎁 প্যাকেজ: ${encodeURIComponent(productName)}${codeLine}%0A📍 লোকেশন: ${encodeURIComponent(location)}%0A📅 তারিখ: ${encodeURIComponent(date)}%0A👥 গেস্ট: ${encodeURIComponent(guests)}%0A⏰ স্লট: ${encodeURIComponent(slot)}%0A💐 উপলক্ষ: ${encodeURIComponent(occasion)}%0A💰 টোটাল: ${encodeURIComponent(total)}`;
   }
 
   if (bookBtn) {

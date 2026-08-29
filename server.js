@@ -61,6 +61,48 @@ function ensureDataDir() {
 }
 ensureDataDir();
 
+// ---------------------------------------------------------------- package codes
+// Packages get a stable display code ("CDM 101", "CDM 102", ...). Because
+// live content lives in the mounted volume rather than in this repo, an
+// already-deployed packages.json will not have codes - so any package
+// missing one is given the next free number on boot. Existing codes are
+// never reassigned and no other field is touched, so this is safe to run
+// against production data on every deploy.
+const CODE_PREFIX = 'CDM';
+const CODE_START = 101;
+
+function codeNumber(code) {
+  const m = /^\s*CDM\s*(\d+)\s*$/i.exec(String(code || ''));
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function backfillPackageCodes() {
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages)) return;
+
+  const used = new Set();
+  data.packages.forEach(p => {
+    const n = codeNumber(p.code);
+    if (n !== null && !used.has(n)) used.add(n);
+  });
+
+  let next = CODE_START;
+  const assigned = [];
+  data.packages.forEach(p => {
+    const n = codeNumber(p.code);
+    if (n !== null && used.has(n) && p.code === `${CODE_PREFIX} ${n}`) return; // already fine
+    while (used.has(next)) next++;
+    p.code = `${CODE_PREFIX} ${next}`;
+    used.add(next);
+    assigned.push(`${p.slug} -> ${p.code}`);
+  });
+
+  if (assigned.length) {
+    writeJSON(PACKAGES_FILE, data);
+    console.log(`Assigned package codes: ${assigned.join(', ')}`);
+  }
+}
+
 // ---------------------------------------------------------------- tiny signed-cookie session
 // No session store needed: the cookie itself carries an expiry and an
 // HMAC signature, so a single Railway instance (or many, since they'd
@@ -102,6 +144,9 @@ function readJSON(file, fallback) {
 function writeJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
 }
+
+// Runs after the JSON helpers exist; safe to re-run on every boot.
+backfillPackageCodes();
 
 // ---------------------------------------------------------------- app
 const app = express();
@@ -167,6 +212,7 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
   if (!body || !Array.isArray(body.packages)) return res.status(400).json({ error: 'অবৈধ ডেটা' });
 
   const slugs = new Set();
+  const codes = new Set();
   for (const pkg of body.packages) {
     if (!pkg.slug || typeof pkg.slug !== 'string' || !/^[a-z0-9-]+$/.test(pkg.slug)) {
       return res.status(400).json({ error: `Slug অবৈধ: "${pkg.slug}" — শুধু ছোট হাতের ইংরেজি অক্ষর, সংখ্যা ও হাইফেন ব্যবহার করুন` });
@@ -175,9 +221,36 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
       return res.status(400).json({ error: `Slug "${pkg.slug}" একাধিকবার ব্যবহার হয়েছে — প্রতিটা প্যাকেজের slug অনন্য হতে হবে` });
     }
     slugs.add(pkg.slug);
+
+    // Package code: normalise "cdm101" / "CDM  101" to "CDM 101", and keep
+    // codes unique. A blank code is filled in from the next free number so
+    // a newly added package never has to be numbered by hand.
+    const typed = String(pkg.code || '').trim();
+    if (typed) {
+      const n = codeNumber(typed);
+      if (n === null) {
+        return res.status(400).json({ error: `প্যাকেজ কোড অবৈধ: "${typed}" — ফরম্যাট হবে "CDM 101"` });
+      }
+      pkg.code = `${CODE_PREFIX} ${n}`;
+      if (codes.has(pkg.code)) {
+        return res.status(400).json({ error: `প্যাকেজ কোড "${pkg.code}" একাধিকবার ব্যবহার হয়েছে — প্রতিটা কোড অনন্য হতে হবে` });
+      }
+      codes.add(pkg.code);
+    }
+
     if (!Array.isArray(pkg.categories)) pkg.categories = [];
     if (!Array.isArray(pkg.thumbnails)) pkg.thumbnails = [];
     if (!Array.isArray(pkg.inclusions)) pkg.inclusions = [];
+  }
+
+  // Fill in any package saved without a code, reusing the same numbering
+  // rule as the boot-time backfill.
+  let next = CODE_START;
+  for (const pkg of body.packages) {
+    if (pkg.code) continue;
+    while (codes.has(`${CODE_PREFIX} ${next}`)) next++;
+    pkg.code = `${CODE_PREFIX} ${next}`;
+    codes.add(pkg.code);
   }
 
   writeJSON(PACKAGES_FILE, body);

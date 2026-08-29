@@ -22,6 +22,9 @@ function packageUrl(pkg) {
 
 function productCardHTML(pkg) {
   const url = packageUrl(pkg);
+  const code = pkg.code
+    ? `<div class="product-code">Package Code: <span>${pkg.code}</span></div>`
+    : '';
   return (
     `<div class="product-card" data-cat="${pkg.categories.join(' ')}">` +
     `<a href="${url}"><div class="product-thumb">` +
@@ -30,6 +33,7 @@ function productCardHTML(pkg) {
     `<img src="${pkg.main_image}" alt="${pkg.name}"></div></a>` +
     `<div class="product-body">` +
     `<a href="${url}"><h3 class="product-name">${pkg.name}</h3></a>` +
+    code +
     `<div class="product-loc">${PIN_SVG}কক্সবাজার</div>` +
     `<div class="product-price"><span class="from">শুরু</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
@@ -155,6 +159,20 @@ function applyProductDetail(packages) {
 
   const trustText = document.querySelector('.pd-trust-text');
   if (trustText) trustText.textContent = `${pkg.trust_extra} · ${pkg.discount} · কক্সবাজার`;
+
+  // Stashed on <body> so the booking buttons in script.js can pull the code
+  // into the WhatsApp message without re-parsing any rendered text.
+  const codeEl = document.querySelector('.pd-code');
+  if (pkg.code) {
+    document.body.dataset.packageCode = pkg.code;
+    if (codeEl) {
+      codeEl.innerHTML = `Package Code: <span>${pkg.code}</span>`;
+      codeEl.hidden = false;
+    }
+  } else {
+    delete document.body.dataset.packageCode;
+    if (codeEl) codeEl.hidden = true;
+  }
 
   const inclusionsList = document.querySelector('.pd-inclusions');
   if (inclusionsList) inclusionsList.innerHTML = pkg.inclusions.map(li => `<li>${li}</li>`).join('');

@@ -163,6 +163,10 @@ button{font-family:inherit; cursor:pointer;}
 }
 .product-body{padding:14px 16px 16px; display:flex; flex-direction:column; gap:8px; flex:1;}
 .product-name{font-size:14px; font-weight:600; color:#1a1a2e; line-height:1.35;}
+/* Package code - deliberately quiet so it never competes with the name */
+.product-code{font-size:11px; color:#9a9a9a; letter-spacing:0.02em;}
+/* nowrap so the code itself never splits across lines on narrow cards */
+.product-code span{font-weight:600; color:var(--gray-text); letter-spacing:0.04em; white-space:nowrap;}
 .product-loc{font-size:11.5px; color:var(--gray-text); display:flex; align-items:center; gap:5px;}
 .product-loc svg{width:12px; height:12px; flex-shrink:0;}
 .product-price{font-size:16px; font-weight:700; color:var(--ink); margin-top:auto;}
@@ -198,7 +202,12 @@ button{font-family:inherit; cursor:pointer;}
 .pd-thumb img{width:100%; height:100%; object-fit:cover;}
 
 .pd-info h1{font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--ink); margin-bottom:6px;}
-.pd-trust{font-size:12.5px; color:var(--gray-text); margin-bottom:16px; display:flex; align-items:center; gap:6px;}
+.pd-trust{font-size:12.5px; color:var(--gray-text); margin-bottom:8px; display:flex; align-items:center; gap:6px;}
+.pd-code{font-size:12px; color:#9a9a9a; margin-bottom:16px; letter-spacing:0.02em;}
+.pd-code span{
+  font-weight:600; color:var(--red); letter-spacing:0.06em;
+  background:#fdf0ee; padding:2px 8px; border-radius:3px; margin-left:2px;
+}
 .pd-trust svg{width:14px; height:14px; color:var(--gold);}
 .pd-section-label{font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:#888; margin-bottom:8px; margin-top:18px;}
 .pd-inclusions{font-size:13.5px; color:#4a4a4a; line-height:1.8;}

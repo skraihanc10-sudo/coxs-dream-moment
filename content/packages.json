@@ -2,6 +2,7 @@
   "packages": [
     {
       "slug": "simple",
+      "code": "CDM 101",
       "name": "Sweet Beginnings Package",
       "badge": "বেসিক",
       "trust_extra": "বেসিক প্যাকেজ",
@@ -43,6 +44,7 @@
     },
     {
       "slug": "sunset",
+      "code": "CDM 102",
       "name": "Golden Sunset Package",
       "badge": "জনপ্রিয়",
       "trust_extra": "সবচেয়ে জনপ্রিয়",
@@ -87,6 +89,7 @@
     },
     {
       "slug": "luxury",
+      "code": "CDM 103",
       "name": "Forever Luxury Package",
       "badge": "প্রিমিয়াম",
       "trust_extra": "প্রিমিয়াম অভিজ্ঞতা",
@@ -131,6 +134,7 @@
     },
     {
       "slug": "royal",
+      "code": "CDM 104",
       "name": "Royal Luxury Package",
       "badge": "লাক্সারি",
       "trust_extra": "রয়্যাল অভিজ্ঞতা",

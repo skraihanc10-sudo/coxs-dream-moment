@@ -254,6 +254,9 @@ $('#save-settings-btn').addEventListener('click', async () => {
 function blankPackage() {
   return {
     slug: '',
+    // Left blank on purpose: the server assigns the next free "CDM <n>"
+    // on save, so nobody has to track the numbering by hand.
+    code: '',
     name: 'নতুন প্যাকেজ',
     badge: 'নতুন',
     trust_extra: '',
@@ -286,6 +289,7 @@ function renderPackageCard(pkg, idx) {
     <div class="package-card-head-title">
       <span>${escapeHTML(pkg.name || '(নাম নেই)')}</span>
       <span class="slug-badge">${escapeHTML(pkg.slug || 'slug নেই')}</span>
+      <span class="code-badge">${escapeHTML(pkg.code || 'কোড হবে সেভ করলে')}</span>
     </div>
     <span class="package-card-toggle">খুলতে ক্লিক করুন ▾</span>
   `;
@@ -307,15 +311,17 @@ function renderPackageCard(pkg, idx) {
     const input = f.querySelector('input');
     input.addEventListener('input', () => {
       pkg[key] = input.value;
-      if (key === 'name' || key === 'slug') {
+      if (key === 'name' || key === 'slug' || key === 'code') {
         head.querySelector('.package-card-head-title span').textContent = pkg.name || '(নাম নেই)';
         head.querySelector('.slug-badge').textContent = pkg.slug || 'slug নেই';
+        head.querySelector('.code-badge').textContent = pkg.code || 'কোড হবে সেভ করলে';
       }
     });
     grid.appendChild(f);
   }
 
   field('Slug (ইউনিক, ছোট হাতের ইংরেজি/সংখ্যা/হাইফেন)', 'slug');
+  field('প্যাকেজ কোড (যেমন CDM 101 — খালি রাখলে সয়ংক্রিয়ভাবে বসবে)', 'code');
   field('প্যাকেজের নাম', 'name');
   field('ব্যাজ', 'badge');
   field('ট্রাস্ট লাইনের টেক্সট', 'trust_extra');
