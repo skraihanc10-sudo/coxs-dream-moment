@@ -74,6 +74,20 @@ function applySettings(settings) {
   });
 }
 
+// The cover design puts the closing line of the headline in gold. Rather
+// than make whoever edits the CMS hand-write a <span>, the last <br>
+// separated line is highlighted automatically - they just type plain text
+// with <br> between lines. An explicit hero-accent span is left as-is so
+// a hand-tuned headline still wins.
+function headingHTML(raw) {
+  const text = String(raw || '');
+  if (/hero-accent/.test(text)) return text;
+  const lines = text.split(/<br\s*\/?>/i);
+  if (lines.length < 2) return text;
+  const last = lines.pop();
+  return `${lines.join('<br>')}<br><span class="hero-accent">${last}</span>`;
+}
+
 function applyHero(hero) {
   if (!hero) return;
   const eyebrow = document.getElementById('hero-eyebrow');
@@ -82,7 +96,7 @@ function applyHero(hero) {
   const cta = document.getElementById('hero-cta');
   const img = document.getElementById('hero-image');
   if (eyebrow) eyebrow.textContent = hero.eyebrow;
-  if (heading) heading.innerHTML = hero.heading;
+  if (heading) heading.innerHTML = headingHTML(hero.heading);
   if (sub) sub.textContent = hero.subheading;
   if (cta) cta.textContent = hero.cta_text;
   if (img) img.setAttribute('src', hero.image);
