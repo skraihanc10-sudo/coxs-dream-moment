@@ -503,3 +503,23 @@ button{font-family:inherit; cursor:pointer;}
 .pd-main-img img.is-placeholder{
   object-fit:contain; padding:16%; background:#fff;
 }
+
+/* Booking add-ons. Priced separately from the package and folded into the
+   total, so the row reads like a line item rather than a plain checkbox. */
+.bb-addons{
+  padding:14px 0 4px; margin-bottom:4px; border-top:1px solid var(--gray-line);
+}
+.bb-addons-label{
+  font-size:11px; font-weight:600; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--gray-text); margin:0 0 10px;
+}
+.bb-addon{
+  display:flex; align-items:center; gap:10px; cursor:pointer;
+  padding:10px 12px; border:1px solid var(--gray-line); border-radius:6px;
+  font-size:13.5px; transition:border-color .2s ease, background .2s ease;
+}
+.bb-addon:hover{border-color:var(--red);}
+.bb-addon input{width:16px; height:16px; accent-color:var(--red); flex-shrink:0; margin:0;}
+.bb-addon-name{flex:1;}
+.bb-addon-fee{font-weight:700; color:var(--red); white-space:nowrap;}
+.bb-addon:has(input:checked){border-color:var(--red); background:#fdf0ee;}

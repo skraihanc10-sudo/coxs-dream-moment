@@ -25,5 +25,9 @@
     "cta_text": "View packages",
     "image": "images/hero-wide.jpg"
   },
-  "footer_desc": "Dream proposal and decoration services on Cox's Bazar sea beach. We make your special moment unforgettable."
+  "footer_desc": "Dream proposal and decoration services on Cox's Bazar sea beach. We make your special moment unforgettable.",
+  "drone_addon": {
+    "label": "Drone shot",
+    "fee": "2000"
+  }
 }

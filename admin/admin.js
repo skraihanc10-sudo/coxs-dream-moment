@@ -174,6 +174,20 @@ function renderSettings() {
   root.appendChild(hoursWrap);
   renderHours(hoursWrap);
 
+  const addonTitle = document.createElement('div');
+  addonTitle.className = 'section-title';
+  addonTitle.textContent = 'Booking extras';
+  root.appendChild(addonTitle);
+
+  // Offered on every package page and added on top of the package price.
+  const addon = s.drone_addon || (s.drone_addon = { label: 'Drone shot', fee: '2000' });
+  [['label', 'Extra service name'], ['fee', 'Extra fee (numbers only)']].forEach(([key, label]) => {
+    const field = document.createElement('div');
+    field.className = 'field';
+    field.innerHTML = `<label>${label}</label><input data-addon-key="${key}" value="${escapeAttr(addon[key] || '')}">`;
+    root.appendChild(field);
+  });
+
   const heroTitle = document.createElement('div');
   heroTitle.className = 'section-title';
   heroTitle.textContent = 'Homepage hero section';
@@ -237,6 +251,7 @@ function collectSettings() {
   const s = state.settings;
   $$('#settings-form [data-key]').forEach(el => (s[el.dataset.key] = el.value));
   $$('#settings-form [data-hero-key]').forEach(el => (s.hero[el.dataset.heroKey] = el.value));
+  $$('#settings-form [data-addon-key]').forEach(el => (s.drone_addon[el.dataset.addonKey] = el.value));
   return s;
 }
 

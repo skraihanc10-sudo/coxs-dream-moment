@@ -31,9 +31,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const occasion = document.querySelector('#bb-occasion') ? document.querySelector('#bb-occasion').value : '';
     const total = document.querySelector('.bb-total-value') ? document.querySelector('.bb-total-value').textContent.trim() : '';
 
-    const codeLine = packageCode ? `%0A🔖 Package Code: ${encodeURIComponent(packageCode)}` : '';
+    const addons = document.body.dataset.addons || '';
 
-    return `Hello, I would like to make a booking.%0A%0A🎁 Package: ${encodeURIComponent(productName)}${codeLine}%0A📍 Location: ${encodeURIComponent(location)}%0A📅 Date: ${encodeURIComponent(date)}%0A👥 Guests: ${encodeURIComponent(guests)}%0A⏰ Time slot: ${encodeURIComponent(slot)}%0A💐 Occasion: ${encodeURIComponent(occasion)}%0A💰 Total: ${encodeURIComponent(total)}`;
+    const codeLine = packageCode ? `%0A🔖 Package Code: ${encodeURIComponent(packageCode)}` : '';
+    const addonLine = addons ? `%0A➕ Extra service: ${encodeURIComponent(addons)}` : '';
+
+    return `Hello, I would like to make a booking.%0A%0A🎁 Package: ${encodeURIComponent(productName)}${codeLine}%0A📍 Location: ${encodeURIComponent(location)}%0A📅 Date: ${encodeURIComponent(date)}%0A👥 Guests: ${encodeURIComponent(guests)}%0A⏰ Time slot: ${encodeURIComponent(slot)}%0A💐 Occasion: ${encodeURIComponent(occasion)}${addonLine}%0A💰 Total: ${encodeURIComponent(total)}`;
   }
 
   if (bookBtn) {

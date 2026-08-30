@@ -12,25 +12,8 @@
       "categories": [
         "proposal"
       ],
-      "main_image": "images/setup-arch.jpg",
-      "thumbnails": [
-        {
-          "image": "images/setup-arch.jpg",
-          "alt": "Full setup"
-        },
-        {
-          "image": "images/neon-sign.jpg",
-          "alt": "Neon sign"
-        },
-        {
-          "image": "images/flower-bouquet.jpg",
-          "alt": "Floral styling"
-        },
-        {
-          "image": "images/sunset-sea.jpg",
-          "alt": "Beach evening"
-        }
-      ],
+      "main_image": "",
+      "thumbnails": [],
       "inclusions": [
         "Customized cake",
         "Mineral water",
@@ -59,25 +42,8 @@
         "proposal",
         "dinner"
       ],
-      "main_image": "images/full-setup.jpg",
-      "thumbnails": [
-        {
-          "image": "images/full-setup.jpg",
-          "alt": "Full setup"
-        },
-        {
-          "image": "images/petal-walkway.jpg",
-          "alt": "Rose petal walkway"
-        },
-        {
-          "image": "images/neon-sign.jpg",
-          "alt": "Neon sign"
-        },
-        {
-          "image": "images/fairy-lights.jpg",
-          "alt": "Fairy lights"
-        }
-      ],
+      "main_image": "",
+      "thumbnails": [],
       "inclusions": [
         "Customized cake",
         "Mineral water",
@@ -106,25 +72,8 @@
         "proposal",
         "dinner"
       ],
-      "main_image": "images/dinner-table.jpg",
-      "thumbnails": [
-        {
-          "image": "images/dinner-table.jpg",
-          "alt": "Candlelight dinner"
-        },
-        {
-          "image": "images/candle-jars.jpg",
-          "alt": "Hanging candles"
-        },
-        {
-          "image": "images/seating-area.jpg",
-          "alt": "Seating area"
-        },
-        {
-          "image": "images/sunset-sea.jpg",
-          "alt": "Sunset view"
-        }
-      ],
+      "main_image": "",
+      "thumbnails": [],
       "inclusions": [
         "Customized cake",
         "Mineral water",
@@ -153,25 +102,8 @@
         "proposal",
         "dinner"
       ],
-      "main_image": "images/candle-jars.jpg",
-      "thumbnails": [
-        {
-          "image": "images/candle-jars.jpg",
-          "alt": "Hanging candles"
-        },
-        {
-          "image": "images/dinner-table.jpg",
-          "alt": "Candlelight dinner"
-        },
-        {
-          "image": "images/flower-bouquet.jpg",
-          "alt": "Premium floral styling"
-        },
-        {
-          "image": "images/fairy-lights.jpg",
-          "alt": "Fairy lights"
-        }
-      ],
+      "main_image": "",
+      "thumbnails": [],
       "inclusions": [
         "Customized cake",
         "Mineral water",

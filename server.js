@@ -27,6 +27,7 @@ const SETTINGS_FILE = path.join(CONTENT_DIR, 'settings.json');
 const PACKAGES_FILE = path.join(CONTENT_DIR, 'packages.json');
 const GALLERY_FILE = path.join(CONTENT_DIR, 'gallery.json');
 const INTRODUCED_FILE = path.join(CONTENT_DIR, 'introduced-packages.json');
+const MIGRATIONS_FILE = path.join(CONTENT_DIR, 'migrations.json');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-only-secret-change-me';
@@ -237,6 +238,37 @@ function introduceNewSeedPackages() {
 }
 introduceNewSeedPackages();
 backfillPackageCodes();
+
+// ------------------------------------------------------------ one-shot migrations
+// Content lives in the volume, so a change the owner wants applied to what is
+// already deployed cannot be made by editing the seed. These run once and are
+// then recorded, so they never fight an admin who later changes the same field.
+function runOnce(id, fn) {
+  const record = readJSON(MIGRATIONS_FILE, null) || { applied: [] };
+  const applied = Array.isArray(record.applied) ? record.applied : [];
+  if (applied.includes(id)) return;
+  const changed = fn();
+  applied.push(id);
+  writeJSON(MIGRATIONS_FILE, { applied });
+  if (changed) console.log(`Migration applied: ${id}`);
+}
+
+// Owner is replacing every package photo, so clear the current ones and let the
+// placeholder show until each is uploaded again. The image files themselves stay
+// in the volume - only the references are dropped.
+runOnce('clear-package-photos', () => {
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages)) return false;
+  let cleared = 0;
+  data.packages.forEach(p => {
+    if (p.main_image) { p.main_image = ''; cleared++; }
+    if (Array.isArray(p.thumbnails) && p.thumbnails.length) { p.thumbnails = []; cleared++; }
+  });
+  if (!cleared) return false;
+  writeJSON(PACKAGES_FILE, data);
+  return true;
+});
+
 
 
 

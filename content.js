@@ -161,6 +161,40 @@ function applyShopGrid(packages) {
   window.initShopFilters();
 }
 
+
+// ---------------------------------------------------------------- booking add-ons
+// Extras are priced on top of the package and offered on every package page.
+// The fee is editable in site settings; these are the fallbacks for a volume
+// whose settings.json predates the field.
+const DRONE_ADDON_DEFAULTS = { label: 'Drone shot', fee: 2000 };
+
+// Prices are authored as display strings ("\u09f314,999"), so read the amount out of
+// the digits and keep whatever symbol the owner typed.
+function priceAmount(text) {
+  const digits = String(text || '').replace(/[^0-9]/g, '');
+  return digits ? parseInt(digits, 10) : null;
+}
+
+function priceSymbol(text) {
+  const m = /^[^0-9]*/.exec(String(text || ''));
+  // Falls back to the Taka sign when the price is not set yet, so an
+  // add-on fee never renders as a bare number.
+  return (m && m[0].trim()) || '৳';
+}
+
+function formatPrice(amount, symbol) {
+  return `${symbol}${amount.toLocaleString('en-US')}`;
+}
+
+function droneAddon(settings) {
+  const configured = (settings && settings.drone_addon) || {};
+  const fee = priceAmount(configured.fee) || DRONE_ADDON_DEFAULTS.fee;
+  return {
+    label: configured.label || DRONE_ADDON_DEFAULTS.label,
+    fee,
+  };
+}
+
 // ---------------------------------------------------------------- product detail page (product.html?slug=...)
 function applyProductDetail(packages) {
   const params = new URLSearchParams(window.location.search);
@@ -221,9 +255,12 @@ function applyProductDetail(packages) {
   }
 
   const priceValue = document.querySelector('.bb-price-value');
-  if (priceValue) priceValue.innerHTML = `<span class="old">${pkg.old_price}</span>${pkg.price}`;
-  const totalValue = document.querySelector('.bb-total-value');
-  if (totalValue) totalValue.textContent = pkg.price;
+  if (priceValue) {
+    const oldPrice = pkg.old_price ? `<span class="old">${pkg.old_price}</span>` : '';
+    priceValue.innerHTML = `${oldPrice}${pkg.price || ''}`;
+  }
+
+  setupAddons(pkg);
 
   const descP = document.querySelector('.pd-tab-content[data-tab-content="desc"] p');
   if (descP) descP.textContent = pkg.description;
@@ -304,6 +341,9 @@ document.addEventListener('DOMContentLoaded', function () {
   ]).then(([settings, packagesData, gallery]) => {
     const packages = packagesData ? packagesData.packages : null;
 
+    // applyProductDetail() needs the add-on fee, which lives in settings.
+    window.__siteSettings = settings || {};
+
     if (settings) {
       applySettings(settings);
       applyHero(settings.hero);
@@ -318,3 +358,43 @@ document.addEventListener('DOMContentLoaded', function () {
     if (gallery) applyGallery(gallery);
   });
 });
+
+// Keeps the total, the checkbox label and the values script.js reads for the
+// WhatsApp message in step with each other.
+function setupAddons(pkg) {
+  const totalValue = document.querySelector('.bb-total-value');
+  const box = document.querySelector('#bb-addon-drone');
+  const feeLabel = document.querySelector('.bb-addon-fee');
+
+  const addon = droneAddon(window.__siteSettings);
+  const base = priceAmount(pkg.price);
+  const symbol = priceSymbol(pkg.price);
+
+  if (feeLabel) feeLabel.textContent = `+${formatPrice(addon.fee, symbol)}`;
+  const nameLabel = document.querySelector('.bb-addon-name');
+  if (nameLabel) nameLabel.textContent = addon.label;
+
+  const render = () => {
+    const on = !!(box && box.checked);
+    // script.js pulls these off <body> when it builds the booking message.
+    if (on) {
+      document.body.dataset.addons = `${addon.label} (+${formatPrice(addon.fee, symbol)})`;
+    } else {
+      delete document.body.dataset.addons;
+    }
+    if (!totalValue) return;
+    if (base === null) {
+      // No price set on this package yet - show the extra on its own rather
+      // than inventing a total.
+      totalValue.textContent = on ? `+${formatPrice(addon.fee, symbol)}` : '';
+      return;
+    }
+    totalValue.textContent = formatPrice(on ? base + addon.fee : base, symbol);
+  };
+
+  if (box && !box.dataset.wired) {
+    box.dataset.wired = '1';
+    box.addEventListener('change', render);
+  }
+  render();
+}
