@@ -269,6 +269,43 @@ runOnce('clear-package-photos', () => {
   return true;
 });
 
+// Every package advertises the same facilities. The four that predate that
+// decision still carry their old lists in the volume, so bring them into line.
+// Written out here rather than read from the seed so a later seed edit cannot
+// silently change what this one-shot migration meant when it ran.
+runOnce('shared-inclusions', () => {
+  const shared = [
+    'Customized cake',
+    'Mineral water',
+    'Welcome drinks',
+    'Free music system',
+    'Pickup & drop service',
+    'Professional photography',
+    'Professional cinematography & cinematic video shoot',
+    'Premium luxury decoration setup',
+    'And many more attractive facilities!',
+  ];
+
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages)) return false;
+
+  let updated = 0;
+  data.packages.forEach(p => {
+    const current = Array.isArray(p.inclusions) ? p.inclusions : [];
+    const same = current.length === shared.length
+      && current.every((v, i) => v === shared[i]);
+    if (same) return;
+    p.inclusions = shared.slice();
+    updated++;
+  });
+
+  if (!updated) return false;
+  writeJSON(PACKAGES_FILE, data);
+  console.log(`Applied the shared inclusions list to ${updated} package(s)`);
+  return true;
+});
+
+
 
 
 
