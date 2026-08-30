@@ -328,6 +328,19 @@ runOnce('sunset-night-bangla', () => {
   return true;
 });
 
+// Booking extras became a list so more than one can be offered, and the second
+// one - Special Dinner - is quoted on request rather than at a set fee.
+runOnce('booking-extras-list', () => {
+  const settings = readJSON(SETTINGS_FILE, null);
+  if (!settings) return false;
+  if (Array.isArray(settings.addons) && settings.addons.length) return false;
+  settings.addons = [{"label": "Drone Shot (Cinematic Special Drone Video)", "fee": "2000"}, {"label": "Special Dinner", "fee": ""}];
+  delete settings.drone_addon;
+  writeJSON(SETTINGS_FILE, settings);
+  return true;
+});
+
+
 
 
 

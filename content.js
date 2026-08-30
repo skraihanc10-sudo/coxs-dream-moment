@@ -163,10 +163,19 @@ function applyShopGrid(packages) {
 
 
 // ---------------------------------------------------------------- booking add-ons
-// Extras are priced on top of the package and offered on every package page.
-// The fee is editable in site settings; these are the fallbacks for a volume
-// whose settings.json predates the field.
-const DRONE_ADDON_DEFAULTS = { label: 'Drone Shot (Cinematic Special Drone Video)', fee: 2000 };
+// Extras sit on top of the package price and are offered on every package page.
+// They are editable in site settings; this is the fallback for a volume whose
+// settings.json predates the field.
+//
+// An extra with no fee is quoted on request rather than free - it is marked as
+// such, left out of the total, and flagged in the booking message so the
+// customer knows the price is still to be agreed.
+const ADDON_DEFAULTS = [
+  { label: 'Drone Shot (Cinematic Special Drone Video)', fee: '2000' },
+  { label: 'Special Dinner', fee: '' },
+];
+
+const ON_REQUEST_LABEL = '\u0986\u09b2\u09cb\u099a\u09a8\u09be \u09b8\u09be\u09aa\u09c7\u0995\u09cd\u09b7\u09c7';
 
 // Prices are authored as display strings ("\u09f314,999"), so read the amount out of
 // the digits and keep whatever symbol the owner typed.
@@ -179,20 +188,23 @@ function priceSymbol(text) {
   const m = /^[^0-9]*/.exec(String(text || ''));
   // Falls back to the Taka sign when the price is not set yet, so an
   // add-on fee never renders as a bare number.
-  return (m && m[0].trim()) || '৳';
+  return (m && m[0].trim()) || '\u09f3';
 }
 
 function formatPrice(amount, symbol) {
   return `${symbol}${amount.toLocaleString('en-US')}`;
 }
 
-function droneAddon(settings) {
-  const configured = (settings && settings.drone_addon) || {};
-  const fee = priceAmount(configured.fee) || DRONE_ADDON_DEFAULTS.fee;
-  return {
-    label: configured.label || DRONE_ADDON_DEFAULTS.label,
-    fee,
-  };
+function bookingAddons(settings) {
+  let configured = settings && settings.addons;
+  if (!Array.isArray(configured) || !configured.length) {
+    // settings.json from before extras became a list carried a single one
+    const legacy = settings && settings.drone_addon;
+    configured = legacy ? [legacy] : ADDON_DEFAULTS;
+  }
+  return configured
+    .filter(a => a && a.label)
+    .map(a => ({ label: a.label, fee: priceAmount(a.fee) }));
 }
 
 // ---------------------------------------------------------------- product detail page (product.html?slug=...)
@@ -365,39 +377,67 @@ document.addEventListener('DOMContentLoaded', function () {
 // Keeps the total, the checkbox label and the values script.js reads for the
 // WhatsApp message in step with each other.
 function setupAddons(pkg) {
+  const wrap = document.querySelector('.bb-addons-list');
+  const section = document.querySelector('.bb-addons');
   const totalValue = document.querySelector('.bb-total-value');
-  const box = document.querySelector('#bb-addon-drone');
-  const feeLabel = document.querySelector('.bb-addon-fee');
+  const totalNote = document.querySelector('.bb-total-note');
+  if (!wrap) return;
 
-  const addon = droneAddon(window.__siteSettings);
+  const addons = bookingAddons(window.__siteSettings);
   const base = priceAmount(pkg.price);
   const symbol = priceSymbol(pkg.price);
 
-  if (feeLabel) feeLabel.textContent = `+${formatPrice(addon.fee, symbol)}`;
-  const nameLabel = document.querySelector('.bb-addon-name');
-  if (nameLabel) nameLabel.textContent = addon.label;
+  if (section) section.hidden = !addons.length;
+
+  wrap.innerHTML = addons.map((a, i) => {
+    const fee = a.fee === null
+      ? `<span class="bb-addon-fee is-on-request">${ON_REQUEST_LABEL}</span>`
+      : `<span class="bb-addon-fee">+${formatPrice(a.fee, symbol)}</span>`;
+    return `<label class="bb-addon" for="bb-addon-${i}">`
+      + `<input type="checkbox" id="bb-addon-${i}" data-addon-index="${i}">`
+      + `<span class="bb-addon-name">${a.label}</span>${fee}</label>`;
+  }).join('');
+
+  const boxes = Array.from(wrap.querySelectorAll('input[data-addon-index]'));
 
   const render = () => {
-    const on = !!(box && box.checked);
-    // script.js pulls these off <body> when it builds the booking message.
-    if (on) {
-      document.body.dataset.addons = `${addon.label} — +${formatPrice(addon.fee, symbol)}`;
+    const chosen = boxes
+      .map((b, i) => (b.checked ? addons[i] : null))
+      .filter(Boolean);
+
+    // script.js reads these off <body> when it builds the booking message.
+    if (chosen.length) {
+      document.body.dataset.addons = chosen
+        .map(a => a.fee === null
+          ? `${a.label} (${ON_REQUEST_LABEL})`
+          : `${a.label} \u2014 +${formatPrice(a.fee, symbol)}`)
+        .join(', ');
     } else {
       delete document.body.dataset.addons;
     }
+
+    const extra = chosen.reduce((sum, a) => sum + (a.fee || 0), 0);
+    const onRequest = chosen.some(a => a.fee === null);
+
+    if (totalNote) {
+      totalNote.hidden = !onRequest;
+      if (onRequest) {
+        totalNote.textContent = '* '
+          + chosen.filter(a => a.fee === null).map(a => a.label).join(', ')
+          + '-\u098f\u09b0 \u09ae\u09c2\u09b2\u09cd\u09af \u0986\u09b2\u09cb\u099a\u09a8\u09be \u09b8\u09be\u09aa\u09c7\u0995\u09cd\u09b7\u09c7 \u09a8\u09bf\u09b0\u09cd\u09a7\u09be\u09b0\u09bf\u09a4 \u09b9\u09ac\u09c7\u0964';
+      }
+    }
+
     if (!totalValue) return;
     if (base === null) {
-      // No price set on this package yet - show the extra on its own rather
-      // than inventing a total.
-      totalValue.textContent = on ? `+${formatPrice(addon.fee, symbol)}` : '';
+      // No price on this package yet - show the extras alone rather than
+      // inventing a total.
+      totalValue.textContent = extra ? `+${formatPrice(extra, symbol)}` : '';
       return;
     }
-    totalValue.textContent = formatPrice(on ? base + addon.fee : base, symbol);
+    totalValue.textContent = formatPrice(base + extra, symbol);
   };
 
-  if (box && !box.dataset.wired) {
-    box.dataset.wired = '1';
-    box.addEventListener('change', render);
-  }
+  boxes.forEach(b => b.addEventListener('change', render));
   render();
 }

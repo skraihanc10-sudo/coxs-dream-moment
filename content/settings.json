@@ -26,8 +26,14 @@
     "image": "images/hero-wide.jpg"
   },
   "footer_desc": "কক্সবাজার সমুদ্র সৈকতে স্বপ্নের প্রপোজাল ও ডেকোরেশন সার্ভিস। আপনার বিশেষ মুহূর্তকে করে তুলি স্মরণীয়।",
-  "drone_addon": {
-    "label": "Drone Shot (Cinematic Special Drone Video)",
-    "fee": "2000"
-  }
+  "addons": [
+    {
+      "label": "Drone Shot (Cinematic Special Drone Video)",
+      "fee": "2000"
+    },
+    {
+      "label": "Special Dinner",
+      "fee": ""
+    }
+  ]
 }

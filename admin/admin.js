@@ -179,14 +179,17 @@ function renderSettings() {
   addonTitle.textContent = 'Booking extras';
   root.appendChild(addonTitle);
 
-  // Offered on every package page and added on top of the package price.
-  const addon = s.drone_addon || (s.drone_addon = { label: 'Drone Shot (Cinematic Special Drone Video)', fee: '2000' });
-  [['label', 'Extra service name'], ['fee', 'Extra fee (numbers only)']].forEach(([key, label]) => {
-    const field = document.createElement('div');
-    field.className = 'field';
-    field.innerHTML = `<label>${label}</label><input data-addon-key="${key}" value="${escapeAttr(addon[key] || '')}">`;
-    root.appendChild(field);
-  });
+  // Offered on every package page. A blank fee means the price is agreed with
+  // the customer rather than shown, so leave it empty for those.
+  if (!Array.isArray(s.addons)) {
+    s.addons = s.drone_addon ? [s.drone_addon] : [];
+    delete s.drone_addon;
+  }
+  const addonsWrap = document.createElement('div');
+  addonsWrap.className = 'full';
+  addonsWrap.id = 'addons-repeater';
+  root.appendChild(addonsWrap);
+  renderAddons(addonsWrap);
 
   const heroTitle = document.createElement('div');
   heroTitle.className = 'section-title';
@@ -210,6 +213,43 @@ function renderSettings() {
   heroImgField.innerHTML = '<label>Hero image</label>';
   heroImgField.appendChild(buildImageField(hero.image, path => (hero.image = path)));
   root.appendChild(heroImgField);
+}
+
+function renderAddons(wrap) {
+  const list = state.settings.addons;
+  wrap.innerHTML = '';
+
+  list.forEach((addon, i) => {
+    const row = document.createElement('div');
+    row.className = 'repeater-item';
+    row.innerHTML = `
+      <input placeholder="Extra service name" value="${escapeAttr(addon.label || '')}"
+             data-addon-idx="${i}" data-addon-field="label">
+      <input placeholder="Fee \u2014 leave blank to quote on request"
+             value="${escapeAttr(addon.fee || '')}"
+             data-addon-idx="${i}" data-addon-field="fee">
+      <button type="button" class="remove-btn" title="\u09b8\u09b0\u09be\u09a8">&times;</button>`;
+    row.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', e => {
+        list[e.target.dataset.addonIdx][e.target.dataset.addonField] = e.target.value;
+      });
+    });
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      list.splice(i, 1);
+      renderAddons(wrap);
+    });
+    wrap.appendChild(row);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'add-row-btn';
+  addBtn.textContent = '+ Add an extra service';
+  addBtn.addEventListener('click', () => {
+    list.push({ label: '', fee: '' });
+    renderAddons(wrap);
+  });
+  wrap.appendChild(addBtn);
 }
 
 function renderHours(container) {
@@ -251,7 +291,6 @@ function collectSettings() {
   const s = state.settings;
   $$('#settings-form [data-key]').forEach(el => (s[el.dataset.key] = el.value));
   $$('#settings-form [data-hero-key]').forEach(el => (s.hero[el.dataset.heroKey] = el.value));
-  $$('#settings-form [data-addon-key]').forEach(el => (s.drone_addon[el.dataset.addonKey] = el.value));
   return s;
 }
 
