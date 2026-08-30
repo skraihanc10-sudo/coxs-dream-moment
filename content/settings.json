@@ -1,31 +1,31 @@
 {
-  "topbar_announcement": "Serving all across Cox's Bazar 🌊",
+  "topbar_announcement": "কক্সবাজার জুড়ে সার্ভিস প্রদান করি 🌊",
   "phone_display": "+880 1898-841305",
   "whatsapp_number": "8801898841305",
   "email": "hello@coxsdreammoment.com",
   "facebook_url": "https://www.facebook.com/profile.php?id=61579034380434",
   "facebook_label": "Cox's Dream Moment",
-  "service_area": "Cox's Bazar sea beach and the surrounding area",
-  "address": "Cox's Bazar, Bangladesh",
+  "service_area": "কক্সবাজার সমুদ্র সৈকত ও আশেপাশের এলাকা",
+  "address": "কক্সবাজার, বাংলাদেশ",
   "hours": [
     {
-      "days": "Saturday – Thursday",
-      "time": "9:00 AM – 9:00 PM"
+      "days": "শনি – বৃহস্পতি",
+      "time": "সকাল ৯টা – রাত ৯টা"
     },
     {
-      "days": "Friday",
-      "time": "2:00 PM – 9:00 PM"
+      "days": "শুক্রবার",
+      "time": "দুপুর ২টা – রাত ৯টা"
     }
   ],
-  "hours_note": "On the day of your event our team is on the beach from 2 hours before setup.",
+  "hours_note": "ইভেন্টের দিন আমাদের টিম সেটআপের ২ ঘণ্টা আগে থেকেই সৈকতে উপস্থিত থাকে।",
   "hero": {
-    "eyebrow": "The finest moments on Cox's Bazar beach",
-    "heading": "We Set the Stage For<br>Your Dream Proposal",
-    "subheading": "Sunset light, flowers everywhere — book your special evening on Cox's Bazar beach.",
-    "cta_text": "View packages",
+    "eyebrow": "কক্সবাজারের সমুদ্র সৈকতে সেরা মুহূর্ত",
+    "heading": "আপনার স্বপ্নের প্রপোজাল মুহূর্ত<br>আমরা সাজিয়ে দিই",
+    "subheading": "সূর্যাস্তের আলোয়, ফুলের সাজে — কক্সবাজার সৈকতে বুক করুন আপনার বিশেষ সন্ধ্যা।",
+    "cta_text": "প্যাকেজ দেখুন",
     "image": "images/hero-wide.jpg"
   },
-  "footer_desc": "Dream proposal and decoration services on Cox's Bazar sea beach. We make your special moment unforgettable.",
+  "footer_desc": "কক্সবাজার সমুদ্র সৈকতে স্বপ্নের প্রপোজাল ও ডেকোরেশন সার্ভিস। আপনার বিশেষ মুহূর্তকে করে তুলি স্মরণীয়।",
   "drone_addon": {
     "label": "Drone Shot (Cinematic Special Drone Video)",
     "fee": "2000"

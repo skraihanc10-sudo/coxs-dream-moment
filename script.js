@@ -33,10 +33,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const addons = document.body.dataset.addons || '';
 
-    const codeLine = packageCode ? `%0A🔖 Package Code: ${encodeURIComponent(packageCode)}` : '';
-    const addonLine = addons ? `%0A➕ Extra service: ${encodeURIComponent(addons)}` : '';
+    const codeLine = packageCode ? `%0A🔖 প্যাকেজ কোড: ${encodeURIComponent(packageCode)}` : '';
+    const addonLine = addons ? `%0A➕ অতিরিক্ত সার্ভিস: ${encodeURIComponent(addons)}` : '';
 
-    return `Hello, I would like to make a booking.%0A%0A🎁 Package: ${encodeURIComponent(productName)}${codeLine}%0A📍 Location: ${encodeURIComponent(location)}%0A📅 Date: ${encodeURIComponent(date)}%0A👥 Guests: ${encodeURIComponent(guests)}%0A⏰ Time slot: ${encodeURIComponent(slot)}%0A💐 Occasion: ${encodeURIComponent(occasion)}${addonLine}%0A💰 Total: ${encodeURIComponent(total)}`;
+    return `আসসালামু আলাইকুম, আমি বুকিং করতে চাই।%0A%0A🎁 প্যাকেজ: ${encodeURIComponent(productName)}${codeLine}%0A📍 লোকেশন: ${encodeURIComponent(location)}%0A📅 তারিখ: ${encodeURIComponent(date)}%0A👥 গেস্ট: ${encodeURIComponent(guests)}%0A⏰ সময়: ${encodeURIComponent(slot)}%0A💐 উপলক্ষ: ${encodeURIComponent(occasion)}${addonLine}%0A💰 সর্বমোট: ${encodeURIComponent(total)}`;
   }
 
   if (bookBtn) {

@@ -48,7 +48,7 @@ function productCardHTML(pkg) {
     code +
     `<div class="product-loc">${PIN_SVG}Cox's Bazar</div>` +
     (pkg.price
-      ? `<div class="product-price"><span class="from">From</span>${oldPrice}${pkg.price}</div>`
+      ? `<div class="product-price"><span class="from">শুরু</span>${oldPrice}${pkg.price}</div>`
       : '') +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
     `<a href="${url}" class="book-btn">Book Now</a></div></div></div>`
@@ -100,7 +100,7 @@ function applySettings(settings) {
   document.querySelectorAll('.footer-col').forEach(col => {
     const h4 = col.querySelector('h4');
     const p = col.querySelector('p');
-    if (h4 && p && h4.textContent.trim() === 'Contact') p.textContent = settings.address;
+    if (h4 && p && h4.textContent.trim() === 'যোগাযোগ') p.textContent = settings.address;
   });
 }
 

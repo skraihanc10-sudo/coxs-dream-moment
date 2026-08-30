@@ -4,13 +4,13 @@
       "slug": "simple",
       "code": "CDM 101",
       "name": "Sweet Beginnings Package",
-      "badge": "Basic",
-      "trust_extra": "Basic package",
+      "badge": "Sunset",
+      "trust_extra": "সূর্যাস্তের সময়",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "sunset"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -25,22 +25,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "The perfect package for a small, sweet proposal. A simple floral setup on Cox's Bazar beach in the light of the sunset, a neon sign and 30 minutes of professional photography — everything you need to create a memorable moment on a modest budget.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "sunset",
       "code": "CDM 102",
       "name": "Golden Sunset Package",
-      "badge": "Popular",
-      "trust_extra": "Most popular",
+      "badge": "Sunset",
+      "trust_extra": "সূর্যাস্তের সময়",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal",
-        "dinner"
+        "sunset"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -55,22 +54,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "We have put together a special 50% discount just for you! This package normally costs ৳ 14,000, but you can book it now for only ৳ 6,999. Beautiful floral styling, welcome drinks, mineral water, unlimited photography, an edited video and a free music system — everything you need to make your special moment even more beautiful and memorable.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "luxury",
       "code": "CDM 103",
       "name": "Forever Luxury Package",
-      "badge": "Premium",
-      "trust_extra": "Premium experience",
+      "badge": "Sunset",
+      "trust_extra": "সূর্যাস্তের সময়",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal",
-        "dinner"
+        "sunset"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -85,22 +83,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "Our premium experience on Cox's Bazar beach — a premium floral arch, a candlelight dinner setup, two photographers plus drone photography, a custom cake, a cinematic video and private waiter service. Normally ৳ 22,000, now only ৳ 14,999 with 32% off.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "royal",
       "code": "CDM 104",
       "name": "Royal Luxury Package",
-      "badge": "Luxury",
-      "trust_extra": "Royal experience",
+      "badge": "Night",
+      "trust_extra": "রাতের আয়োজন",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal",
-        "dinner"
+        "night"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -115,21 +112,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "Our grandest and most complete experience — everything in the Forever Luxury package plus full premium floral decoration, a royal theme, a 3-course candlelight dinner and live music or a private sound system. Normally ৳ 30,000, now only ৳ 18,999 with 37% off.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "sunset-serenade",
       "code": "",
       "name": "Sunset Serenade Package",
-      "badge": "New",
-      "trust_extra": "Sunset setting",
+      "badge": "Sunset",
+      "trust_extra": "সূর্যাস্তের সময়",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "sunset"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -144,21 +141,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "A beachside setup timed to the sunset, with premium decoration, welcome drinks and full photo and video coverage of the moment.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "ocean-breeze",
       "code": "",
       "name": "Ocean Breeze Package",
-      "badge": "New",
-      "trust_extra": "Seaside setting",
+      "badge": "Sunset",
+      "trust_extra": "সূর্যাস্তের সময়",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "sunset"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -173,21 +170,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "An open-air setup right by the water, styled with premium decoration and covered end to end by our photography and cinematography team.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "moonlight-romance",
       "code": "",
       "name": "Moonlight Romance Package",
       "badge": "Night",
-      "trust_extra": "After dark",
+      "trust_extra": "রাতের আয়োজন",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "night"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -202,21 +199,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "A late-evening setup under the stars, lit for the camera, with a customized cake and a cinematic video of the whole evening.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "starlight-dinner",
       "code": "",
       "name": "Starlight Dinner Package",
-      "badge": "Dinner",
-      "trust_extra": "Dinner setting",
+      "badge": "Night",
+      "trust_extra": "রাতের আয়োজন",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "night"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -231,21 +228,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "A private dinner setting on the sand with premium luxury decoration, welcome drinks and professional photography throughout.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "grand-celebration",
       "code": "",
       "name": "Grand Celebration Package",
-      "badge": "Celebration",
-      "trust_extra": "For larger groups",
+      "badge": "Night",
+      "trust_extra": "রাতের আয়োজন",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "night"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -260,21 +257,21 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "Built for birthdays, anniversaries and family celebrations — a larger premium setup with a customized cake, music and full coverage.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     },
     {
       "slug": "signature-elite",
       "code": "",
       "name": "Signature Elite Package",
-      "badge": "Signature",
-      "trust_extra": "Our signature setup",
+      "badge": "Night",
+      "trust_extra": "রাতের আয়োজন",
       "price": "",
       "old_price": "",
       "discount": "",
       "categories": [
-        "proposal"
+        "night"
       ],
       "main_image": "",
       "thumbnails": [],
@@ -289,9 +286,9 @@
         "Premium luxury decoration setup",
         "And many more attractive facilities!"
       ],
-      "description": "Our signature arrangement, with the most elaborate premium decoration we offer and complete photo and cinematic video coverage from arrival to finish.",
-      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
-      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+      "description": "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।",
+      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
+      "faq": "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
     }
   ]
 }

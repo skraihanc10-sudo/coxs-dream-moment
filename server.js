@@ -152,48 +152,6 @@ function writeJSON(file, data) {
 }
 
 // Runs after the JSON helpers exist; safe to re-run on every boot.
-// ---------------------------------------------------------------- English content
-// The site was authored in Bengali and later switched to English. Live content
-// lives in the mounted volume rather than in this repo, so translating the seed
-// files is not enough - anything already deployed has to be migrated in place.
-//
-// content/i18n-en.json is an exact-match Bengali -> English dictionary. Only a
-// string that matches a key outright is replaced, so anything an admin has
-// since written themselves is left alone, and re-running is a no-op once every
-// value is English.
-function translateContentToEnglish() {
-  const dict = readJSON(path.join(APP_DIR, 'content', 'i18n-en.json'), null);
-  if (!dict) return;
-
-  let replaced = 0;
-  const convert = (value) => {
-    if (typeof value === 'string') {
-      if (Object.prototype.hasOwnProperty.call(dict, value)) {
-        replaced++;
-        return dict[value];
-      }
-      return value;
-    }
-    if (Array.isArray(value)) return value.map(convert);
-    if (value && typeof value === 'object') {
-      const out = {};
-      for (const key of Object.keys(value)) out[key] = convert(value[key]);
-      return out;
-    }
-    return value;
-  };
-
-  for (const file of [SETTINGS_FILE, PACKAGES_FILE, GALLERY_FILE]) {
-    const data = readJSON(file, null);
-    if (!data) continue;
-    const before = replaced;
-    const translated = convert(data);
-    if (replaced > before) writeJSON(file, translated);
-  }
-
-  if (replaced) console.log(`Translated ${replaced} content string(s) to English`);
-}
-translateContentToEnglish();
 
 // ------------------------------------------------------ new packages from a release
 // Packages live in the volume, so one added to the seed file would never reach a
@@ -322,6 +280,53 @@ runOnce('clear-package-prices', () => {
   return true;
 });
 
+// Half the catalogue is a sunset setting and half is after dark, and the
+// descriptive copy moved to Bangla while names, codes, inclusions and prices
+// stay in English. Both are content, so the deployed volume needs them applied
+// directly rather than through the seed.
+runOnce('sunset-night-bangla', () => {
+  const sunset = ["simple", "sunset", "luxury", "sunset-serenade", "ocean-breeze"];
+  const night = ["royal", "moonlight-romance", "starlight-dinner", "grand-celebration", "signature-elite"];
+  const copy = {
+    sunset: { trust_extra: "সূর্যাস্তের সময়", description: "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।" },
+    night: { trust_extra: "রাতের আয়োজন", description: "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।" },
+  };
+  const policy = "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।";
+  const faq = "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।";
+
+  const data = readJSON(PACKAGES_FILE, null);
+  if (data && Array.isArray(data.packages)) {
+    data.packages.forEach(p => {
+      const group = sunset.includes(p.slug) ? 'sunset'
+                  : night.includes(p.slug) ? 'night'
+                  : null;
+      if (!group) return;   // something the owner added since - leave it alone
+      p.badge = group === 'sunset' ? 'Sunset' : 'Night';
+      p.categories = [group];
+      p.trust_extra = copy[group].trust_extra;
+      p.description = copy[group].description;
+      p.booking_policy = policy;
+      p.faq = faq;
+    });
+    writeJSON(PACKAGES_FILE, data);
+  }
+
+  const settings = readJSON(SETTINGS_FILE, null);
+  if (settings) {
+    Object.assign(settings, {"topbar_announcement": "কক্সবাজার জুড়ে সার্ভিস প্রদান করি 🌊", "service_area": "কক্সবাজার সমুদ্র সৈকত ও আশেপাশের এলাকা", "address": "কক্সবাজার, বাংলাদেশ", "hours_note": "ইভেন্টের দিন আমাদের টিম সেটআপের ২ ঘণ্টা আগে থেকেই সৈকতে উপস্থিত থাকে।", "footer_desc": "কক্সবাজার সমুদ্র সৈকতে স্বপ্নের প্রপোজাল ও ডেকোরেশন সার্ভিস। আপনার বিশেষ মুহূর্তকে করে তুলি স্মরণীয়।"});
+    settings.hours = [{"days": "শনি – বৃহস্পতি", "time": "সকাল ৯টা – রাত ৯টা"}, {"days": "শুক্রবার", "time": "দুপুর ২টা – রাত ৯টা"}];
+    settings.hero = Object.assign({}, settings.hero, {"eyebrow": "কক্সবাজারের সমুদ্র সৈকতে সেরা মুহূর্ত", "heading": "আপনার স্বপ্নের প্রপোজাল মুহূর্ত<br>আমরা সাজিয়ে দিই", "subheading": "সূর্যাস্তের আলোয়, ফুলের সাজে — কক্সবাজার সৈকতে বুক করুন আপনার বিশেষ সন্ধ্যা।", "cta_text": "প্যাকেজ দেখুন"});
+    writeJSON(SETTINGS_FILE, settings);
+  }
+
+  const gallery = readJSON(GALLERY_FILE, null);
+  if (gallery) {
+    gallery.note = "* বর্তমানে ডেমো গ্যালারি — শীঘ্রই আরও বাস্তব ইভেন্টের ছবি যুক্ত হবে।";
+    writeJSON(GALLERY_FILE, gallery);
+  }
+
+  return true;
+});
 
 
 

@@ -350,7 +350,7 @@ function renderPackageCard(pkg, idx) {
   catField.innerHTML = '<label>Categories</label>';
   const chipRow = document.createElement('div');
   chipRow.className = 'chip-row';
-  [['proposal', 'Proposal decoration'], ['dinner', 'Candlelight dinner'], ['gift', 'Gifts and hampers']].forEach(([val, label]) => {
+  [['sunset', 'Sunset (সূর্যাস্তের সময়)'], ['night', 'Night (রাতের আয়োজন)']].forEach(([val, label]) => {
     const chip = document.createElement('label');
     chip.className = 'chip-check';
     const checked = (pkg.categories || []).includes(val);
