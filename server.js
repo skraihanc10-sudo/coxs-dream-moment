@@ -133,7 +133,7 @@ function verifySession(token) {
 
 function requireAuth(req, res, next) {
   if (verifySession(req.cookies && req.cookies.admin_session)) return next();
-  res.status(401).json({ error: 'লগইন প্রয়োজন' });
+  res.status(401).json({ error: 'Login required' });
 }
 
 // ---------------------------------------------------------------- json helpers
@@ -152,6 +152,50 @@ function writeJSON(file, data) {
 // Runs after the JSON helpers exist; safe to re-run on every boot.
 backfillPackageCodes();
 
+// ---------------------------------------------------------------- English content
+// The site was authored in Bengali and later switched to English. Live content
+// lives in the mounted volume rather than in this repo, so translating the seed
+// files is not enough - anything already deployed has to be migrated in place.
+//
+// content/i18n-en.json is an exact-match Bengali -> English dictionary. Only a
+// string that matches a key outright is replaced, so anything an admin has
+// since written themselves is left alone, and re-running is a no-op once every
+// value is English.
+function translateContentToEnglish() {
+  const dict = readJSON(path.join(APP_DIR, 'content', 'i18n-en.json'), null);
+  if (!dict) return;
+
+  let replaced = 0;
+  const convert = (value) => {
+    if (typeof value === 'string') {
+      if (Object.prototype.hasOwnProperty.call(dict, value)) {
+        replaced++;
+        return dict[value];
+      }
+      return value;
+    }
+    if (Array.isArray(value)) return value.map(convert);
+    if (value && typeof value === 'object') {
+      const out = {};
+      for (const key of Object.keys(value)) out[key] = convert(value[key]);
+      return out;
+    }
+    return value;
+  };
+
+  for (const file of [SETTINGS_FILE, PACKAGES_FILE, GALLERY_FILE]) {
+    const data = readJSON(file, null);
+    if (!data) continue;
+    const before = replaced;
+    const translated = convert(data);
+    if (replaced > before) writeJSON(file, translated);
+  }
+
+  if (replaced) console.log(`Translated ${replaced} content string(s) to English`);
+}
+translateContentToEnglish();
+
+
 // ---------------------------------------------------------------- app
 const app = express();
 app.disable('x-powered-by');
@@ -168,13 +212,13 @@ app.use('/images', express.static(IMAGES_DIR, { maxAge: '7d' }));
 // ---------------------------------------------------------------- admin auth
 app.post('/admin/api/login', (req, res) => {
   if (!ADMIN_PASSWORD) {
-    return res.status(500).json({ error: 'সার্ভারে ADMIN_PASSWORD সেট করা নেই। Railway Variables-এ যোগ করুন।' });
+    return res.status(500).json({ error: 'ADMIN_PASSWORD is not set on the server. Add it under Railway Variables.' });
   }
   const { password } = req.body || {};
   const given = Buffer.from(String(password || ''));
   const expected = Buffer.from(ADMIN_PASSWORD);
   const ok = given.length === expected.length && crypto.timingSafeEqual(given, expected);
-  if (!ok) return res.status(401).json({ error: 'পাসওয়ার্ড ভুল' });
+  if (!ok) return res.status(401).json({ error: 'Wrong password' });
 
   const expiresAt = Date.now() + SESSION_MAX_AGE_MS;
   res.cookie('admin_session', signSession(expiresAt), {
@@ -206,23 +250,23 @@ app.get('/admin/api/data', requireAuth, (req, res) => {
 
 app.put('/admin/api/settings', requireAuth, (req, res) => {
   const body = req.body;
-  if (!body || typeof body !== 'object') return res.status(400).json({ error: 'অবৈধ ডেটা' });
+  if (!body || typeof body !== 'object') return res.status(400).json({ error: 'Invalid data' });
   writeJSON(SETTINGS_FILE, body);
   res.json({ ok: true });
 });
 
 app.put('/admin/api/packages', requireAuth, (req, res) => {
   const body = req.body;
-  if (!body || !Array.isArray(body.packages)) return res.status(400).json({ error: 'অবৈধ ডেটা' });
+  if (!body || !Array.isArray(body.packages)) return res.status(400).json({ error: 'Invalid data' });
 
   const slugs = new Set();
   const codes = new Set();
   for (const pkg of body.packages) {
     if (!pkg.slug || typeof pkg.slug !== 'string' || !/^[a-z0-9-]+$/.test(pkg.slug)) {
-      return res.status(400).json({ error: `Slug অবৈধ: "${pkg.slug}" — শুধু ছোট হাতের ইংরেজি অক্ষর, সংখ্যা ও হাইফেন ব্যবহার করুন` });
+      return res.status(400).json({ error: `Invalid slug: "${pkg.slug}" — use lowercase letters, numbers and hyphens only` });
     }
     if (slugs.has(pkg.slug)) {
-      return res.status(400).json({ error: `Slug "${pkg.slug}" একাধিকবার ব্যবহার হয়েছে — প্রতিটা প্যাকেজের slug অনন্য হতে হবে` });
+      return res.status(400).json({ error: `Slug "${pkg.slug}" is used more than once — every package needs a unique slug` });
     }
     slugs.add(pkg.slug);
 
@@ -233,11 +277,11 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
     if (typed) {
       const n = codeNumber(typed);
       if (n === null) {
-        return res.status(400).json({ error: `প্যাকেজ কোড অবৈধ: "${typed}" — ফরম্যাট হবে "CDM 101"` });
+        return res.status(400).json({ error: `Invalid package code: "${typed}" — the format is "CDM 101"` });
       }
       pkg.code = `${CODE_PREFIX} ${n}`;
       if (codes.has(pkg.code)) {
-        return res.status(400).json({ error: `প্যাকেজ কোড "${pkg.code}" একাধিকবার ব্যবহার হয়েছে — প্রতিটা কোড অনন্য হতে হবে` });
+        return res.status(400).json({ error: `Package Code "${pkg.code}" is used more than once — every code must be unique` });
       }
       codes.add(pkg.code);
     }
@@ -263,7 +307,7 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
 
 app.put('/admin/api/gallery', requireAuth, (req, res) => {
   const body = req.body;
-  if (!body || !Array.isArray(body.items)) return res.status(400).json({ error: 'অবৈধ ডেটা' });
+  if (!body || !Array.isArray(body.items)) return res.status(400).json({ error: 'Invalid data' });
   writeJSON(GALLERY_FILE, body);
   res.json({ ok: true });
 });
@@ -290,7 +334,7 @@ const upload = multer({
 });
 
 app.post('/admin/api/upload', requireAuth, upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'ছবি আপলোড ব্যর্থ (jpg/png/webp/gif, ৮MB পর্যন্ত)' });
+  if (!req.file) return res.status(400).json({ error: 'Image upload failed (jpg/png/webp/gif, up to 8MB)' });
   res.json({ path: `images/${req.file.filename}` });
 });
 

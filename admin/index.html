@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,14 +19,14 @@
         <span class="brand-mark">CDM</span>
         <span>
           <span class="login-title">Cox's Dream Moment</span>
-          <span class="login-sub">Admin প্যানেল</span>
+          <span class="login-sub">Admin panel</span>
         </span>
       </span>
     </div>
-    <p class="login-sub login-sub-standalone">Admin প্যানেল</p>
-    <label>পাসওয়ার্ড</label>
+    <p class="login-sub login-sub-standalone">Admin panel</p>
+    <label>Password</label>
     <input type="password" id="login-password" autocomplete="current-password" required>
-    <button type="submit">লগইন করুন</button>
+    <button type="submit">Log in</button>
     <p id="login-error" class="error-text" hidden></p>
   </form>
 </div>
@@ -40,15 +40,15 @@
       <span>Admin</span>
     </div>
     <div class="admin-header-actions">
-      <a href="../shop.html" target="_blank" rel="noopener" class="btn-ghost-sm">সাইট দেখুন ↗</a>
-      <button id="logout-btn" class="btn-ghost-sm">লগআউট</button>
+      <a href="../shop.html" target="_blank" rel="noopener" class="btn-ghost-sm">View site ↗</a>
+      <button id="logout-btn" class="btn-ghost-sm">Log out</button>
     </div>
   </header>
 
   <nav class="admin-tabs">
-    <button class="admin-tab active" data-tab="packages">প্যাকেজসমূহ</button>
-    <button class="admin-tab" data-tab="settings">সাইট সেটিংস</button>
-    <button class="admin-tab" data-tab="gallery">গ্যালারি</button>
+    <button class="admin-tab active" data-tab="packages">Packages</button>
+    <button class="admin-tab" data-tab="settings">Site settings</button>
+    <button class="admin-tab" data-tab="gallery">Gallery</button>
   </nav>
 
   <main class="admin-main">
@@ -57,10 +57,10 @@
     <!-- ===================== PACKAGES TAB ===================== -->
     <section id="tab-packages" class="admin-panel">
       <div class="panel-head">
-        <h2>প্যাকেজসমূহ</h2>
+        <h2>Packages</h2>
         <div>
-          <button id="add-package-btn" class="btn-primary-sm">+ নতুন প্যাকেজ</button>
-          <button id="save-packages-btn" class="btn-primary-sm">সেভ করুন</button>
+          <button id="add-package-btn" class="btn-primary-sm">+ New package</button>
+          <button id="save-packages-btn" class="btn-primary-sm">Save</button>
         </div>
       </div>
       <div id="packages-list"></div>
@@ -69,8 +69,8 @@
     <!-- ===================== SETTINGS TAB ===================== -->
     <section id="tab-settings" class="admin-panel" hidden>
       <div class="panel-head">
-        <h2>সাইট সেটিংস</h2>
-        <button id="save-settings-btn" class="btn-primary-sm">সেভ করুন</button>
+        <h2>Site settings</h2>
+        <button id="save-settings-btn" class="btn-primary-sm">Save</button>
       </div>
       <div id="settings-form" class="form-grid"></div>
     </section>
@@ -78,10 +78,10 @@
     <!-- ===================== GALLERY TAB ===================== -->
     <section id="tab-gallery" class="admin-panel" hidden>
       <div class="panel-head">
-        <h2>গ্যালারি</h2>
+        <h2>Gallery</h2>
         <div>
-          <button id="add-gallery-btn" class="btn-primary-sm">+ নতুন ছবি</button>
-          <button id="save-gallery-btn" class="btn-primary-sm">সেভ করুন</button>
+          <button id="add-gallery-btn" class="btn-primary-sm">+ New image</button>
+          <button id="save-gallery-btn" class="btn-primary-sm">Save</button>
         </div>
       </div>
       <div id="gallery-list"></div>
@@ -94,7 +94,7 @@
     <img class="image-preview" src="" alt="">
     <div class="image-field-actions">
       <input type="file" accept="image/*" class="image-input" hidden>
-      <button type="button" class="btn-ghost-sm image-upload-btn">ছবি বদলান</button>
+      <button type="button" class="btn-ghost-sm image-upload-btn">Change image</button>
       <span class="image-path"></span>
     </div>
   </div>

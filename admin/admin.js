@@ -29,7 +29,7 @@ async function api(path, options) {
     body: options && options.body ? JSON.stringify(options.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'অজানা সমস্যা হয়েছে');
+  if (!res.ok) throw new Error(data.error || 'Something went wrong');
   return data;
 }
 
@@ -97,7 +97,7 @@ function buildImageField(initialPath, onChange) {
 
   function setPath(p) {
     img.src = p || '';
-    pathSpan.textContent = p || '(ছবি নেই)';
+    pathSpan.textContent = p || '(no image)';
   }
   setPath(initialPath);
 
@@ -105,21 +105,21 @@ function buildImageField(initialPath, onChange) {
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
-    uploadBtn.textContent = 'আপলোড হচ্ছে...';
+    uploadBtn.textContent = 'Uploading...';
     uploadBtn.disabled = true;
     try {
       const formData = new FormData();
       formData.append('image', file);
       const res = await fetch('/admin/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'আপলোড ব্যর্থ');
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
       setPath(data.path);
       onChange(data.path);
-      toast('ছবি আপলোড হয়েছে', 'success');
+      toast('Image uploaded', 'success');
     } catch (err) {
       toast(err.message, 'error');
     } finally {
-      uploadBtn.textContent = 'ছবি বদলান';
+      uploadBtn.textContent = 'Change image';
       uploadBtn.disabled = false;
       fileInput.value = '';
     }
@@ -130,15 +130,15 @@ function buildImageField(initialPath, onChange) {
 
 // ---------------------------------------------------------------- settings tab
 const SETTINGS_TEXT_FIELDS = [
-  ['topbar_announcement', 'টপবারের ঘোষণা'],
-  ['phone_display', 'ফোন নম্বর (দেখানোর জন্য)'],
-  ['whatsapp_number', 'WhatsApp নম্বর (শুধু সংখ্যা, দেশের কোডসহ)'],
-  ['email', 'ইমেইল'],
-  ['facebook_url', 'Facebook পেজ লিংক'],
-  ['facebook_label', 'Facebook লেবেল টেক্সট'],
-  ['service_area', 'সার্ভিস এরিয়া'],
-  ['address', 'ঠিকানা'],
-  ['hours_note', 'সময়ের নিচে ছোট নোট'],
+  ['topbar_announcement', 'Top bar announcement'],
+  ['phone_display', 'Phone number (as displayed)'],
+  ['whatsapp_number', 'WhatsApp number (digits only, including country code)'],
+  ['email', 'Email'],
+  ['facebook_url', 'Facebook page link'],
+  ['facebook_label', 'Facebook label text'],
+  ['service_area', 'Service area'],
+  ['address', 'Address'],
+  ['hours_note', 'Small note under the hours'],
 ];
 
 function renderSettings() {
@@ -148,7 +148,7 @@ function renderSettings() {
 
   const section1 = document.createElement('div');
   section1.className = 'section-title';
-  section1.textContent = 'যোগাযোগ ও ঘোষণা';
+  section1.textContent = 'Contact and announcements';
   root.appendChild(section1);
 
   SETTINGS_TEXT_FIELDS.forEach(([key, label]) => {
@@ -160,12 +160,12 @@ function renderSettings() {
 
   const descField = document.createElement('div');
   descField.className = 'field full';
-  descField.innerHTML = `<label>ফুটারের বিবরণ</label><textarea data-key="footer_desc">${escapeHTML(s.footer_desc || '')}</textarea>`;
+  descField.innerHTML = `<label>Footer description</label><textarea data-key="footer_desc">${escapeHTML(s.footer_desc || '')}</textarea>`;
   root.appendChild(descField);
 
   const hoursTitle = document.createElement('div');
   hoursTitle.className = 'section-title';
-  hoursTitle.textContent = 'কার্যক্রমের সময়';
+  hoursTitle.textContent = 'Opening hours';
   root.appendChild(hoursTitle);
 
   const hoursWrap = document.createElement('div');
@@ -176,11 +176,11 @@ function renderSettings() {
 
   const heroTitle = document.createElement('div');
   heroTitle.className = 'section-title';
-  heroTitle.textContent = 'হোমপেজ হিরো সেকশন';
+  heroTitle.textContent = 'Homepage hero section';
   root.appendChild(heroTitle);
 
   const hero = s.hero || (s.hero = {});
-  [['eyebrow', 'উপরের ছোট লাইন'], ['heading', 'হেডলাইন (দুই লাইন করতে <br> লিখুন)'], ['cta_text', 'বাটনের লেখা']].forEach(([key, label]) => {
+  [['eyebrow', 'Small line above the headline'], ['heading', 'Headline (write <br> to split it over two lines)'], ['cta_text', 'Button text']].forEach(([key, label]) => {
     const field = document.createElement('div');
     field.className = 'field';
     field.innerHTML = `<label>${label}</label><input data-hero-key="${key}" value="${escapeAttr(hero[key] || '')}">`;
@@ -188,12 +188,12 @@ function renderSettings() {
   });
   const subField = document.createElement('div');
   subField.className = 'field full';
-  subField.innerHTML = `<label>সাবহেডলাইন</label><textarea data-hero-key="subheading">${escapeHTML(hero.subheading || '')}</textarea>`;
+  subField.innerHTML = `<label>Subheadline</label><textarea data-hero-key="subheading">${escapeHTML(hero.subheading || '')}</textarea>`;
   root.appendChild(subField);
 
   const heroImgField = document.createElement('div');
   heroImgField.className = 'field full';
-  heroImgField.innerHTML = '<label>হিরো ছবি</label>';
+  heroImgField.innerHTML = '<label>Hero image</label>';
   heroImgField.appendChild(buildImageField(hero.image, path => (hero.image = path)));
   root.appendChild(heroImgField);
 }
@@ -204,8 +204,8 @@ function renderHours(container) {
     const item = document.createElement('div');
     item.className = 'repeater-item';
     item.innerHTML = `
-      <input placeholder="দিন" value="${escapeAttr(row.days || '')}" data-hours-idx="${i}" data-hours-field="days">
-      <input placeholder="সময়" value="${escapeAttr(row.time || '')}" data-hours-idx="${i}" data-hours-field="time">
+      <input placeholder="Days" value="${escapeAttr(row.days || '')}" data-hours-idx="${i}" data-hours-field="days">
+      <input placeholder="Time" value="${escapeAttr(row.time || '')}" data-hours-idx="${i}" data-hours-field="time">
       <button type="button" class="remove-btn" data-remove-hours="${i}">✕</button>
     `;
     container.appendChild(item);
@@ -213,7 +213,7 @@ function renderHours(container) {
   const addBtn = document.createElement('button');
   addBtn.type = 'button';
   addBtn.className = 'add-row-btn';
-  addBtn.textContent = '+ সময়ের সারি যোগ করুন';
+  addBtn.textContent = '+ Add an hours row';
   addBtn.addEventListener('click', () => {
     state.settings.hours.push({ days: '', time: '' });
     renderHours(container);
@@ -244,7 +244,7 @@ $('#save-settings-btn').addEventListener('click', async () => {
   try {
     const payload = collectSettings();
     await api('/admin/api/settings', { method: 'PUT', body: payload });
-    toast('সেটিংস সেভ হয়েছে ✓', 'success');
+    toast('Settings saved ✓', 'success');
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -257,12 +257,12 @@ function blankPackage() {
     // Left blank on purpose: the server assigns the next free "CDM <n>"
     // on save, so nobody has to track the numbering by hand.
     code: '',
-    name: 'নতুন প্যাকেজ',
-    badge: 'নতুন',
+    name: 'New package',
+    badge: 'New',
     trust_extra: '',
-    price: '৳০',
-    old_price: '৳০',
-    discount: '০% ছাড়',
+    price: '৳0',
+    old_price: '৳0',
+    discount: '0% OFF',
     categories: ['proposal'],
     main_image: '',
     thumbnails: [],
@@ -287,11 +287,11 @@ function renderPackageCard(pkg, idx) {
   head.className = 'package-card-head';
   head.innerHTML = `
     <div class="package-card-head-title">
-      <span>${escapeHTML(pkg.name || '(নাম নেই)')}</span>
-      <span class="slug-badge">${escapeHTML(pkg.slug || 'slug নেই')}</span>
-      <span class="code-badge">${escapeHTML(pkg.code || 'কোড হবে সেভ করলে')}</span>
+      <span>${escapeHTML(pkg.name || '(no name)')}</span>
+      <span class="slug-badge">${escapeHTML(pkg.slug || 'no slug')}</span>
+      <span class="code-badge">${escapeHTML(pkg.code || 'code assigned on save')}</span>
     </div>
-    <span class="package-card-toggle">খুলতে ক্লিক করুন ▾</span>
+    <span class="package-card-toggle">Click to open ▾</span>
   `;
   head.addEventListener('click', () => card.classList.toggle('open'));
   card.appendChild(head);
@@ -312,30 +312,30 @@ function renderPackageCard(pkg, idx) {
     input.addEventListener('input', () => {
       pkg[key] = input.value;
       if (key === 'name' || key === 'slug' || key === 'code') {
-        head.querySelector('.package-card-head-title span').textContent = pkg.name || '(নাম নেই)';
-        head.querySelector('.slug-badge').textContent = pkg.slug || 'slug নেই';
-        head.querySelector('.code-badge').textContent = pkg.code || 'কোড হবে সেভ করলে';
+        head.querySelector('.package-card-head-title span').textContent = pkg.name || '(no name)';
+        head.querySelector('.slug-badge').textContent = pkg.slug || 'no slug';
+        head.querySelector('.code-badge').textContent = pkg.code || 'code assigned on save';
       }
     });
     grid.appendChild(f);
   }
 
-  field('Slug (ইউনিক, ছোট হাতের ইংরেজি/সংখ্যা/হাইফেন)', 'slug');
-  field('প্যাকেজ কোড (যেমন CDM 101 — খালি রাখলে সয়ংক্রিয়ভাবে বসবে)', 'code');
-  field('প্যাকেজের নাম', 'name');
-  field('ব্যাজ', 'badge');
-  field('ট্রাস্ট লাইনের টেক্সট', 'trust_extra');
-  field('দাম', 'price');
-  field('আগের দাম (কাটা দাম)', 'old_price');
-  field('ছাড়ের লেবেল', 'discount');
+  field('Slug (unique — lowercase letters, numbers and hyphens)', 'slug');
+  field('Package code (e.g. CDM 101 — leave blank to assign automatically)', 'code');
+  field('Package name', 'name');
+  field('Badge', 'badge');
+  field('Trust line text', 'trust_extra');
+  field('Price', 'price');
+  field('Old price (struck through)', 'old_price');
+  field('Discount label', 'discount');
 
   // categories
   const catField = document.createElement('div');
   catField.className = 'field full';
-  catField.innerHTML = '<label>ক্যাটাগরি</label>';
+  catField.innerHTML = '<label>Categories</label>';
   const chipRow = document.createElement('div');
   chipRow.className = 'chip-row';
-  [['proposal', 'প্রপোজাল ডেকোরেশন'], ['dinner', 'ক্যান্ডেললাইট ডিনার'], ['gift', 'গিফট ও হ্যাম্পার']].forEach(([val, label]) => {
+  [['proposal', 'Proposal decoration'], ['dinner', 'Candlelight dinner'], ['gift', 'Gifts and hampers']].forEach(([val, label]) => {
     const chip = document.createElement('label');
     chip.className = 'chip-check';
     const checked = (pkg.categories || []).includes(val);
@@ -356,14 +356,14 @@ function renderPackageCard(pkg, idx) {
   // main image
   const mainImgField = document.createElement('div');
   mainImgField.className = 'field full';
-  mainImgField.innerHTML = '<label>প্রধান ছবি</label>';
+  mainImgField.innerHTML = '<label>Main image</label>';
   mainImgField.appendChild(buildImageField(pkg.main_image, path => (pkg.main_image = path)));
   grid.appendChild(mainImgField);
 
   // thumbnails
   const thumbField = document.createElement('div');
   thumbField.className = 'field full';
-  thumbField.innerHTML = '<label>থাম্বনেইল ছবি</label>';
+  thumbField.innerHTML = '<label>Thumbnail images</label>';
   const thumbList = document.createElement('div');
   thumbField.appendChild(thumbList);
   grid.appendChild(thumbField);
@@ -372,7 +372,7 @@ function renderPackageCard(pkg, idx) {
   // inclusions
   const incField = document.createElement('div');
   incField.className = 'field full';
-  incField.innerHTML = '<label>প্যাকেজে যা থাকছে</label>';
+  incField.innerHTML = '<label>What&rsquo;s included</label>';
   const incList = document.createElement('div');
   incField.appendChild(incList);
   grid.appendChild(incField);
@@ -385,15 +385,15 @@ function renderPackageCard(pkg, idx) {
     f.querySelector('textarea').addEventListener('input', e => (pkg[key] = e.target.value));
     grid.appendChild(f);
   }
-  textareaField('বিবরণ (বিবরণ ট্যাব)', 'description');
-  textareaField('বুকিং নীতি', 'booking_policy');
+  textareaField('Description (Description tab)', 'description');
+  textareaField('Booking policy', 'booking_policy');
   textareaField('FAQ', 'faq');
 
   const deleteRow = document.createElement('div');
   deleteRow.className = 'field full';
-  deleteRow.innerHTML = '<button type="button" class="btn-danger-sm">এই প্যাকেজ ডিলিট করুন</button>';
+  deleteRow.innerHTML = '<button type="button" class="btn-danger-sm">Delete this package</button>';
   deleteRow.querySelector('button').addEventListener('click', () => {
-    if (!confirm(`"${pkg.name}" প্যাকেজটি ডিলিট করতে চান? সাইট থেকে সাথে সাথে বাদ যাবে।`)) return;
+    if (!confirm(`Delete the "${pkg.name}" package? It will disappear from the site immediately.`)) return;
     state.packagesData.packages.splice(idx, 1);
     renderPackages();
   });
@@ -413,7 +413,7 @@ function renderThumbnails(container, pkg) {
     imgWrap.appendChild(buildImageField(t.image, path => (t.image = path)));
     row.appendChild(imgWrap);
     const altInput = document.createElement('input');
-    altInput.placeholder = 'Alt টেক্সট';
+    altInput.placeholder = 'Alt text';
     altInput.value = t.alt || '';
     altInput.addEventListener('input', () => (t.alt = altInput.value));
     row.appendChild(altInput);
@@ -431,7 +431,7 @@ function renderThumbnails(container, pkg) {
   const addBtn = document.createElement('button');
   addBtn.type = 'button';
   addBtn.className = 'add-row-btn';
-  addBtn.textContent = '+ থাম্বনেইল যোগ করুন';
+  addBtn.textContent = '+ Add a thumbnail';
   addBtn.addEventListener('click', () => {
     pkg.thumbnails.push({ image: '', alt: '' });
     renderThumbnails(container, pkg);
@@ -463,7 +463,7 @@ function renderInclusions(container, pkg) {
   const addBtn = document.createElement('button');
   addBtn.type = 'button';
   addBtn.className = 'add-row-btn';
-  addBtn.textContent = '+ আইটেম যোগ করুন';
+  addBtn.textContent = '+ Add an item';
   addBtn.addEventListener('click', () => {
     pkg.inclusions.push('');
     renderInclusions(container, pkg);
@@ -485,11 +485,11 @@ $('#add-package-btn').addEventListener('click', () => {
 $('#save-packages-btn').addEventListener('click', async () => {
   const slugs = state.packagesData.packages.map(p => p.slug);
   const emptySlug = slugs.some(s => !s || !/^[a-z0-9-]+$/.test(s));
-  if (emptySlug) return toast('প্রতিটা প্যাকেজের Slug আবশ্যক — শুধু ছোট হাতের ইংরেজি অক্ষর, সংখ্যা ও হাইফেন', 'error');
-  if (new Set(slugs).size !== slugs.length) return toast('দুইটা প্যাকেজে একই Slug ব্যবহার করা যাবে না', 'error');
+  if (emptySlug) return toast('Every package needs a slug — lowercase letters, numbers and hyphens only', 'error');
+  if (new Set(slugs).size !== slugs.length) return toast('Two packages cannot share the same slug', 'error');
   try {
     await api('/admin/api/packages', { method: 'PUT', body: state.packagesData });
-    toast('প্যাকেজ সেভ হয়েছে ✓', 'success');
+    toast('Packages saved ✓', 'success');
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -514,11 +514,11 @@ function renderGallery() {
 
     const imgField = document.createElement('div');
     imgField.className = 'field full';
-    imgField.innerHTML = '<label>ছবি</label>';
+    imgField.innerHTML = '<label>Image</label>';
     imgField.appendChild(buildImageField(item.image, path => (item.image = path)));
     grid.appendChild(imgField);
 
-    [['alt', 'Alt টেক্সট'], ['caption', 'ক্যাপশন']].forEach(([key, label]) => {
+    [['alt', 'Alt text'], ['caption', 'Caption']].forEach(([key, label]) => {
       const f = document.createElement('div');
       f.className = 'field';
       f.innerHTML = `<label>${label}</label><input value="${escapeAttr(item[key] || '')}">`;
@@ -528,18 +528,18 @@ function renderGallery() {
 
     const sizeField = document.createElement('div');
     sizeField.className = 'field';
-    sizeField.innerHTML = `<label>সাইজ</label>
+    sizeField.innerHTML = `<label>Size</label>
       <select>
-        <option value="" ${!item.size ? 'selected' : ''}>নরমাল</option>
-        <option value="tall" ${item.size === 'tall' ? 'selected' : ''}>লম্বা (Tall)</option>
-        <option value="wide" ${item.size === 'wide' ? 'selected' : ''}>চওড়া (Wide)</option>
+        <option value="" ${!item.size ? 'selected' : ''}>Normal</option>
+        <option value="tall" ${item.size === 'tall' ? 'selected' : ''}>Tall</option>
+        <option value="wide" ${item.size === 'wide' ? 'selected' : ''}>Wide</option>
       </select>`;
     sizeField.querySelector('select').addEventListener('change', e => (item.size = e.target.value));
     grid.appendChild(sizeField);
 
     const removeField = document.createElement('div');
     removeField.className = 'field full';
-    removeField.innerHTML = '<button type="button" class="btn-danger-sm">এই ছবি ডিলিট করুন</button>';
+    removeField.innerHTML = '<button type="button" class="btn-danger-sm">Delete this image</button>';
     removeField.querySelector('button').addEventListener('click', () => {
       state.gallery.items.splice(i, 1);
       renderGallery();
@@ -553,7 +553,7 @@ function renderGallery() {
   const noteField = document.createElement('div');
   noteField.className = 'field full';
   noteField.style.marginTop = '12px';
-  noteField.innerHTML = `<label>নিচের নোট টেক্সট</label><input id="gallery-note-input" value="${escapeAttr(state.gallery.note || '')}">`;
+  noteField.innerHTML = `<label>Note text below</label><input id="gallery-note-input" value="${escapeAttr(state.gallery.note || '')}">`;
   noteField.querySelector('input').addEventListener('input', e => (state.gallery.note = e.target.value));
   root.appendChild(noteField);
 }
@@ -566,7 +566,7 @@ $('#add-gallery-btn').addEventListener('click', () => {
 $('#save-gallery-btn').addEventListener('click', async () => {
   try {
     await api('/admin/api/gallery', { method: 'PUT', body: state.gallery });
-    toast('গ্যালারি সেভ হয়েছে ✓', 'success');
+    toast('Gallery saved ✓', 'success');
   } catch (err) {
     toast(err.message, 'error');
   }

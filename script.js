@@ -17,10 +17,12 @@ document.addEventListener('DOMContentLoaded', function () {
   // Booking box total (guests can add-on price, kept simple: total = base price)
   const bookBtn = document.querySelector('.bb-book-btn');
   const waBtn = document.querySelector('.bb-wa-btn');
-  const waNumber = '8801889530421';
+  // content.js publishes the number from site settings; the literal is only a
+  // fallback for when the settings request has not landed yet.
+  const waNumber = () => document.body.dataset.waNumber || '8801898841305';
 
   function buildMessage() {
-    const productName = document.querySelector('.pd-info h1') ? document.querySelector('.pd-info h1').textContent.trim() : 'প্যাকেজ';
+    const productName = document.querySelector('.pd-info h1') ? document.querySelector('.pd-info h1').textContent.trim() : 'Package';
     const packageCode = document.body.dataset.packageCode || '';
     const location = document.querySelector('#bb-location') ? document.querySelector('#bb-location').value : "Cox's Bazar";
     const date = document.querySelector('#bb-date') ? document.querySelector('#bb-date').value : '';
@@ -29,23 +31,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const occasion = document.querySelector('#bb-occasion') ? document.querySelector('#bb-occasion').value : '';
     const total = document.querySelector('.bb-total-value') ? document.querySelector('.bb-total-value').textContent.trim() : '';
 
-    const codeLine = packageCode ? `%0A🔖 প্যাকেজ কোড: ${encodeURIComponent(packageCode)}` : '';
+    const codeLine = packageCode ? `%0A🔖 Package Code: ${encodeURIComponent(packageCode)}` : '';
 
-    return `আসসালামু আলাইকুম, আমি বুকিং করতে চাই।%0A%0A🎁 প্যাকেজ: ${encodeURIComponent(productName)}${codeLine}%0A📍 লোকেশন: ${encodeURIComponent(location)}%0A📅 তারিখ: ${encodeURIComponent(date)}%0A👥 গেস্ট: ${encodeURIComponent(guests)}%0A⏰ স্লট: ${encodeURIComponent(slot)}%0A💐 উপলক্ষ: ${encodeURIComponent(occasion)}%0A💰 টোটাল: ${encodeURIComponent(total)}`;
+    return `Hello, I would like to make a booking.%0A%0A🎁 Package: ${encodeURIComponent(productName)}${codeLine}%0A📍 Location: ${encodeURIComponent(location)}%0A📅 Date: ${encodeURIComponent(date)}%0A👥 Guests: ${encodeURIComponent(guests)}%0A⏰ Time slot: ${encodeURIComponent(slot)}%0A💐 Occasion: ${encodeURIComponent(occasion)}%0A💰 Total: ${encodeURIComponent(total)}`;
   }
 
   if (bookBtn) {
     bookBtn.addEventListener('click', function (e) {
       e.preventDefault();
       const text = buildMessage();
-      window.open(`https://wa.me/${waNumber}?text=${text}`, '_blank');
+      window.open(`https://wa.me/${waNumber()}?text=${text}`, '_blank');
     });
   }
   if (waBtn) {
     waBtn.addEventListener('click', function (e) {
       e.preventDefault();
       const text = buildMessage();
-      window.open(`https://wa.me/${waNumber}?text=${text}`, '_blank');
+      window.open(`https://wa.me/${waNumber()}?text=${text}`, '_blank');
     });
   }
 

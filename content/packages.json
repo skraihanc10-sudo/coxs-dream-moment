@@ -4,11 +4,11 @@
       "slug": "simple",
       "code": "CDM 101",
       "name": "Sweet Beginnings Package",
-      "badge": "বেসিক",
-      "trust_extra": "বেসিক প্যাকেজ",
-      "price": "৳৪,৯৯৯",
-      "old_price": "৳৮,০০০",
-      "discount": "৩৮% ছাড়",
+      "badge": "Basic",
+      "trust_extra": "Basic package",
+      "price": "৳4,999",
+      "old_price": "৳8,000",
+      "discount": "38% OFF",
       "categories": [
         "proposal"
       ],
@@ -16,41 +16,41 @@
       "thumbnails": [
         {
           "image": "images/setup-arch.jpg",
-          "alt": "পুরো সেটআপ"
+          "alt": "Full setup"
         },
         {
           "image": "images/neon-sign.jpg",
-          "alt": "নিয়ন সাইন"
+          "alt": "Neon sign"
         },
         {
           "image": "images/flower-bouquet.jpg",
-          "alt": "ফুলের সাজ"
+          "alt": "Floral styling"
         },
         {
           "image": "images/sunset-sea.jpg",
-          "alt": "সৈকতের সন্ধ্যা"
+          "alt": "Beach evening"
         }
       ],
       "inclusions": [
-        "বেসিক ফুলের ডেকোরেশন",
-        "মিনারেল ওয়াটার",
-        "৩০ মিনিট ফটোগ্রাফি",
-        "১০টি এডিটেড ছবি",
-        "নিয়ন সাইন (\"Will You Marry Me?\")"
+        "Basic floral decoration",
+        "Mineral water",
+        "30 minutes of photography",
+        "10 edited photos",
+        "Neon sign (\"Will You Marry Me?\")"
       ],
-      "description": "একটি ছোট, মিষ্টি প্রপোজাল মুহূর্তের জন্য আদর্শ প্যাকেজ। কক্সবাজার সৈকতে সূর্যাস্তের আলোয় সাজানো একটি বেসিক ফুলের সেটআপ, নিয়ন সাইন আর ৩০ মিনিটের প্রফেশনাল ফটোগ্রাফি — কম বাজেটে স্মরণীয় মুহূর্ত তৈরির জন্য যথেষ্ট।",
-      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
-      "faq": "সেটআপে সাধারণত ৪৫-৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
+      "description": "The perfect package for a small, sweet proposal. A simple floral setup on Cox's Bazar beach in the light of the sunset, a neon sign and 30 minutes of professional photography — everything you need to create a memorable moment on a modest budget.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
     },
     {
       "slug": "sunset",
       "code": "CDM 102",
       "name": "Golden Sunset Package",
-      "badge": "জনপ্রিয়",
-      "trust_extra": "সবচেয়ে জনপ্রিয়",
-      "price": "৳৬,৯৯৯",
-      "old_price": "৳১৪,০০০",
-      "discount": "৫০% ছাড়",
+      "badge": "Popular",
+      "trust_extra": "Most popular",
+      "price": "৳6,999",
+      "old_price": "৳14,000",
+      "discount": "50% OFF",
       "categories": [
         "proposal",
         "dinner"
@@ -59,43 +59,43 @@
       "thumbnails": [
         {
           "image": "images/full-setup.jpg",
-          "alt": "পুরো সেটআপ"
+          "alt": "Full setup"
         },
         {
           "image": "images/petal-walkway.jpg",
-          "alt": "রোজ পেটাল ওয়াকওয়ে"
+          "alt": "Rose petal walkway"
         },
         {
           "image": "images/neon-sign.jpg",
-          "alt": "নিয়ন সাইন"
+          "alt": "Neon sign"
         },
         {
           "image": "images/fairy-lights.jpg",
-          "alt": "ফেয়ারি লাইট"
+          "alt": "Fairy lights"
         }
       ],
       "inclusions": [
-        "সম্পূর্ণ ফুলের আর্চ + ওয়াকওয়ে",
-        "ওয়েলকাম ড্রিংকস + মিনারেল ওয়াটার",
-        "আনলিমিটেড ফটোগ্রাফি",
-        "এডিটেড ভিডিও",
-        "ফ্রি মিউজিক সিস্টেম",
-        "নিয়ন সাইন + ফেয়ারি লাইটস",
-        "গোলাপের পাপড়ির ওয়াকওয়ে"
+        "Full floral arch + walkway",
+        "Welcome drinks + mineral water",
+        "Unlimited photography",
+        "Edited video",
+        "Free music system",
+        "Neon sign + fairy lights",
+        "Rose petal walkway"
       ],
-      "description": "আপনাদের কথা মাথায় রেখে আমরা নিয়ে এসেছি একটি স্পেশাল ৫০% ডিসকাউন্ট অফার! এই প্যাকেজটির রেগুলার প্রাইস ৳১৪,০০০ টাকা, কিন্তু অফারে এখন পাচ্ছেন মাত্র ৳৬,৯৯৯ টাকায়। সুন্দর ফুলের সাজসজ্জা, Welcome Drinks, মিনারেল ওয়াটার, আনলিমিটেড ফটোগ্রাফি, এডিটেড ভিডিও ও ফ্রি মিউজিক সিস্টেম — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটিকে আরও সুন্দর ও স্মরণীয় করে তুলতেই আমাদের এই স্পেশাল অফার।",
-      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
-      "faq": "সেটআপে সাধারণত ৪৫-৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
+      "description": "We have put together a special 50% discount just for you! This package normally costs ৳ 14,000, but you can book it now for only ৳ 6,999. Beautiful floral styling, welcome drinks, mineral water, unlimited photography, an edited video and a free music system — everything you need to make your special moment even more beautiful and memorable.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
     },
     {
       "slug": "luxury",
       "code": "CDM 103",
       "name": "Forever Luxury Package",
-      "badge": "প্রিমিয়াম",
-      "trust_extra": "প্রিমিয়াম অভিজ্ঞতা",
-      "price": "৳১৪,৯৯৯",
-      "old_price": "৳২২,০০০",
-      "discount": "৩২% ছাড়",
+      "badge": "Premium",
+      "trust_extra": "Premium experience",
+      "price": "৳14,999",
+      "old_price": "৳22,000",
+      "discount": "32% OFF",
       "categories": [
         "proposal",
         "dinner"
@@ -104,43 +104,43 @@
       "thumbnails": [
         {
           "image": "images/dinner-table.jpg",
-          "alt": "ক্যান্ডেললাইট ডিনার"
+          "alt": "Candlelight dinner"
         },
         {
           "image": "images/candle-jars.jpg",
-          "alt": "হ্যাঙ্গিং ক্যান্ডেল"
+          "alt": "Hanging candles"
         },
         {
           "image": "images/seating-area.jpg",
-          "alt": "সিটিং এরিয়া"
+          "alt": "Seating area"
         },
         {
           "image": "images/sunset-sea.jpg",
-          "alt": "সানসেট ভিউ"
+          "alt": "Sunset view"
         }
       ],
       "inclusions": [
-        "প্রিমিয়াম ফুলের আর্চ",
-        "ক্যান্ডেললাইট ডিনার সেটআপ",
-        "২ জন ফটোগ্রাফার",
-        "ড্রোন ফটোগ্রাফি",
-        "কাস্টম কেক",
-        "সিনেম্যাটিক ভিডিও",
-        "প্রাইভেট ওয়েটার সার্ভিস"
+        "Premium floral arch",
+        "Candlelight dinner setup",
+        "2 photographers",
+        "Drone photography",
+        "Custom cake",
+        "Cinematic video",
+        "Private waiter service"
       ],
-      "description": "আমাদের প্রিমিয়াম অভিজ্ঞতা — কক্সবাজার সৈকতে প্রিমিয়াম ফুলের আর্চ, ক্যান্ডেললাইট ডিনার সেটআপ, দুইজন ফটোগ্রাফার সহ ড্রোন ফটোগ্রাফি, কাস্টম কেক, সিনেম্যাটিক ভিডিও ও প্রাইভেট ওয়েটার সার্ভিস অন্তর্ভুক্ত। রেগুলার মূল্য ৳২২,০০০ টাকা, এখন ৩২% ছাড়ে মাত্র ৳১৪,৯৯৯ টাকায়।",
-      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
-      "faq": "সেটআপে সাধারণত ৪৫-৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
+      "description": "Our premium experience on Cox's Bazar beach — a premium floral arch, a candlelight dinner setup, two photographers plus drone photography, a custom cake, a cinematic video and private waiter service. Normally ৳ 22,000, now only ৳ 14,999 with 32% off.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
     },
     {
       "slug": "royal",
       "code": "CDM 104",
       "name": "Royal Luxury Package",
-      "badge": "লাক্সারি",
-      "trust_extra": "রয়্যাল অভিজ্ঞতা",
-      "price": "৳১৮,৯৯৯",
-      "old_price": "৳৩০,০০০",
-      "discount": "৩৭% ছাড়",
+      "badge": "Luxury",
+      "trust_extra": "Royal experience",
+      "price": "৳18,999",
+      "old_price": "৳30,000",
+      "discount": "37% OFF",
       "categories": [
         "proposal",
         "dinner"
@@ -149,34 +149,34 @@
       "thumbnails": [
         {
           "image": "images/candle-jars.jpg",
-          "alt": "হ্যাঙ্গিং ক্যান্ডেল"
+          "alt": "Hanging candles"
         },
         {
           "image": "images/dinner-table.jpg",
-          "alt": "ক্যান্ডেললাইট ডিনার"
+          "alt": "Candlelight dinner"
         },
         {
           "image": "images/flower-bouquet.jpg",
-          "alt": "প্রিমিয়াম ফুলের সাজ"
+          "alt": "Premium floral styling"
         },
         {
           "image": "images/fairy-lights.jpg",
-          "alt": "ফেয়ারি লাইট"
+          "alt": "Fairy lights"
         }
       ],
       "inclusions": [
-        "সম্পূর্ণ প্রিমিয়াম ফুলের ডেকোরেশন ও রাজকীয় থিম",
-        "ক্যান্ডেললাইট ডিনার (৩ কোর্স মেনু)",
-        "২ জন প্রফেশনাল ফটোগ্রাফার",
-        "ড্রোন ফটোগ্রাফি",
-        "সিনেম্যাটিক ভিডিও (প্রফেশনাল এডিটিং)",
-        "কাস্টম কেক",
-        "প্রাইভেট ওয়েটার সার্ভিস",
-        "লাইভ মিউজিক / প্রাইভেট সাউন্ড সিস্টেম"
+        "Full premium floral decoration with a royal theme",
+        "Candlelight dinner (3-course menu)",
+        "2 professional photographers",
+        "Drone photography",
+        "Cinematic video (professionally edited)",
+        "Custom cake",
+        "Private waiter service",
+        "Live music / private sound system"
       ],
-      "description": "আমাদের সবচেয়ে রাজকীয় ও সম্পূর্ণ অভিজ্ঞতা — Forever Luxury প্যাকেজের সবকিছুর সাথে যুক্ত হয়েছে সম্পূর্ণ প্রিমিয়াম ফুলের ডেকোরেশন, রাজকীয় থিম, ৩ কোর্স ক্যান্ডেললাইট ডিনার এবং লাইভ মিউজিক বা প্রাইভেট সাউন্ড সিস্টেম। রেগুলার মূল্য ৳৩০,০০০ টাকা, এখন ৩৭% ছাড়ে মাত্র ৳১৮,৯৯৯ টাকায়।",
-      "booking_policy": "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।",
-      "faq": "সেটআপে সাধারণত ৪৫-৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।"
+      "description": "Our grandest and most complete experience — everything in the Forever Luxury package plus full premium floral decoration, a royal theme, a 3-course candlelight dinner and live music or a private sound system. Normally ৳ 30,000, now only ৳ 18,999 with 37% off.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
     }
   ]
 }

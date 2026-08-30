@@ -1,15 +1,65 @@
 {
   "items": [
-    { "image": "images/full-setup.jpg", "alt": "কক্সবাজার সৈকতে সম্পূর্ণ প্রপোজাল সেটআপ", "caption": "সম্পূর্ণ সানসেট সেটআপ", "size": "tall" },
-    { "image": "images/neon-sign.jpg", "alt": "Will You Marry Me নিয়ন সাইন", "caption": "সিগনেচার নিয়ন সাইন", "size": "" },
-    { "image": "images/petal-walkway.jpg", "alt": "রোজ পেটাল ওয়াকওয়ে", "caption": "রোজ পেটাল ওয়াকওয়ে", "size": "" },
-    { "image": "images/setup-arch.jpg", "alt": "ফুলের আর্চ ডেকোরেশন", "caption": "ফুলের আর্চ ও ড্রেপিং", "size": "" },
-    { "image": "images/candle-jars.jpg", "alt": "হ্যাঙ্গিং ক্যান্ডেল জার", "caption": "হ্যাঙ্গিং ক্যান্ডেল জার", "size": "" },
-    { "image": "images/fairy-lights.jpg", "alt": "ফেয়ারি লাইট ডিটেইল", "caption": "ফেয়ারি লাইট ডিটেইল", "size": "tall" },
-    { "image": "images/dinner-table.jpg", "alt": "ক্যান্ডেললাইট ডিনার টেবিল", "caption": "ক্যান্ডেললাইট ডিনার", "size": "" },
-    { "image": "images/seating-area.jpg", "alt": "কুশন সহ কোজি সিটিং এরিয়া", "caption": "কোজি সিটিং এরিয়া", "size": "" },
-    { "image": "images/flower-bouquet.jpg", "alt": "সাদা ও গোলাপি ফুলের সাজ", "caption": "ফুলের বুকে ও সাজ", "size": "" },
-    { "image": "images/sunset-sea.jpg", "alt": "কক্সবাজার সৈকতে সূর্যাস্ত", "caption": "সন্ধ্যার আকাশ, সাক্ষী ঢেউ", "size": "" }
+    {
+      "image": "images/full-setup.jpg",
+      "alt": "Complete proposal setup on Cox's Bazar beach",
+      "caption": "Complete sunset setup",
+      "size": "tall"
+    },
+    {
+      "image": "images/neon-sign.jpg",
+      "alt": "“Will You Marry Me” neon sign",
+      "caption": "Signature neon sign",
+      "size": ""
+    },
+    {
+      "image": "images/petal-walkway.jpg",
+      "alt": "Rose petal walkway",
+      "caption": "Rose petal walkway",
+      "size": ""
+    },
+    {
+      "image": "images/setup-arch.jpg",
+      "alt": "Floral arch decoration",
+      "caption": "Floral arch and draping",
+      "size": ""
+    },
+    {
+      "image": "images/candle-jars.jpg",
+      "alt": "Hanging candle jars",
+      "caption": "Hanging candle jars",
+      "size": ""
+    },
+    {
+      "image": "images/fairy-lights.jpg",
+      "alt": "Fairy light details",
+      "caption": "Fairy light details",
+      "size": "tall"
+    },
+    {
+      "image": "images/dinner-table.jpg",
+      "alt": "Candlelight dinner table",
+      "caption": "Candlelight dinner",
+      "size": ""
+    },
+    {
+      "image": "images/seating-area.jpg",
+      "alt": "Cosy seating area with cushions",
+      "caption": "Cosy seating area",
+      "size": ""
+    },
+    {
+      "image": "images/flower-bouquet.jpg",
+      "alt": "White and pink floral styling",
+      "caption": "Bouquets and floral styling",
+      "size": ""
+    },
+    {
+      "image": "images/sunset-sea.jpg",
+      "alt": "Sunset on Cox's Bazar beach",
+      "caption": "Evening sky, waves as witness",
+      "size": ""
+    }
   ],
-  "note": "* বর্তমানে ডেমো গ্যালারি — শীঘ্রই আরও বাস্তব ইভেন্টের ছবি যুক্ত হবে।"
+  "note": "* Demo gallery for now — more photos from real events coming soon."
 }

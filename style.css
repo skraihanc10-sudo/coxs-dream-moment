@@ -315,7 +315,7 @@ button{font-family:inherit; cursor:pointer;}
   color:var(--hero-accent); font-size:12px; letter-spacing:0.24em;
   text-transform:uppercase; margin-bottom:14px;
 }
-/* Wide enough that a headline line like "আপনার স্বপ্নের প্রপোজাল মুহূর্ত"
+/* Wide enough that a headline line like "Your Dream Proposal"
    stays on one line instead of orphaning its last word. */
 .home-hero-overlay h1{
   font-family:var(--font-display); color:#fff;

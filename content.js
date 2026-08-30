@@ -34,8 +34,8 @@ function productCardHTML(pkg) {
     `<div class="product-body">` +
     `<a href="${url}"><h3 class="product-name">${pkg.name}</h3></a>` +
     code +
-    `<div class="product-loc">${PIN_SVG}কক্সবাজার</div>` +
-    `<div class="product-price"><span class="from">শুরু</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
+    `<div class="product-loc">${PIN_SVG}Cox's Bazar</div>` +
+    `<div class="product-price"><span class="from">From</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
     `<a href="${url}" class="book-btn">Book Now</a></div></div></div>`
   );
@@ -47,24 +47,36 @@ function productCardHTML(pkg) {
 const relatedCardHTML = productCardHTML;
 
 // ---------------------------------------------------------------- settings (every page)
+// wa.me and tel: want bare digits. Admins reasonably type the number the way
+// they'd write it ("+880 1898-841305"), which produced links like
+// "https://wa.me/+880 1898-841305" that no client could open, so strip
+// everything that isn't a digit before building a link.
+function phoneDigits(value) {
+  return String(value || '').replace(/\D/g, '');
+}
+
 function applySettings(settings) {
   if (!settings) return;
+
+  // script.js builds the booking deep-link and has no access to settings,
+  // so hand it the current number here rather than hard-coding one there.
+  document.body.dataset.waNumber = phoneDigits(settings.whatsapp_number);
 
   const topbarSpan = document.querySelector('.topbar .container span');
   if (topbarSpan) topbarSpan.textContent = settings.topbar_announcement;
   const topbarLink = document.querySelector('.topbar .container a');
   if (topbarLink) {
     topbarLink.textContent = settings.phone_display;
-    topbarLink.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`);
+    topbarLink.setAttribute('href', `https://wa.me/${phoneDigits(settings.whatsapp_number)}`);
   }
 
-  document.querySelectorAll('a.float-wa').forEach(a => a.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`));
+  document.querySelectorAll('a.float-wa').forEach(a => a.setAttribute('href', `https://wa.me/${phoneDigits(settings.whatsapp_number)}`));
 
   const footerDesc = document.querySelector('.footer-desc');
   if (footerDesc) footerDesc.textContent = settings.footer_desc;
 
   document.querySelectorAll('.footer-col a[href^="tel:"]').forEach(a => {
-    a.setAttribute('href', `tel:+${settings.whatsapp_number}`);
+    a.setAttribute('href', `tel:+${phoneDigits(settings.whatsapp_number)}`);
     a.textContent = settings.phone_display;
   });
   document.querySelectorAll('.footer-col a[href^="mailto:"]').forEach(a => {
@@ -74,7 +86,7 @@ function applySettings(settings) {
   document.querySelectorAll('.footer-col').forEach(col => {
     const h4 = col.querySelector('h4');
     const p = col.querySelector('p');
-    if (h4 && p && h4.textContent.trim() === 'যোগাযোগ') p.textContent = settings.address;
+    if (h4 && p && h4.textContent.trim() === 'Contact') p.textContent = settings.address;
   });
 }
 
@@ -158,7 +170,7 @@ function applyProductDetail(packages) {
   if (crumb) crumb.textContent = pkg.name;
 
   const trustText = document.querySelector('.pd-trust-text');
-  if (trustText) trustText.textContent = `${pkg.trust_extra} · ${pkg.discount} · কক্সবাজার`;
+  if (trustText) trustText.textContent = `${pkg.trust_extra} · ${pkg.discount} · Cox's Bazar`;
 
   // Stashed on <body> so the booking buttons in script.js can pull the code
   // into the WhatsApp message without re-parsing any rendered text.
@@ -230,7 +242,7 @@ function applyContactPage(settings) {
 
   const waLink = cards.querySelector('a[href^="https://wa.me/"]');
   if (waLink) {
-    waLink.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`);
+    waLink.setAttribute('href', `https://wa.me/${phoneDigits(settings.whatsapp_number)}`);
     waLink.textContent = settings.phone_display;
   }
   const fbLink = cards.querySelector('a[href*="facebook.com"]');
@@ -240,7 +252,7 @@ function applyContactPage(settings) {
   }
   const phoneLink = cards.querySelector('a[href^="tel:"]');
   if (phoneLink) {
-    phoneLink.setAttribute('href', `tel:+${settings.whatsapp_number}`);
+    phoneLink.setAttribute('href', `tel:+${phoneDigits(settings.whatsapp_number)}`);
     phoneLink.textContent = settings.phone_display;
   }
   const mailLink = cards.querySelector('a[href^="mailto:"]');
@@ -252,7 +264,7 @@ function applyContactPage(settings) {
   if (serviceArea) serviceArea.textContent = settings.service_area;
 
   const sideWaBtn = document.querySelector('.side-wa-btn');
-  if (sideWaBtn) sideWaBtn.setAttribute('href', `https://wa.me/${settings.whatsapp_number}`);
+  if (sideWaBtn) sideWaBtn.setAttribute('href', `https://wa.me/${phoneDigits(settings.whatsapp_number)}`);
 
   const hoursRows = document.querySelectorAll('.hours-card p:not(.hours-note)');
   settings.hours.forEach((h, i) => {
