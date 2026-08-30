@@ -166,7 +166,7 @@ function applyShopGrid(packages) {
 // Extras are priced on top of the package and offered on every package page.
 // The fee is editable in site settings; these are the fallbacks for a volume
 // whose settings.json predates the field.
-const DRONE_ADDON_DEFAULTS = { label: 'Drone shot', fee: 2000 };
+const DRONE_ADDON_DEFAULTS = { label: 'Drone Shot (Cinematic Special Drone Video)', fee: 2000 };
 
 // Prices are authored as display strings ("\u09f314,999"), so read the amount out of
 // the digits and keep whatever symbol the owner typed.
@@ -258,6 +258,9 @@ function applyProductDetail(packages) {
   if (priceValue) {
     const oldPrice = pkg.old_price ? `<span class="old">${pkg.old_price}</span>` : '';
     priceValue.innerHTML = `${oldPrice}${pkg.price || ''}`;
+    // No price yet - hide the whole row rather than leave a dangling label.
+    const priceRow = priceValue.closest('.bb-price-row');
+    if (priceRow) priceRow.hidden = !pkg.price;
   }
 
   setupAddons(pkg);
@@ -378,7 +381,7 @@ function setupAddons(pkg) {
     const on = !!(box && box.checked);
     // script.js pulls these off <body> when it builds the booking message.
     if (on) {
-      document.body.dataset.addons = `${addon.label} (+${formatPrice(addon.fee, symbol)})`;
+      document.body.dataset.addons = `${addon.label} — +${formatPrice(addon.fee, symbol)}`;
     } else {
       delete document.body.dataset.addons;
     }

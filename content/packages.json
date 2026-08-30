@@ -6,9 +6,9 @@
       "name": "Sweet Beginnings Package",
       "badge": "Basic",
       "trust_extra": "Basic package",
-      "price": "৳4,999",
-      "old_price": "৳8,000",
-      "discount": "38% OFF",
+      "price": "",
+      "old_price": "",
+      "discount": "",
       "categories": [
         "proposal"
       ],
@@ -35,9 +35,9 @@
       "name": "Golden Sunset Package",
       "badge": "Popular",
       "trust_extra": "Most popular",
-      "price": "৳6,999",
-      "old_price": "৳14,000",
-      "discount": "50% OFF",
+      "price": "",
+      "old_price": "",
+      "discount": "",
       "categories": [
         "proposal",
         "dinner"
@@ -65,9 +65,9 @@
       "name": "Forever Luxury Package",
       "badge": "Premium",
       "trust_extra": "Premium experience",
-      "price": "৳14,999",
-      "old_price": "৳22,000",
-      "discount": "32% OFF",
+      "price": "",
+      "old_price": "",
+      "discount": "",
       "categories": [
         "proposal",
         "dinner"
@@ -95,9 +95,9 @@
       "name": "Royal Luxury Package",
       "badge": "Luxury",
       "trust_extra": "Royal experience",
-      "price": "৳18,999",
-      "old_price": "৳30,000",
-      "discount": "37% OFF",
+      "price": "",
+      "old_price": "",
+      "discount": "",
       "categories": [
         "proposal",
         "dinner"

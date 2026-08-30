@@ -180,7 +180,7 @@ function renderSettings() {
   root.appendChild(addonTitle);
 
   // Offered on every package page and added on top of the package price.
-  const addon = s.drone_addon || (s.drone_addon = { label: 'Drone shot', fee: '2000' });
+  const addon = s.drone_addon || (s.drone_addon = { label: 'Drone Shot (Cinematic Special Drone Video)', fee: '2000' });
   [['label', 'Extra service name'], ['fee', 'Extra fee (numbers only)']].forEach(([key, label]) => {
     const field = document.createElement('div');
     field.className = 'field';

@@ -305,6 +305,24 @@ runOnce('shared-inclusions', () => {
   return true;
 });
 
+// Owner is re-pricing the whole catalogue from the admin panel, so clear the
+// prices that are already deployed and let each be set fresh. A package with no
+// price simply hides its price line and total until one is entered.
+runOnce('clear-package-prices', () => {
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages)) return false;
+  let cleared = 0;
+  data.packages.forEach(p => {
+    for (const key of ['price', 'old_price', 'discount']) {
+      if (p[key]) { p[key] = ''; cleared++; }
+    }
+  });
+  if (!cleared) return false;
+  writeJSON(PACKAGES_FILE, data);
+  return true;
+});
+
+
 
 
 
