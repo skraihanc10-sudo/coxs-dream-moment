@@ -2,31 +2,25 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<link rel="canonical" href="shop.html">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cox's Dream Moment | কক্সবাজার প্রপোজাল ও ডেকোরেশন বুকিং</title>
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<meta name="description" content="কক্সবাজার সমুদ্র সৈকতে প্রপোজাল, ক্যান্ডেললাইট ডিনার ও ডেকোরেশন প্যাকেজ বুক করুন।">
+<link rel="icon" href="images/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="images/favicon.png">
+<meta name="theme-color" content="#1b2848">
+<link rel="canonical" href="shop.html">
+<meta http-equiv="refresh" content="0; url=shop.html">
+<style>
+  body{margin:0; min-height:100vh; display:flex; flex-direction:column;
+       align-items:center; justify-content:center; gap:18px;
+       font-family:'Segoe UI', Arial, sans-serif; background:#fff; color:#242222;}
+  img{max-width:280px; width:70%; height:auto;}
+  a{color:#c0392b;}
+</style>
 </head>
 <body>
+<img src="images/logo.png" alt="Cox's Dream Moment" onerror="this.hidden=true;">
 <p>লোড হচ্ছে… <a href="shop.html">এখানে ক্লিক করুন</a>।</p>
-<script>
-  // A Netlify Identity invite/recovery link lands here with a token in the
-  // URL hash - let the widget handle it (and send the user to /admin/)
-  // instead of immediately bouncing to the shop page.
-  var hasIdentityToken = /invite_token|recovery_token|confirmation_token|access_token/.test(location.hash);
-
-  if (window.netlifyIdentity) {
-    window.netlifyIdentity.on('init', function (user) {
-      if (!user) {
-        window.netlifyIdentity.on('login', function () {
-          document.location.href = '/admin/';
-        });
-      }
-    });
-  }
-
-  if (!hasIdentityToken) {
-    location.replace('shop.html');
-  }
-</script>
+<script>location.replace('shop.html');</script>
 </body>
 </html>

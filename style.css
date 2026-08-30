@@ -60,6 +60,9 @@ button{font-family:inherit; cursor:pointer;}
   padding:16px 0; gap:24px;
 }
 .brand{display:flex; align-items:center; gap:10px;}
+/* Header carries the emblem only (2.15:1) - the lockup's own wordmark is
+   unreadable at this size. The CDM monogram stays as an onerror fallback. */
+.brand-logo{height:44px; width:auto; display:block; flex-shrink:0;}
 .brand-mark{
   width:38px; height:38px; border-radius:50%;
   background:var(--red); color:#fff;
@@ -92,6 +95,10 @@ button{font-family:inherit; cursor:pointer;}
 
 .nav-toggle{display:none; background:none; border:none; flex-direction:column; gap:5px; padding:6px;}
 .nav-toggle span{width:22px; height:2px; background:#333; display:block;}
+.mobile-menu-logo{
+  height:66px; width:auto; max-width:78%; object-fit:contain;
+  align-self:flex-start; margin:4px 0 16px;
+}
 .mobile-menu{
   position:fixed; inset:0; z-index:200; background:#fff;
   display:flex; flex-direction:column; padding:20px; gap:4px;
@@ -328,6 +335,12 @@ button{font-family:inherit; cursor:pointer;}
 .site-footer{background:#171217; color:rgba(255,255,255,0.72); padding:50px 0 22px; margin-top:0;}
 .footer-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:36px; padding-bottom:30px; border-bottom:1px solid rgba(255,255,255,0.1);}
 .footer-brand{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+/* emblem only, on a light plate - the artwork's navy would vanish on the
+   dark footer otherwise. The wordmark stays as live text beside it. */
+.footer-logo{
+  height:34px; width:auto; display:block; flex-shrink:0;
+  background:#fff; padding:6px 9px; border-radius:8px;
+}
 .footer-brand .name{font-family:var(--font-display); color:#fff; font-size:18px; font-weight:700;}
 .footer-desc{font-size:13px; color:rgba(255,255,255,0.55); max-width:280px;}
 .footer-col h4{font-size:12px; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); font-weight:600; margin-bottom:14px;}
@@ -453,6 +466,7 @@ button{font-family:inherit; cursor:pointer;}
 }
 @media (max-width:860px){
   .nav-bar, .header-action span, .location-pill{display:none;}
+  .brand-logo{height:40px;}
   .nav-toggle{display:flex;}
   .product-grid{grid-template-columns:repeat(2,1fr); gap:14px;}
   .footer-grid{grid-template-columns:1fr 1fr; gap:26px;}
@@ -469,6 +483,9 @@ button{font-family:inherit; cursor:pointer;}
   }
 }
 @media (max-width:560px){
+  .brand-logo{height:34px;}
+  .footer-logo{height:30px;}
+  .brand-text .name{font-size:16px;}
   .product-grid{grid-template-columns:1fr 1fr; gap:10px;}
   .footer-grid{grid-template-columns:1fr;}
   .home-hero-img{height:320px;}

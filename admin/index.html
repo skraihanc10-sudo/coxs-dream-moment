@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin | Cox's Dream Moment</title>
 <meta name="robots" content="noindex">
+<link rel="icon" href="../images/favicon.png" type="image/png">
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -12,12 +13,17 @@
 <div id="login-screen" class="login-screen">
   <form id="login-form" class="login-box">
     <div class="login-brand">
-      <div class="brand-mark">CDM</div>
-      <div>
-        <div class="login-title">Cox's Dream Moment</div>
-        <div class="login-sub">Admin প্যানেল</div>
-      </div>
+      <img class="login-logo" src="../images/logo.png" alt="Cox's Dream Moment"
+           onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+      <span class="login-brand-fallback" hidden>
+        <span class="brand-mark">CDM</span>
+        <span>
+          <span class="login-title">Cox's Dream Moment</span>
+          <span class="login-sub">Admin প্যানেল</span>
+        </span>
+      </span>
     </div>
+    <p class="login-sub login-sub-standalone">Admin প্যানেল</p>
     <label>পাসওয়ার্ড</label>
     <input type="password" id="login-password" autocomplete="current-password" required>
     <button type="submit">লগইন করুন</button>
@@ -28,8 +34,10 @@
 <div id="dashboard" class="dashboard" hidden>
   <header class="admin-header">
     <div class="admin-header-brand">
-      <div class="brand-mark">CDM</div>
-      <span>Cox's Dream Moment — Admin</span>
+      <img class="admin-logo" src="../images/logo-mark.png" alt="Cox's Dream Moment"
+           onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+      <span class="brand-mark" hidden>CDM</span>
+      <span>Admin</span>
     </div>
     <div class="admin-header-actions">
       <a href="../shop.html" target="_blank" rel="noopener" class="btn-ghost-sm">সাইট দেখুন ↗</a>

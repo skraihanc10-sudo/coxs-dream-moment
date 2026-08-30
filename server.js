@@ -50,11 +50,15 @@ function ensureDataDir() {
     if (!fs.existsSync(dest) && fs.existsSync(src)) fs.copyFileSync(src, dest);
   }
 
+  // Copy per-file rather than only when the volume is empty: once an admin has
+  // uploaded anything the directory is non-empty forever, and new artwork
+  // shipped with a release (e.g. the brand logo) would never reach production.
+  // An existing file is never overwritten, so admin uploads always win.
   if (fs.existsSync(seedImagesDir)) {
-    const existing = fs.readdirSync(IMAGES_DIR);
-    if (existing.length === 0) {
-      for (const file of fs.readdirSync(seedImagesDir)) {
-        fs.copyFileSync(path.join(seedImagesDir, file), path.join(IMAGES_DIR, file));
+    for (const file of fs.readdirSync(seedImagesDir)) {
+      const dest = path.join(IMAGES_DIR, file);
+      if (!fs.existsSync(dest)) {
+        fs.copyFileSync(path.join(seedImagesDir, file), dest);
       }
     }
   }
