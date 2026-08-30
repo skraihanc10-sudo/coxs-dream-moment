@@ -496,3 +496,10 @@ button{font-family:inherit; cursor:pointer;}
   .map-embed{height:200px;}
   .pd-thumb{width:56px; height:56px;}
 }
+
+/* Package photo not uploaded yet: the logo mark stands in, fitted rather than
+   cropped so it does not look like a broken or badly-framed photo. */
+.product-thumb img.is-placeholder,
+.pd-main-img img.is-placeholder{
+  object-fit:contain; padding:16%; background:#fff;
+}

@@ -20,22 +20,36 @@ function packageUrl(pkg) {
   return `product.html?slug=${encodeURIComponent(pkg.slug)}`;
 }
 
+// A package can exist before its photo has been uploaded. An empty src renders
+// as a broken-image icon, so show a labelled placeholder instead.
+const PLACEHOLDER = 'images/logo-mark.png';
+
+function imageOrPlaceholder(src) {
+  return src || PLACEHOLDER;
+}
+
 function productCardHTML(pkg) {
   const url = packageUrl(pkg);
   const code = pkg.code
     ? `<div class="product-code">Package Code: <span>${pkg.code}</span></div>`
     : '';
+  // A freshly added package has no badge, discount or old price yet. These
+  // render as coloured pills, so an empty one would show as a blank chip.
+  const badge = pkg.badge ? `<span class="product-badge">${pkg.badge}</span>` : '';
+  const discount = pkg.discount ? `<span class="product-discount">${pkg.discount}</span>` : '';
+  const oldPrice = pkg.old_price ? `<span class="old">${pkg.old_price}</span>` : '';
   return (
     `<div class="product-card" data-cat="${pkg.categories.join(' ')}">` +
     `<a href="${url}"><div class="product-thumb">` +
-    `<span class="product-badge">${pkg.badge}</span>` +
-    `<span class="product-discount">${pkg.discount}</span>` +
-    `<img src="${pkg.main_image}" alt="${pkg.name}"></div></a>` +
+    badge + discount +
+    `<img class="${pkg.main_image ? '' : 'is-placeholder'}" src="${imageOrPlaceholder(pkg.main_image)}" alt="${pkg.name}"></div></a>` +
     `<div class="product-body">` +
     `<a href="${url}"><h3 class="product-name">${pkg.name}</h3></a>` +
     code +
     `<div class="product-loc">${PIN_SVG}Cox's Bazar</div>` +
-    `<div class="product-price"><span class="from">From</span><span class="old">${pkg.old_price}</span>${pkg.price}</div>` +
+    (pkg.price
+      ? `<div class="product-price"><span class="from">From</span>${oldPrice}${pkg.price}</div>`
+      : '') +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
     `<a href="${url}" class="book-btn">Book Now</a></div></div></div>`
   );
@@ -163,14 +177,17 @@ function applyProductDetail(packages) {
 
   document.title = `${pkg.name} | Cox's Dream Moment`;
   const metaDesc = document.querySelector('meta[name="description"]');
-  if (metaDesc) metaDesc.setAttribute('content', pkg.description.slice(0, 155));
+  if (metaDesc) metaDesc.setAttribute('content', (pkg.description || '').slice(0, 155));
 
   document.querySelectorAll('.page-banner h1, .pd-info h1').forEach(h1 => (h1.textContent = pkg.name));
   const crumb = document.querySelector('.crumb-current');
   if (crumb) crumb.textContent = pkg.name;
 
   const trustText = document.querySelector('.pd-trust-text');
-  if (trustText) trustText.textContent = `${pkg.trust_extra} · ${pkg.discount} · Cox's Bazar`;
+  if (trustText) {
+    trustText.textContent = [pkg.trust_extra, pkg.discount, "Cox's Bazar"]
+      .filter(Boolean).join(' · ');
+  }
 
   // Stashed on <body> so the booking buttons in script.js can pull the code
   // into the WhatsApp message without re-parsing any rendered text.
@@ -191,8 +208,9 @@ function applyProductDetail(packages) {
 
   const mainImg = document.querySelector('.pd-main-img img');
   if (mainImg) {
-    mainImg.setAttribute('src', pkg.main_image);
+    mainImg.setAttribute('src', imageOrPlaceholder(pkg.main_image));
     mainImg.setAttribute('alt', pkg.name);
+    mainImg.classList.toggle('is-placeholder', !pkg.main_image);
   }
   const thumbs = document.querySelector('.pd-thumbs');
   if (thumbs) {

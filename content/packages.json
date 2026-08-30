@@ -186,6 +186,180 @@
       "description": "Our grandest and most complete experience — everything in the Forever Luxury package plus full premium floral decoration, a royal theme, a 3-course candlelight dinner and live music or a private sound system. Normally ৳ 30,000, now only ৳ 18,999 with 37% off.",
       "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
       "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+    },
+    {
+      "slug": "sunset-serenade",
+      "code": "",
+      "name": "Sunset Serenade Package",
+      "badge": "New",
+      "trust_extra": "Sunset setting",
+      "price": "",
+      "old_price": "",
+      "discount": "",
+      "categories": [
+        "proposal"
+      ],
+      "main_image": "",
+      "thumbnails": [],
+      "inclusions": [
+        "Customized cake",
+        "Mineral water",
+        "Welcome drinks",
+        "Free music system",
+        "Pickup & drop service",
+        "Professional photography",
+        "Professional cinematography & cinematic video shoot",
+        "Premium luxury decoration setup",
+        "And many more attractive facilities!"
+      ],
+      "description": "A beachside setup timed to the sunset, with premium decoration, welcome drinks and full photo and video coverage of the moment.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+    },
+    {
+      "slug": "ocean-breeze",
+      "code": "",
+      "name": "Ocean Breeze Package",
+      "badge": "New",
+      "trust_extra": "Seaside setting",
+      "price": "",
+      "old_price": "",
+      "discount": "",
+      "categories": [
+        "proposal"
+      ],
+      "main_image": "",
+      "thumbnails": [],
+      "inclusions": [
+        "Customized cake",
+        "Mineral water",
+        "Welcome drinks",
+        "Free music system",
+        "Pickup & drop service",
+        "Professional photography",
+        "Professional cinematography & cinematic video shoot",
+        "Premium luxury decoration setup",
+        "And many more attractive facilities!"
+      ],
+      "description": "An open-air setup right by the water, styled with premium decoration and covered end to end by our photography and cinematography team.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+    },
+    {
+      "slug": "moonlight-romance",
+      "code": "",
+      "name": "Moonlight Romance Package",
+      "badge": "Night",
+      "trust_extra": "After dark",
+      "price": "",
+      "old_price": "",
+      "discount": "",
+      "categories": [
+        "proposal"
+      ],
+      "main_image": "",
+      "thumbnails": [],
+      "inclusions": [
+        "Customized cake",
+        "Mineral water",
+        "Welcome drinks",
+        "Free music system",
+        "Pickup & drop service",
+        "Professional photography",
+        "Professional cinematography & cinematic video shoot",
+        "Premium luxury decoration setup",
+        "And many more attractive facilities!"
+      ],
+      "description": "A late-evening setup under the stars, lit for the camera, with a customized cake and a cinematic video of the whole evening.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+    },
+    {
+      "slug": "starlight-dinner",
+      "code": "",
+      "name": "Starlight Dinner Package",
+      "badge": "Dinner",
+      "trust_extra": "Dinner setting",
+      "price": "",
+      "old_price": "",
+      "discount": "",
+      "categories": [
+        "proposal"
+      ],
+      "main_image": "",
+      "thumbnails": [],
+      "inclusions": [
+        "Customized cake",
+        "Mineral water",
+        "Welcome drinks",
+        "Free music system",
+        "Pickup & drop service",
+        "Professional photography",
+        "Professional cinematography & cinematic video shoot",
+        "Premium luxury decoration setup",
+        "And many more attractive facilities!"
+      ],
+      "description": "A private dinner setting on the sand with premium luxury decoration, welcome drinks and professional photography throughout.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+    },
+    {
+      "slug": "grand-celebration",
+      "code": "",
+      "name": "Grand Celebration Package",
+      "badge": "Celebration",
+      "trust_extra": "For larger groups",
+      "price": "",
+      "old_price": "",
+      "discount": "",
+      "categories": [
+        "proposal"
+      ],
+      "main_image": "",
+      "thumbnails": [],
+      "inclusions": [
+        "Customized cake",
+        "Mineral water",
+        "Welcome drinks",
+        "Free music system",
+        "Pickup & drop service",
+        "Professional photography",
+        "Professional cinematography & cinematic video shoot",
+        "Premium luxury decoration setup",
+        "And many more attractive facilities!"
+      ],
+      "description": "Built for birthdays, anniversaries and family celebrations — a larger premium setup with a customized cake, music and full coverage.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
+    },
+    {
+      "slug": "signature-elite",
+      "code": "",
+      "name": "Signature Elite Package",
+      "badge": "Signature",
+      "trust_extra": "Our signature setup",
+      "price": "",
+      "old_price": "",
+      "discount": "",
+      "categories": [
+        "proposal"
+      ],
+      "main_image": "",
+      "thumbnails": [],
+      "inclusions": [
+        "Customized cake",
+        "Mineral water",
+        "Welcome drinks",
+        "Free music system",
+        "Pickup & drop service",
+        "Professional photography",
+        "Professional cinematography & cinematic video shoot",
+        "Premium luxury decoration setup",
+        "And many more attractive facilities!"
+      ],
+      "description": "Our signature arrangement, with the most elaborate premium decoration we offer and complete photo and cinematic video coverage from arrival to finish.",
+      "booking_policy": "A 30% advance is required to confirm your booking. You may change the date free of charge up to 48 hours before the event. Cancellations within 24 hours are non-refundable.",
+      "faq": "Setup usually takes 45–60 minutes. If it rains, you can move to another date free of charge."
     }
   ]
 }

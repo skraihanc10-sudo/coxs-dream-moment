@@ -26,6 +26,7 @@ const IMAGES_DIR = path.join(DATA_DIR, 'images');
 const SETTINGS_FILE = path.join(CONTENT_DIR, 'settings.json');
 const PACKAGES_FILE = path.join(CONTENT_DIR, 'packages.json');
 const GALLERY_FILE = path.join(CONTENT_DIR, 'gallery.json');
+const INTRODUCED_FILE = path.join(CONTENT_DIR, 'introduced-packages.json');
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-only-secret-change-me';
@@ -150,8 +151,6 @@ function writeJSON(file, data) {
 }
 
 // Runs after the JSON helpers exist; safe to re-run on every boot.
-backfillPackageCodes();
-
 // ---------------------------------------------------------------- English content
 // The site was authored in Bengali and later switched to English. Live content
 // lives in the mounted volume rather than in this repo, so translating the seed
@@ -194,6 +193,51 @@ function translateContentToEnglish() {
   if (replaced) console.log(`Translated ${replaced} content string(s) to English`);
 }
 translateContentToEnglish();
+
+// ------------------------------------------------------ new packages from a release
+// Packages live in the volume, so one added to the seed file would never reach a
+// site that is already deployed. This introduces such a package once - the same
+// additive rule ensureDataDir() uses for images: never overwrite, never touch
+// what is already there.
+//
+// "Once" matters. Without a record, deleting an introduced package in the admin
+// panel would see it reappear on the next deploy. introduced-packages.json
+// remembers every slug this has offered, and the volume's own packages seed that
+// record on first run so nothing already present is ever re-added either.
+function introduceNewSeedPackages() {
+  const seed = readJSON(path.join(APP_DIR, 'content', 'packages.json'), null);
+  const live = readJSON(PACKAGES_FILE, null);
+  if (!seed || !Array.isArray(seed.packages)) return;
+  if (!live || !Array.isArray(live.packages)) return;
+
+  const record = readJSON(INTRODUCED_FILE, null);
+  const introduced = new Set(
+    record && Array.isArray(record.slugs)
+      ? record.slugs
+      : live.packages.map(p => p.slug)   // first run: everything present counts as seen
+  );
+
+  const present = new Set(live.packages.map(p => p.slug));
+  const added = [];
+
+  for (const pkg of seed.packages) {
+    if (!pkg.slug || present.has(pkg.slug) || introduced.has(pkg.slug)) continue;
+    live.packages.push(JSON.parse(JSON.stringify(pkg)));
+    introduced.add(pkg.slug);
+    added.push(pkg.slug);
+  }
+
+  if (added.length) {
+    writeJSON(PACKAGES_FILE, live);
+    console.log(`Introduced new packages: ${added.join(', ')}`);
+  }
+  if (!record || added.length) {
+    writeJSON(INTRODUCED_FILE, { slugs: Array.from(introduced) });
+  }
+}
+introduceNewSeedPackages();
+backfillPackageCodes();
+
 
 
 // ---------------------------------------------------------------- app
