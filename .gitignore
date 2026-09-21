@@ -2,3 +2,5 @@
 Thumbs.db
 node_modules/
 .env
+content/migrations.json
+content/introduced-packages.json

@@ -227,41 +227,69 @@ runOnce('clear-package-photos', () => {
   return true;
 });
 
-// Every package advertises the same facilities. The four that predate that
-// decision still carry their old lists in the volume, so bring them into line.
-// Written out here rather than read from the seed so a later seed edit cannot
-// silently change what this one-shot migration meant when it ran.
-runOnce('shared-inclusions', () => {
-  const shared = [
-    'Customized cake',
-    'Mineral water',
-    'Welcome drinks',
-    'Free music system',
-    'Pickup & drop service',
-    'Professional photography',
-    'Professional cinematography & cinematic video shoot',
-    'Premium luxury decoration setup',
-    'And many more attractive facilities!',
-  ];
+// The catalogue was cut from forty near-identical packages to twenty that
+// differ from each other. The live volume still holds the old forty, and
+// introduceNewSeedPackages only ever adds slugs - so the list has to be
+// replaced outright here, once.
+//
+// Anything an admin had set per package that the seed cannot know - the
+// photographs, and any price that was filled in - is carried across for the
+// slugs that survive. Everything else comes from the seed.
+runOnce('catalogue-of-twenty', () => {
+  const seed = readJSON(path.join(APP_DIR, 'content', 'packages.json'), null);
+  const live = readJSON(PACKAGES_FILE, null);
+  if (!seed || !Array.isArray(seed.packages)) return false;
+  if (!live || !Array.isArray(live.packages)) return false;
 
-  const data = readJSON(PACKAGES_FILE, null);
-  if (!data || !Array.isArray(data.packages)) return false;
+  const keepBySlug = new Map(live.packages.map(p => [p.slug, p]));
 
-  let updated = 0;
-  data.packages.forEach(p => {
-    const current = Array.isArray(p.inclusions) ? p.inclusions : [];
-    const same = current.length === shared.length
-      && current.every((v, i) => v === shared[i]);
-    if (same) return;
-    p.inclusions = shared.slice();
-    updated++;
-  });
+  // Seventeen of the twenty kept their slug. These three were renamed, and
+  // they are the original packages - the ones most likely to have had a
+  // photograph uploaded against them, so the old name is consulted too.
+  const RENAMED = {
+    'sweet-beginnings': 'simple',
+    'golden-sunset': 'sunset',
+    'royal-luxury': 'royal',
+  };
 
-  if (!updated) return false;
-  writeJSON(PACKAGES_FILE, data);
-  console.log(`Applied the shared inclusions list to ${updated} package(s)`);
+  // Both the new slug and the old one may exist by the time this runs:
+  // introduceNewSeedPackages will already have inserted an empty copy under
+  // the new name. So take the first non-empty value across both rather than
+  // letting the empty newcomer win.
+  function carried(pkg, field) {
+    const candidates = [keepBySlug.get(pkg.slug), keepBySlug.get(RENAMED[pkg.slug])];
+    for (const previous of candidates) {
+      const value = previous && previous[field];
+      if (Array.isArray(value) ? value.length : value) return value;
+    }
+    return pkg[field];
+  }
+
+  const next = seed.packages.map(pkg => ({
+    ...JSON.parse(JSON.stringify(pkg)),
+    // Anything an admin did that the seed cannot know is kept: the uploaded
+    // photographs, and any price that was filled in.
+    main_image: carried(pkg, 'main_image'),
+    thumbnails: carried(pkg, 'thumbnails'),
+    price: carried(pkg, 'price'),
+    old_price: carried(pkg, 'old_price'),
+    discount: carried(pkg, 'discount'),
+  }));
+
+  writeJSON(PACKAGES_FILE, { packages: next });
+
+  // The retired slugs must not come back through introduceNewSeedPackages,
+  // so record every slug the volume has ever seen as already introduced.
+  const record = readJSON(INTRODUCED_FILE, null);
+  const seen = new Set(record && Array.isArray(record.slugs) ? record.slugs : []);
+  live.packages.forEach(p => seen.add(p.slug));
+  next.forEach(p => seen.add(p.slug));
+  writeJSON(INTRODUCED_FILE, { slugs: Array.from(seen) });
+
+  console.log(`Catalogue replaced: ${live.packages.length} -> ${next.length} packages`);
   return true;
 });
+
 
 // Owner is re-pricing the whole catalogue from the admin panel, so clear the
 // prices that are already deployed and let each be set fresh. A package with no

@@ -69,8 +69,102 @@
 </div>
 
 <section class="page-banner">
-  <h1>যোগাযোগ করুন</h1>
-  <p class="crumb"><a href="shop.html">সব প্যাকেজ</a> / যোগাযোগ</p>
+  <div class="container">
+    <p class="crumb"><a href="shop.html">সব প্যাকেজ</a> <span>/</span> <span class="crumb-current">যোগাযোগ</span></p>
+    <h1>যোগাযোগ করুন</h1>
+    <p>তারিখ খালি আছে কি না, খরচ কত, কী কী থাকবে — যা জানার আছে জিজ্ঞাসা করুন। কক্সবাজারে আমরা প্রতিদিন সকাল ৯টা থেকে রাত ৯টা পর্যন্ত আছি।</p>
+  </div>
+</section>
+
+<section class="enquiry-section">
+  <div class="container">
+    <div class="enquiry-card">
+      <div class="enquiry-intro">
+        <span class="eyebrow">বুকিং জিজ্ঞাসা</span>
+        <h2>তারিখটা খালি আছে কি না জেনে নিন</h2>
+        <p>নিচের তথ্যগুলো দিন — আমরা WhatsApp-এ সাথে সাথেই জানিয়ে দেব আপনার তারিখ ও সময় খালি আছে কি না, আর মোট খরচ কত হবে।</p>
+
+        <ul class="enquiry-points">
+          <li>কোনো অগ্রিম ছাড়াই জিজ্ঞাসা করতে পারেন</li>
+          <li>সাধারণত ৩০ মিনিটের মধ্যে উত্তর</li>
+          <li>বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তন</li>
+        </ul>
+      </div>
+
+      <form class="enquiry-form" id="enquiry-form" novalidate>
+        <div class="ef-row">
+          <div class="ef-field">
+            <label for="ef-name">আপনার নাম <span aria-hidden="true">*</span></label>
+            <input id="ef-name" name="name" type="text" autocomplete="name"
+                   placeholder="যেমন: রায়হান" required>
+          </div>
+          <div class="ef-field">
+            <label for="ef-phone">মোবাইল নম্বর <span aria-hidden="true">*</span></label>
+            <input id="ef-phone" name="phone" type="tel" inputmode="tel"
+                   autocomplete="tel" placeholder="01XXXXXXXXX" required>
+          </div>
+        </div>
+
+        <div class="ef-field">
+          <label for="ef-package">কোন প্যাকেজ</label>
+          <select id="ef-package" name="package">
+            <option value="">এখনো ঠিক করিনি — পরামর্শ চাই</option>
+          </select>
+        </div>
+
+        <div class="ef-row">
+          <div class="ef-field">
+            <label for="ef-date">পছন্দের তারিখ</label>
+            <input id="ef-date" name="date" type="date">
+          </div>
+          <div class="ef-field">
+            <label for="ef-time">সময়</label>
+            <select id="ef-time" name="time">
+              <option value="">সময় বেছে নিন</option>
+              <option value="সূর্যাস্তের সময় (বিকেল ৫টা – সন্ধ্যা ৬টা)">সূর্যাস্তের সময় (বিকেল ৫টা – সন্ধ্যা ৬টা)</option>
+              <option value="সন্ধ্যা (৬টা – ৮টা)">সন্ধ্যা (৬টা – ৮টা)</option>
+              <option value="রাত (৮টার পর)">রাত (৮টার পর)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ef-row">
+          <div class="ef-field">
+            <label for="ef-people">কতজন থাকবেন</label>
+            <input id="ef-people" name="people" type="number" min="1" max="200"
+                   inputmode="numeric" placeholder="২">
+          </div>
+          <div class="ef-field">
+            <label for="ef-occasion">উপলক্ষ</label>
+            <select id="ef-occasion" name="occasion">
+              <option value="">বেছে নিন</option>
+              <option value="প্রপোজাল">প্রপোজাল</option>
+              <option value="জন্মদিন">জন্মদিন</option>
+              <option value="অ্যানিভার্সারি">অ্যানিভার্সারি</option>
+              <option value="হানিমুন">হানিমুন</option>
+              <option value="অন্যান্য">অন্যান্য</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="ef-field">
+          <label for="ef-note">বিশেষ কিছু বলার আছে?</label>
+          <textarea id="ef-note" name="note" rows="3"
+                    placeholder="যেমন: কেকে নাম লিখতে হবে, নির্দিষ্ট কোনো গান, বা অন্য কোনো অনুরোধ"></textarea>
+        </div>
+
+        <button type="submit" class="ef-submit">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.07-1.33A9.94 9.94 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.01.79.8-2.94-.2-.3A7.94 7.94 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm4.4-5.9c-.24-.12-1.43-.7-1.65-.79-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.19-.46-.39-.4-.54-.41-.14-.01-.3-.01-.46-.01s-.42.06-.64.3c-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.43-.58 1.63-1.15.2-.56.2-1.04.14-1.15-.06-.1-.22-.16-.46-.28z"/></svg>
+          WhatsApp-এ পাঠান
+        </button>
+
+        <p class="ef-note">
+          বোতামে চাপ দিলে আপনার WhatsApp খুলবে, আর উপরের তথ্যগুলো লেখা অবস্থায় প্রস্তুত থাকবে —
+          শুধু Send চাপুন। কোনো তথ্য এই ওয়েবসাইটে জমা থাকে না।
+        </p>
+      </form>
+    </div>
+  </div>
 </section>
 
 <section class="contact-section">
@@ -194,7 +288,7 @@
   </div>
 </footer>
 
-<a href="https://wa.me/8801898841305" target="_blank" rel="noopener" class="float-wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.07-1.33A9.94 9.94 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.01.79.8-2.94-.2-.3A7.94 7.94 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm4.4-5.9c-.24-.12-1.43-.7-1.65-.79-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.19-.46-.39-.4-.54-.41-.14-.01-.3-.01-.46-.01s-.42.06-.64.3c-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.43-.58 1.63-1.15.2-.56.2-1.04.14-1.15-.06-.1-.22-.16-.46-.28z"/></svg></a>
+<a href="https://wa.me/8801898841305" target="_blank" rel="noopener" class="float-wa" aria-label="WhatsApp"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.07-1.33A9.94 9.94 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.01.79.8-2.94-.2-.3A7.94 7.94 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm4.4-5.9c-.24-.12-1.43-.7-1.65-.79-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.19-.46-.39-.4-.54-.41-.14-.01-.3-.01-.46-.01s-.42.06-.64.3c-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.43-.58 1.63-1.15.2-.56.2-1.04.14-1.15-.06-.1-.22-.16-.46-.28z"/></svg><span>WhatsApp</span></a>
 
 <script src="content.js"></script>
 <script src="script.js"></script>

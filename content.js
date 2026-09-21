@@ -49,7 +49,9 @@ function productCardHTML(pkg) {
     `<div class="product-loc">${PIN_SVG}Cox's Bazar</div>` +
     (pkg.price
       ? `<div class="product-price"><span class="from">শুরু</span>${oldPrice}${pkg.price}</div>`
-      : '') +
+      // No price set: say so, rather than leaving a gap where one would be.
+      // Every package is quoted on request, so this is the normal case.
+      : `<div class="is-on-request">${ON_REQUEST_LABEL}</div>`) +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
     `<a href="${url}" class="book-btn">Book Now</a></div></div></div>`
   );
