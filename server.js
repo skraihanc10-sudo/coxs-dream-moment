@@ -337,6 +337,53 @@ runOnce('english-front-end', () => {
 
 // Booking extras became a list so more than one can be offered, and the second
 // one - Special Dinner - is quoted on request rather than at a set fee.
+// Packages no longer belong to a time of day. The badge used to read Sunset
+// or Night, which ruled out half the bookings each package could have taken -
+// the customer picks the time when they book instead. The deployed volume
+// still carries the old badges, categories and time-specific copy, so the
+// seed's catalogue text is brought across.
+//
+// Photographs, prices and the featured flags are the admin's, and are kept.
+runOnce('packages-any-time', () => {
+  const seed = readJSON(path.join(APP_DIR, 'content', 'packages.json'), null);
+  const live = readJSON(PACKAGES_FILE, null);
+  if (!seed || !Array.isArray(seed.packages)) return false;
+  if (!live || !Array.isArray(live.packages)) return false;
+
+  const liveBySlug = new Map(live.packages.map(p => [p.slug, p]));
+
+  const next = seed.packages.map(pkg => {
+    const previous = liveBySlug.get(pkg.slug);
+    const carried = previous || {};
+
+    return {
+      ...JSON.parse(JSON.stringify(pkg)),
+      main_image: carried.main_image || pkg.main_image,
+      thumbnails: Array.isArray(carried.thumbnails) && carried.thumbnails.length
+        ? carried.thumbnails
+        : pkg.thumbnails,
+      // A price the admin set is theirs. The seed only supplies one for the
+      // three featured packages, and only when nothing is there already.
+      price: carried.price || pkg.price,
+      old_price: carried.old_price || pkg.old_price,
+      discount: carried.discount || pkg.discount,
+      featured: typeof carried.featured === 'boolean' ? carried.featured : pkg.featured,
+    };
+  });
+
+  writeJSON(PACKAGES_FILE, { packages: next });
+
+  // Retired slugs must not return through introduceNewSeedPackages.
+  const record = readJSON(INTRODUCED_FILE, null);
+  const seen = new Set(record && Array.isArray(record.slugs) ? record.slugs : []);
+  live.packages.forEach(p => seen.add(p.slug));
+  next.forEach(p => seen.add(p.slug));
+  writeJSON(INTRODUCED_FILE, { slugs: Array.from(seen) });
+
+  console.log(`Packages freed from a time of day: ${next.length} rewritten`);
+  return true;
+});
+
 runOnce('booking-extras-list', () => {
   const settings = readJSON(SETTINGS_FILE, null);
   if (!settings) return false;

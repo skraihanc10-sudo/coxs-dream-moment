@@ -410,6 +410,15 @@ document.addEventListener('DOMContentLoaded', function () {
       applyProductDetail(packages);
     }
     if (gallery) applyGallery(gallery);
+  })
+  .catch(() => {
+    // A failed fetch leaves whatever the HTML shipped with, which is better
+    // than an empty page - but the loader has to come off either way.
+  })
+  .finally(() => {
+    // Lifted only once the live content is in place, so the first thing seen
+    // is the real catalogue rather than the fallback baked into the HTML.
+    if (window.__liftLoader) window.__liftLoader();
   });
 });
 

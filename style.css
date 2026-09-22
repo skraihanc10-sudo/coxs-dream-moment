@@ -806,9 +806,8 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   .gallery-grid{grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); grid-auto-rows:150px; gap:10px;}
   .footer-grid{grid-template-columns:1fr; gap:26px;}
   .footer-bottom{justify-content:center; text-align:center;}
-  /* The label goes on a phone: the icon is understood, and the space is not. */
-  .float-wa{height:54px; width:54px; padding:0; justify-content:center; right:14px; bottom:14px;}
-  .float-wa span{display:none;}
+  /* The label stays: "Booking Now" is the instruction, and the icon alone
+     only says which app opens. */
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -1025,7 +1024,8 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 
   /* The floating button sits above the fold of the thumb zone, and the page
      is given room underneath so it cannot cover the last control. */
-  .float-wa{height:52px; width:52px; right:12px; bottom:12px;}
+  .float-wa{height:50px; padding:0 15px; gap:8px; right:12px; bottom:12px; font-size:14px;}
+  .float-wa svg{width:24px; height:24px;}
   body{padding-bottom:0;}
   .site-footer{padding-bottom:76px;}
 }
