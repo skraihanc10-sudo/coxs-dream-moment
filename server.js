@@ -434,6 +434,32 @@ runOnce('empty-demo-gallery', () => {
   return true;
 });
 
+// The homepage gained an About section and a row of numbers. Neither exists in
+// a settings file written before them, so the seed's copy is brought across -
+// but only where nothing is there already, so this cannot overwrite text the
+// owner has since rewritten.
+runOnce('about-and-stats', () => {
+  const seedSettings = readJSON(path.join(APP_DIR, 'content', 'settings.json'), null);
+  const settings = readJSON(SETTINGS_FILE, null);
+  if (!seedSettings || !settings) return false;
+
+  let changed = false;
+
+  if (!settings.about && seedSettings.about) {
+    settings.about = seedSettings.about;
+    changed = true;
+  }
+  if ((!Array.isArray(settings.stats) || settings.stats.length === 0) && Array.isArray(seedSettings.stats)) {
+    settings.stats = seedSettings.stats;
+    changed = true;
+  }
+
+  if (!changed) return false;
+  writeJSON(SETTINGS_FILE, settings);
+  console.log('About section and stats added to settings');
+  return true;
+});
+
 runOnce('booking-extras-list', () => {
   const settings = readJSON(SETTINGS_FILE, null);
   if (!settings) return false;

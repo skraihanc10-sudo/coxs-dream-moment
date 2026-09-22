@@ -38,5 +38,29 @@
   ],
   "helpline_number": "8801973615217",
   "helpline_display": "+880 1973-615217",
-  "helpline_note": "Urgent help on the day of your event"
+  "helpline_note": "Urgent help on the day of your event",
+  "about": {
+    "eyebrow": "Who sets this up",
+    "heading": "One year on this beach, and we know where the light falls",
+    "body": "Cox's Dream Moment started a year ago with one setup and a borrowed music system. Since then we have arranged proposals, birthdays and anniversaries along the same stretch of sand almost every week — which is how we know which spots stay quiet at sunset, how long the good light lasts, and where the wind will take a candle.\n\nEverything is carried, built and cleared by our own team. We arrive two hours early, set up while you are still at your hotel, and stay until it is done. You only have to turn up.",
+    "note": "Serving Cox’s Bazar sea beach and Marine Drive."
+  },
+  "stats": [
+    {
+      "value": "1",
+      "label": "Year on the beach"
+    },
+    {
+      "value": "200+",
+      "label": "Events arranged"
+    },
+    {
+      "value": "20",
+      "label": "Packages to choose from"
+    },
+    {
+      "value": "30 min",
+      "label": "Typical reply time"
+    }
+  ]
 }

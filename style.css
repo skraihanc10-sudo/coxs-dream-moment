@@ -1237,3 +1237,79 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   #shop-grid .section-head{padding-top:30px;}
   .product-badge{font-size:9.5px; padding:3px 8px;}
 }
+
+/* -------------------- about -------------------- */
+/* Who is behind the packages, sitting between the catalogue and the
+   reassurance strip: read what is on offer, then who sets it up, then why
+   that is safe to book. */
+.about-section{
+  padding:clamp(48px, 7vw, 76px) 0;
+  border-top:1px solid var(--line);
+  background:var(--sand-2);
+}
+.about-grid{
+  display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);
+  gap:clamp(28px, 5vw, 64px); align-items:start;
+}
+
+.about-copy .eyebrow{
+  color:var(--coral); font-size:12.5px; font-weight:600;
+  letter-spacing:0.14em; text-transform:uppercase;
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+}
+.about-copy .eyebrow::before{
+  content:''; width:22px; height:1px; background:var(--coral); flex:none;
+}
+.about-copy h2{
+  font-family:var(--font-body);
+  font-size:clamp(23px, 3.2vw, 34px);
+  color:var(--night); font-weight:700; line-height:1.25;
+  letter-spacing:-0.015em; text-wrap:balance;
+}
+#about-body{margin-top:16px; display:flex; flex-direction:column; gap:14px;}
+#about-body p{color:var(--ink-2); font-size:15.5px; line-height:1.78; max-width:62ch;}
+
+.about-note{
+  margin-top:16px; font-size:13.5px; color:var(--ink-3);
+  display:flex; align-items:center; gap:8px;
+}
+.about-note::before{
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:var(--gold); flex:none;
+}
+
+.about-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:26px;}
+
+/* The numbers. Two columns so each figure has room to be read as a figure
+   rather than as a row of a table. */
+.stat-grid{
+  display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+  gap:14px;
+}
+.stat-grid li{
+  background:#fff; border:1px solid var(--line);
+  border-radius:var(--radius); padding:20px 18px;
+  display:flex; flex-direction:column; gap:4px;
+  transition:border-color .15s, transform .15s;
+}
+.stat-grid li:hover{border-color:var(--gold); transform:translateY(-2px);}
+.stat-grid strong{
+  font-family:var(--font-display);
+  font-size:clamp(28px, 4vw, 38px); font-weight:600;
+  color:var(--coral); line-height:1.1;
+  font-variant-numeric:tabular-nums;
+}
+.stat-grid span{font-size:13px; color:var(--ink-2); line-height:1.45;}
+
+@media (max-width:860px){
+  .about-grid{grid-template-columns:1fr; gap:30px;}
+}
+
+@media (max-width:760px){
+  .about-section{padding:38px 0;}
+  #about-body p{font-size:15px;}
+  .about-actions a{flex:1; min-width:140px;}
+  .stat-grid{gap:10px;}
+  .stat-grid li{padding:16px 14px;}
+  .stat-grid span{font-size:12px;}
+}

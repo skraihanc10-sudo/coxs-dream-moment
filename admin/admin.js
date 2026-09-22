@@ -211,11 +211,85 @@ function renderSettings() {
   subField.innerHTML = `<label>Subheadline</label><textarea data-hero-key="subheading">${escapeHTML(hero.subheading || '')}</textarea>`;
   root.appendChild(subField);
 
-  const heroImgField = document.createElement('div');
-  heroImgField.className = 'field full';
-  heroImgField.innerHTML = '<label>Hero image</label>';
-  heroImgField.appendChild(buildImageField(hero.image, path => (hero.image = path)));
-  root.appendChild(heroImgField);
+  // No hero image field: the homepage hero is type only now, so a picture
+  // uploaded here would never be drawn.
+
+  // ---------------------------------------------------------------- about
+  const aboutTitle = document.createElement('div');
+  aboutTitle.className = 'section-title';
+  aboutTitle.textContent = 'About section (homepage)';
+  root.appendChild(aboutTitle);
+
+  const about = s.about || (s.about = {});
+  [['eyebrow', 'Small line above the heading'], ['heading', 'Heading']].forEach(([key, label]) => {
+    const field = document.createElement('div');
+    field.className = 'field full';
+    field.innerHTML = `<label>${label}</label><input data-about-key="${key}" value="${escapeAttr(about[key] || '')}">`;
+    root.appendChild(field);
+  });
+
+  const aboutBody = document.createElement('div');
+  aboutBody.className = 'field full';
+  aboutBody.innerHTML =
+    `<label>Body text (leave a blank line between paragraphs)</label>` +
+    `<textarea rows="8" data-about-key="body">${escapeHTML(about.body || '')}</textarea>`;
+  root.appendChild(aboutBody);
+
+  const aboutNote = document.createElement('div');
+  aboutNote.className = 'field full';
+  aboutNote.innerHTML =
+    `<label>Small note underneath</label>` +
+    `<input data-about-key="note" value="${escapeAttr(about.note || '')}">`;
+  root.appendChild(aboutNote);
+
+  // ---------------------------------------------------------------- stats
+  const statsTitle = document.createElement('div');
+  statsTitle.className = 'section-title';
+  statsTitle.textContent = 'Numbers shown beside the About text';
+  root.appendChild(statsTitle);
+
+  if (!Array.isArray(s.stats)) s.stats = [];
+  const statsWrap = document.createElement('div');
+  statsWrap.className = 'field full';
+  root.appendChild(statsWrap);
+  renderStats(statsWrap);
+}
+
+function renderStats(wrap) {
+  const list = state.settings.stats;
+  wrap.innerHTML = '';
+
+  list.forEach((stat, i) => {
+    const row = document.createElement('div');
+    row.className = 'repeater-item';
+    row.innerHTML = `
+      <input placeholder="Number, e.g. 1 or 200+" value="${escapeAttr(stat.value || '')}"
+             data-stat-idx="${i}" data-stat-field="value">
+      <input placeholder="What it counts, e.g. Year on the beach"
+             value="${escapeAttr(stat.label || '')}"
+             data-stat-idx="${i}" data-stat-field="label">
+      <button type="button" class="remove-btn" title="Remove">&times;</button>`;
+    row.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', e => {
+        list[e.target.dataset.statIdx][e.target.dataset.statField] = e.target.value;
+      });
+    });
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      list.splice(i, 1);
+      renderStats(wrap);
+    });
+    wrap.appendChild(row);
+  });
+
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'add-btn';
+  add.textContent = '+ Add a number';
+  add.addEventListener('click', () => {
+    list.push({ value: '', label: '' });
+    renderStats(wrap);
+  });
+  wrap.appendChild(add);
 }
 
 function renderAddons(wrap) {
@@ -294,6 +368,10 @@ function collectSettings() {
   const s = state.settings;
   $$('#settings-form [data-key]').forEach(el => (s[el.dataset.key] = el.value));
   $$('#settings-form [data-hero-key]').forEach(el => (s.hero[el.dataset.heroKey] = el.value));
+  // The stats repeater writes into state.settings.stats as it is typed, so
+  // only the About fields need collecting here.
+  if (!s.about) s.about = {};
+  $$('#settings-form [data-about-key]').forEach(el => (s.about[el.dataset.aboutKey] = el.value));
   return s;
 }
 
@@ -315,12 +393,15 @@ function blankPackage() {
     // on save, so nobody has to track the numbering by hand.
     code: '',
     name: 'New package',
-    badge: 'New',
-    trust_extra: '',
-    price: '৳0',
-    old_price: '৳0',
-    discount: '0% OFF',
-    categories: ['proposal'],
+    badge: 'Simple',
+    trust_extra: "Simple setup • Cox's Bazar",
+    // No price: only the featured packages carry one, and it is typed in
+    // rather than defaulted to a number nobody meant.
+    price: '',
+    old_price: '',
+    discount: '',
+    featured: false,
+    categories: [],
     main_image: '',
     thumbnails: [],
     inclusions: [],
@@ -403,29 +484,8 @@ function renderPackageCard(pkg, idx) {
   field('Old price (struck through) — needs a Price to show', 'old_price');
   field('Discount label (e.g. 20% OFF) — needs a Price to show', 'discount');
 
-  // categories
-  const catField = document.createElement('div');
-  catField.className = 'field full';
-  catField.innerHTML = '<label>Categories</label>';
-  const chipRow = document.createElement('div');
-  chipRow.className = 'chip-row';
-  [['sunset', 'Sunset (সূর্যাস্তের সময়)'], ['night', 'Night (রাতের আয়োজন)']].forEach(([val, label]) => {
-    const chip = document.createElement('label');
-    chip.className = 'chip-check';
-    const checked = (pkg.categories || []).includes(val);
-    chip.innerHTML = `<input type="checkbox" value="${val}" ${checked ? 'checked' : ''}> ${label}`;
-    chip.querySelector('input').addEventListener('change', e => {
-      pkg.categories = pkg.categories || [];
-      if (e.target.checked) {
-        if (!pkg.categories.includes(val)) pkg.categories.push(val);
-      } else {
-        pkg.categories = pkg.categories.filter(c => c !== val);
-      }
-    });
-    chipRow.appendChild(chip);
-  });
-  catField.appendChild(chipRow);
-  grid.appendChild(catField);
+  // No categories field. Packages used to be split into Sunset and Night;
+  // they are not tied to a time of day any more, and nothing filters on it.
 
   // main image
   const mainImgField = document.createElement('div');

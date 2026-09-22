@@ -152,6 +152,56 @@ function applyHero(hero) {
   // so an existing volume is not invalidated, and is simply unused.
 }
 
+// ---------------------------------------------------------------- about + stats
+// Both are editable in site settings, so the owner can rewrite who they are
+// and what the numbers say without touching the markup.
+function applyAbout(settings) {
+  if (!settings) return;
+
+  const about = settings.about;
+  if (about) {
+    const eyebrow = document.getElementById('about-eyebrow');
+    const heading = document.getElementById('about-heading');
+    const body = document.getElementById('about-body');
+    const note = document.getElementById('about-note');
+
+    if (eyebrow && about.eyebrow) eyebrow.textContent = about.eyebrow;
+    if (heading && about.heading) heading.textContent = about.heading;
+
+    if (body && about.body) {
+      // A blank line starts a new paragraph. Built as elements rather than
+      // innerHTML so anything typed into the admin panel is text, not markup.
+      body.textContent = '';
+      String(about.body).split(/\n\s*\n/).forEach(part => {
+        const trimmed = part.trim();
+        if (!trimmed) return;
+        const el = document.createElement('p');
+        el.textContent = trimmed;
+        body.appendChild(el);
+      });
+    }
+
+    if (note) {
+      note.textContent = about.note || '';
+      note.hidden = !about.note;
+    }
+  }
+
+  const grid = document.getElementById('stat-grid');
+  if (grid && Array.isArray(settings.stats) && settings.stats.length) {
+    grid.textContent = '';
+    settings.stats.forEach(stat => {
+      const li = document.createElement('li');
+      const value = document.createElement('strong');
+      value.textContent = stat.value || '';
+      const label = document.createElement('span');
+      label.textContent = stat.label || '';
+      li.append(value, label);
+      grid.appendChild(li);
+    });
+  }
+}
+
 // ---------------------------------------------------------------- mobile menu / footer links
 // Both are fully rebuilt from the current package list (not just
 // text-patched) so adding or deleting a package via the CMS changes the
@@ -429,6 +479,7 @@ document.addEventListener('DOMContentLoaded', function () {
       applySettings(settings);
       applyHero(settings.hero);
       applyContactPage(settings);
+      applyAbout(settings);
     }
     if (packages) {
       buildMobileMenu(packages);
