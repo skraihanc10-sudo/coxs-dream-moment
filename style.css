@@ -235,53 +235,109 @@ h1,h2,h3{line-height:1.3; font-weight:600;}
 /* -------------------- hero -------------------- */
 .home-hero{
   position:relative; overflow:hidden;
-  min-height:clamp(340px, 46vw, 500px);
-}
-/* The markup nests the photo and the text together inside this wrapper, so
-   the wrapper is the layer that fills the hero and centres what is on it. */
-.home-hero-img{
-  position:absolute; inset:0;
-  display:flex; align-items:center;
-}
-.home-hero-img > img{
-  position:absolute; inset:0;
-  width:100%; height:100%; object-fit:cover;
-}
-/* The gradient belongs to the same layer as the photo, not to the section:
-   put it on the section and it paints over the text as well. */
-.home-hero-img::after{
-  content:''; position:absolute; inset:0;
-  background:linear-gradient(100deg,
-    rgba(13,27,42,0.93) 0%,
-    rgba(13,27,42,0.8) 44%,
-    rgba(13,27,42,0.3) 78%,
-    rgba(13,27,42,0.12) 100%);
+  background:var(--night);
+  padding:clamp(48px, 9vw, 92px) 0 clamp(44px, 8vw, 80px);
 }
 
-.home-hero-overlay{
-  position:relative; z-index:2;
-  width:100%; max-width:1200px; margin:0 auto;
-  padding:40px 22px;
+/* A slow warm glow behind the type, standing in for the sunset the photograph
+   used to carry. It breathes rather than moves, so it reads as light on water
+   and not as something demanding attention. */
+.hero-glow{
+  position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(60% 70% at 18% 20%, rgba(226,97,60,0.34) 0%, transparent 62%),
+    radial-gradient(52% 62% at 78% 78%, rgba(217,164,65,0.22) 0%, transparent 60%);
+  animation:hero-breathe 11s ease-in-out infinite;
 }
-.home-hero-overlay > *{max-width:600px;}
+@keyframes hero-breathe{
+  0%,100%{opacity:0.75; transform:scale(1);}
+  50%{opacity:1; transform:scale(1.07);}
+}
+
+/* A hairline of surf along the bottom edge. */
+.home-hero::after{
+  content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(217,164,65,0.55), transparent);
+}
+
+.home-hero-overlay{position:relative; z-index:2;}
+.home-hero-overlay > *{max-width:640px;}
 
 .home-hero .eyebrow{
-  color:var(--gold); font-size:13px; font-weight:600;
-  letter-spacing:0.1em; text-transform:uppercase;
-  margin-bottom:14px;
+  color:var(--gold); font-size:12.5px; font-weight:600;
+  letter-spacing:0.16em; text-transform:uppercase;
+  margin-bottom:16px;
+  display:flex; align-items:center; gap:10px;
 }
+/* A short rule leading into the eyebrow, so the block has somewhere to start. */
+.home-hero .eyebrow::before{
+  content:''; width:28px; height:1px; background:var(--gold); flex:none;
+}
+
 .home-hero h1{
   font-family:var(--font-body);
-  font-size:clamp(28px, 4.4vw, 46px);
-  color:#fff; font-weight:700; line-height:1.28;
+  font-size:clamp(30px, 6.4vw, 58px);
+  color:#fff; font-weight:700; line-height:1.16;
+  letter-spacing:-0.015em;
   text-wrap:balance;
 }
-.hero-accent{color:var(--gold);}
-.home-hero .sub, .home-hero p:not(.eyebrow){
-  color:rgba(255,255,255,0.88); font-size:16.5px;
-  margin-top:14px;
+.hero-accent{
+  color:var(--gold);
+  /* The accent word gets its own weight of attention without a second colour
+     fighting the coral elsewhere on the page. */
+  font-style:italic;
 }
-.home-hero .btn-cta{margin-top:24px; padding:13px 28px; font-size:15.5px;}
+
+.home-hero .sub, .home-hero p:not(.eyebrow){
+  color:rgba(255,255,255,0.82); font-size:clamp(15px, 2.2vw, 17px);
+  margin-top:18px; line-height:1.7;
+}
+
+.hero-actions{
+  display:flex; gap:12px; flex-wrap:wrap; margin-top:30px;
+}
+.home-hero .btn-cta{padding:14px 30px; font-size:15.5px;}
+.btn-hero-ghost{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:14px 26px; border-radius:100px;
+  border:1px solid rgba(255,255,255,0.28); color:#fff;
+  font-weight:600; font-size:15px;
+  transition:border-color .15s, background .15s;
+}
+.btn-hero-ghost:hover{border-color:var(--gold); background:rgba(255,255,255,0.06);}
+
+.hero-points{
+  display:flex; flex-wrap:wrap; gap:10px 22px;
+  margin-top:30px; max-width:640px;
+}
+.hero-points li{
+  display:flex; align-items:center; gap:8px;
+  font-size:13.5px; color:rgba(255,255,255,0.68);
+}
+.hero-points li::before{
+  content:''; width:5px; height:5px; border-radius:50%;
+  background:var(--gold); flex:none;
+}
+
+/* Everything arrives in order, so the eye is led down the block instead of
+   being handed all of it at once. It starts visible and animates from there,
+   so a failed animation still leaves a readable page. */
+.home-hero-overlay > *{animation:hero-rise .7s cubic-bezier(.2,.7,.3,1) backwards;}
+.home-hero .eyebrow{animation-delay:.05s;}
+.home-hero h1{animation-delay:.15s;}
+.home-hero .sub{animation-delay:.28s;}
+.hero-actions{animation-delay:.4s;}
+.hero-points{animation-delay:.52s;}
+
+@keyframes hero-rise{
+  from{opacity:0; transform:translateY(14px);}
+  to{opacity:1; transform:none;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .hero-glow{animation:none;}
+  .home-hero-overlay > *{animation:none;}
+}
 
 .location-pill{
   display:inline-flex; align-items:center; gap:7px;
@@ -430,14 +486,16 @@ h1,h2,h3{line-height:1.3; font-weight:600;}
 }
 /* Every package is quoted on request, so the space where a price would be
    says so rather than sitting empty. */
+/* Where a price would be. It is an invitation rather than an absence, so it
+   is set in the accent and given the arrow that says something happens. */
 .is-on-request{
-  margin-top:12px; font-size:13.5px; color:var(--ink-2);
-  display:flex; align-items:center; gap:6px;
+  margin-top:12px; font-size:13.5px; font-weight:600; color:var(--coral);
+  display:inline-flex; align-items:center; gap:6px;
 }
-.is-on-request::before{
-  content:''; width:6px; height:6px; border-radius:50%;
-  background:var(--gold); flex:none;
+.is-on-request::after{
+  content:'→'; font-weight:700; transition:transform .15s;
 }
+.product-card:hover .is-on-request::after{transform:translateX(3px);}
 
 .product-actions{
   display:flex; align-items:center; gap:9px;
@@ -796,7 +854,6 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   .nav-bar{display:none;}
   .nav-toggle{display:flex;}
   .header-action span{display:none;}
-  .home-hero-overlay{padding:42px 0;}
   .product-grid{grid-template-columns:repeat(auto-fill, minmax(165px,1fr)); gap:14px; padding:26px 0 40px;}
   .product-body{padding:12px 12px 14px;}
   .product-name{font-size:14.5px;}
@@ -927,16 +984,9 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 .product-card.is-featured .product-price{color:var(--coral);}
 
 /* A quiet ribbon rather than a loud one - the price is the real signal. */
-.product-card.is-featured .product-thumb::after{
-  content:'Popular';
-  position:absolute; left:11px; bottom:9px; z-index:3;
-  background:var(--gold); color:var(--night);
-  font-size:10px; font-weight:700; letter-spacing:0.07em;
-  text-transform:uppercase;
-  padding:3px 9px;
-  border-radius:100px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.25);
-}
+/* No badge on the featured cards. Every card in that row would carry it, and
+   a label that is on everything distinguishes nothing - the row's heading
+   already says what they are. The gold edge is signal enough. */
 .product-card{position:relative;}
 
 #shop-grid .section-head{padding-top:26px;}
@@ -1043,9 +1093,9 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 
 /* A landscape phone is short, not narrow: the hero must not eat the screen. */
 @media (max-height:520px) and (orientation:landscape){
-  .home-hero{min-height:300px;}
-  .home-hero-overlay{padding:24px 22px;}
-  .home-hero h1{font-size:24px;}
+  .home-hero{padding:34px 0 30px;}
+  .home-hero h1{font-size:26px;}
+  .hero-points{display:none;}
 }
 
 /* -------------------- no sideways scroll -------------------- */
@@ -1101,3 +1151,89 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 }
 .gallery-empty svg{width:38px; height:38px; color:var(--ink-3);}
 .gallery-empty p{color:var(--ink-2); font-size:14.5px; max-width:340px;}
+
+/* ==========================================================================
+   Refinements
+
+   The photograph is gone from the hero, so the page now opens on type and the
+   first thing with an image on it is a package card. That shifts the weight of
+   the design onto the cards and the rhythm between sections, which is what
+   these adjust.
+   ========================================================================== */
+
+/* -------------------- cards -------------------- */
+/* A flatter resting state and a clearer lift, so a grid of twenty reads as a
+   list rather than twenty competing boxes. */
+.product-card{
+  box-shadow:none;
+  border-color:var(--line-soft);
+}
+.product-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 10px 30px rgba(13,27,42,0.11);
+  border-color:var(--line);
+}
+.product-card.is-featured{
+  border-color:var(--gold);
+  box-shadow:0 1px 3px rgba(217,164,65,0.2);
+}
+.product-card.is-featured:hover{
+  box-shadow:0 12px 32px rgba(217,164,65,0.26);
+}
+
+/* The tier badge is information, not a sticker. Quieter, and it sits on the
+   image rather than shouting over it. */
+.product-badge{
+  background:rgba(13,27,42,0.72);
+  font-weight:600; letter-spacing:0.05em;
+  text-transform:uppercase; font-size:10px;
+  padding:4px 10px;
+}
+
+.product-name{letter-spacing:-0.01em;}
+.product-code{letter-spacing:0.02em;}
+
+/* Book Now is the action on every card, twenty times down the page. At full
+   strength that is twenty coral bars; it earns its colour on hover instead. */
+.book-btn{
+  background:var(--night);
+  font-weight:600;
+}
+.book-btn:hover{background:var(--coral);}
+.product-card.is-featured .book-btn{background:var(--coral);}
+.product-card.is-featured .book-btn:hover{background:var(--coral-dark);}
+
+/* -------------------- section rhythm -------------------- */
+/* The featured row and the full catalogue are two different things. A rule
+   between them says so more quietly than a coloured band would. */
+#shop-grid .section-head{
+  padding-top:38px;
+  border-top:1px solid var(--line);
+  max-width:none; text-align:left;
+}
+#shop-grid .section-head p{max-width:560px;}
+.featured-section .section-head{max-width:none; text-align:left;}
+.featured-section .section-head p{max-width:560px;}
+
+/* The eyebrow gets the same leading rule as the hero's, so the two read as
+   the same system. */
+.section-head .eyebrow{
+  display:flex; align-items:center; gap:10px;
+}
+.section-head .eyebrow::before{
+  content:''; width:22px; height:1px; background:var(--coral); flex:none;
+}
+
+/* -------------------- trust strip -------------------- */
+.trust-strip{position:relative; overflow:hidden;}
+.trust-strip::before{
+  content:''; position:absolute; right:-80px; top:-80px;
+  width:300px; height:300px; border-radius:50%;
+  background:radial-gradient(circle, rgba(217,164,65,0.16) 0%, transparent 70%);
+}
+.trust-strip .container{position:relative; z-index:1;}
+
+@media (max-width:760px){
+  #shop-grid .section-head{padding-top:30px;}
+  .product-badge{font-size:9.5px; padding:3px 8px;}
+}

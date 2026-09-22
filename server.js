@@ -545,10 +545,19 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
     // Stored as a real boolean so the shop can filter on it without having to
     // guess what "false", 0 or "" were meant to mean.
     pkg.featured = pkg.featured === true;
+
+    // A discount and a struck-through old price only mean something next to a
+    // price. Dropped here as well as in the shop, so the data does not carry a
+    // "30% OFF" that nothing will ever draw.
+    if (!String(pkg.price || '').trim()) {
+      pkg.price = '';
+      pkg.old_price = '';
+      pkg.discount = '';
+    }
   }
 
-  // The featured row is the first thing on the shop page and it holds three
-  // cards. More than that and it stops being a recommendation.
+  // The featured row is the first thing on the shop page. More than a handful
+  // and it stops being a recommendation.
   const featuredCount = body.packages.filter(p => p.featured).length;
   if (featuredCount > 5) {
     return res.status(400).json({

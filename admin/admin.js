@@ -382,7 +382,7 @@ function renderPackageCard(pkg, idx) {
   field('Package name', 'name');
   field('Badge', 'badge');
   field('Trust line text', 'trust_extra');
-  field('Price', 'price');
+  field('Price — only shown on Featured packages; leave blank for "For contact"', 'price');
 
   // Featured packages sit in their own row at the top of the shop and are the
   // only ones showing a price, so this sits next to the price field.
@@ -400,8 +400,8 @@ function renderPackageCard(pkg, idx) {
   featRow.appendChild(featChip);
   featField.appendChild(featRow);
   grid.appendChild(featField);
-  field('Old price (struck through)', 'old_price');
-  field('Discount label', 'discount');
+  field('Old price (struck through) — needs a Price to show', 'old_price');
+  field('Discount label (e.g. 20% OFF) — needs a Price to show', 'discount');
 
   // categories
   const catField = document.createElement('div');

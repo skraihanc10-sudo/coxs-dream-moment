@@ -36,8 +36,13 @@ function productCardHTML(pkg, isFeatured) {
   // A freshly added package has no badge, discount or old price yet. These
   // render as coloured pills, so an empty one would show as a blank chip.
   const badge = pkg.badge ? `<span class="product-badge">${pkg.badge}</span>` : '';
-  const discount = pkg.discount ? `<span class="product-discount">${pkg.discount}</span>` : '';
-  const oldPrice = pkg.old_price ? `<span class="old">${pkg.old_price}</span>` : '';
+  // A discount is a reduction from a price. Without a price there is nothing
+  // for it to reduce, so neither the pill nor the struck-through old price is
+  // drawn on a package that is quoted in conversation.
+  const discount = pkg.price && pkg.discount
+    ? `<span class="product-discount">${pkg.discount}</span>` : '';
+  const oldPrice = pkg.price && pkg.old_price
+    ? `<span class="old">${pkg.old_price}</span>` : '';
   return (
     `<div class="product-card${isFeatured ? ' is-featured' : ''}" data-cat="${pkg.categories.join(' ')}">` +
     `<a href="${url}"><div class="product-thumb">` +
@@ -139,12 +144,12 @@ function applyHero(hero) {
   const heading = document.getElementById('hero-heading');
   const sub = document.getElementById('hero-sub');
   const cta = document.getElementById('hero-cta');
-  const img = document.getElementById('hero-image');
   if (eyebrow) eyebrow.textContent = hero.eyebrow;
   if (heading) heading.innerHTML = headingHTML(hero.heading);
   if (sub) sub.textContent = hero.subheading;
   if (cta) cta.textContent = hero.cta_text;
-  if (img) img.setAttribute('src', hero.image);
+  // The hero carries no photograph any more; hero.image is left in settings
+  // so an existing volume is not invalidated, and is simply unused.
 }
 
 // ---------------------------------------------------------------- mobile menu / footer links
@@ -210,7 +215,7 @@ const ADDON_DEFAULTS = [
   { label: 'Special Dinner', fee: '' },
 ];
 
-const ON_REQUEST_LABEL = 'Price on request';
+const ON_REQUEST_LABEL = 'For contact';
 
 // Prices are authored as display strings ("\u09f314,999"), so read the amount out of
 // the digits and keep whatever symbol the owner typed.
