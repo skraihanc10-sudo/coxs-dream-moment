@@ -28,7 +28,7 @@ function imageOrPlaceholder(src) {
   return src || PLACEHOLDER;
 }
 
-function productCardHTML(pkg) {
+function productCardHTML(pkg, isFeatured) {
   const url = packageUrl(pkg);
   const code = pkg.code
     ? `<div class="product-code">Package Code: <span>${pkg.code}</span></div>`
@@ -39,7 +39,7 @@ function productCardHTML(pkg) {
   const discount = pkg.discount ? `<span class="product-discount">${pkg.discount}</span>` : '';
   const oldPrice = pkg.old_price ? `<span class="old">${pkg.old_price}</span>` : '';
   return (
-    `<div class="product-card" data-cat="${pkg.categories.join(' ')}">` +
+    `<div class="product-card${isFeatured ? ' is-featured' : ''}" data-cat="${pkg.categories.join(' ')}">` +
     `<a href="${url}"><div class="product-thumb">` +
     badge + discount +
     `<img class="${pkg.main_image ? '' : 'is-placeholder'}" src="${imageOrPlaceholder(pkg.main_image)}" alt="${pkg.name}"></div></a>` +
@@ -48,7 +48,7 @@ function productCardHTML(pkg) {
     code +
     `<div class="product-loc">${PIN_SVG}Cox's Bazar</div>` +
     (pkg.price
-      ? `<div class="product-price"><span class="from">শুরু</span>${oldPrice}${pkg.price}</div>`
+      ? `<div class="product-price"><span class="from">From</span>${oldPrice}${pkg.price}</div>`
       // No price set: say so, rather than leaving a gap where one would be.
       // Every package is quoted on request, so this is the normal case.
       : `<div class="is-on-request">${ON_REQUEST_LABEL}</div>`) +
@@ -64,8 +64,8 @@ const relatedCardHTML = productCardHTML;
 
 // ---------------------------------------------------------------- settings (every page)
 // wa.me and tel: want bare digits. Admins reasonably type the number the way
-// they'd write it ("+880 1898-841305"), which produced links like
-// "https://wa.me/+880 1898-841305" that no client could open, so strip
+// they'd write it ("+880 1347-059522"), which produced links like
+// "https://wa.me/+880 1347-059522" that no client could open, so strip
 // everything that isn't a digit before building a link.
 function phoneDigits(value) {
   return String(value || '').replace(/\D/g, '');
@@ -88,6 +88,19 @@ function applySettings(settings) {
 
   document.querySelectorAll('a.float-wa').forEach(a => a.setAttribute('href', `https://wa.me/${phoneDigits(settings.whatsapp_number)}`));
 
+  // The helpline is a separate number: a phone that is answered on the day of
+  // an event, when a WhatsApp message is no use to anybody. It falls back to
+  // the main number so a settings file that predates the field still works.
+  const helplineDigits = phoneDigits(settings.helpline_number) || phoneDigits(settings.whatsapp_number);
+  const helplineCard = document.getElementById('helpline-card');
+  if (helplineCard) {
+    helplineCard.setAttribute('href', `tel:+${helplineDigits}`);
+    const display = document.getElementById('helpline-display');
+    if (display) display.textContent = settings.helpline_display || settings.phone_display || `+${helplineDigits}`;
+    const note = document.getElementById('helpline-note');
+    if (note && settings.helpline_note) note.textContent = settings.helpline_note;
+  }
+
   const footerDesc = document.querySelector('.footer-desc');
   if (footerDesc) footerDesc.textContent = settings.footer_desc;
 
@@ -102,7 +115,7 @@ function applySettings(settings) {
   document.querySelectorAll('.footer-col').forEach(col => {
     const h4 = col.querySelector('h4');
     const p = col.querySelector('p');
-    if (h4 && p && h4.textContent.trim() === 'যোগাযোগ') p.textContent = settings.address;
+    if (h4 && p && h4.textContent.trim() === 'Contact') p.textContent = settings.address;
   });
 }
 
@@ -158,7 +171,27 @@ function applyShopGrid(packages) {
   const realGrid = document.querySelector('#shop-grid > .product-grid');
   if (!realGrid) return;
 
-  realGrid.innerHTML = packages.map(productCardHTML).join('');
+  // The three marked `featured` are the only ones with a published price, so
+  // they go in their own row above everything else. A customer who wants a
+  // number should not have to open twenty pages to find one.
+  const featured = packages.filter(p => p.featured);
+  const rest = packages.filter(p => !p.featured);
+
+  const section = document.getElementById('featured-grid');
+  if (section) {
+    if (featured.length) {
+      section.hidden = false;
+      const grid = section.querySelector('.product-grid');
+      if (grid) grid.innerHTML = featured.map(p => productCardHTML(p, true)).join('');
+    } else {
+      section.hidden = true;
+    }
+  }
+
+  // With no featured section on the page, nothing is dropped - everything is
+  // shown in the main grid as before.
+  realGrid.innerHTML = (section ? rest : packages).map(p => productCardHTML(p)).join('');
+
   window.initWishButtons();
   window.initShopFilters();
 }
@@ -312,22 +345,26 @@ function applyContactPage(settings) {
   const cards = document.querySelector('.contact-cards');
   if (!cards || !settings) return;
 
-  const waLink = cards.querySelector('a[href^="https://wa.me/"]');
+  // Every selector here is scoped to .cc-body - the link *inside* a card.
+  // The helpline card is itself an <a href="tel:">, so an unscoped
+  // `a[href^="tel:"]` matched the whole card and replaced its markup with a
+  // bare phone number.
+  const waLink = cards.querySelector('.cc-body a[href^="https://wa.me/"]');
   if (waLink) {
     waLink.setAttribute('href', `https://wa.me/${phoneDigits(settings.whatsapp_number)}`);
     waLink.textContent = settings.phone_display;
   }
-  const fbLink = cards.querySelector('a[href*="facebook.com"]');
+  const fbLink = cards.querySelector('.cc-body a[href*="facebook.com"]');
   if (fbLink) {
     fbLink.setAttribute('href', settings.facebook_url);
     fbLink.textContent = settings.facebook_label;
   }
-  const phoneLink = cards.querySelector('a[href^="tel:"]');
+  const phoneLink = cards.querySelector('.cc-body a[href^="tel:"]');
   if (phoneLink) {
     phoneLink.setAttribute('href', `tel:+${phoneDigits(settings.whatsapp_number)}`);
     phoneLink.textContent = settings.phone_display;
   }
-  const mailLink = cards.querySelector('a[href^="mailto:"]');
+  const mailLink = cards.querySelector('.cc-body a[href^="mailto:"]');
   if (mailLink) {
     mailLink.setAttribute('href', `mailto:${settings.email}`);
     mailLink.textContent = settings.email;

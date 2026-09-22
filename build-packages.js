@@ -1,23 +1,25 @@
 // ==========================================================================
-// Rebuilds content/packages.json as a catalogue of twenty.
+// Rebuilds content/packages.json.
 //
-// The previous forty were the same package forty times - identical inclusions,
-// two descriptions shared between them all, names that were the only thing
-// telling them apart. A customer scrolling that list cannot choose, because
-// there is nothing to choose between.
+// Twenty packages: ten at sunset, ten at night, rising from a simple setup to
+// a full production. What separates them is what is in them, so the inclusion
+// lists differ rather than repeating.
 //
-// These twenty are a ladder instead: ten at sunset, ten at night, rising from
-// a simple setup to a full production, with each step adding something a
-// customer can actually see. The inclusions differ because the packages
-// differ.
+// Three of them are marked `featured`. Those sit in their own row at the top
+// of the shop and are the only ones showing a price. Every other package is
+// quoted in conversation, because the cost depends on the date, the size of
+// the group and what is added to it.
+//
+// The prices below are placeholders. Set the real ones in the admin panel -
+// they are the three packages that carry a number, so they are the three worth
+// getting right.
 //
 // Run with: node build-packages.js
 // ==========================================================================
 
 const fs = require('node:fs');
 
-// The things a package can include. Written once here so the same wording is
-// used everywhere and a tier is defined by what it adds to the one below.
+// Written once so a tier is defined by what it adds to the one below it.
 const I = {
   decor: 'Premium beach decoration setup',
   decorLux: 'Premium luxury decoration setup',
@@ -42,8 +44,6 @@ const I = {
   more: 'And many more attractive facilities!',
 };
 
-// Five tiers. Each one is the tier below plus what is named here, so the list
-// a customer reads grows in a way that matches the price.
 const TIERS = {
   simple: [I.decor, I.water, I.drinks, I.music, I.cake],
   standard: [I.decor, I.water, I.drinks, I.music, I.cake, I.petals, I.photos],
@@ -80,119 +80,131 @@ const TIER_LABEL = {
 };
 
 const POLICY =
-  'বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা ' +
-  'যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।';
+  'A 30% advance confirms the booking. The date can be changed free of charge ' +
+  'up to 48 hours before the event. Cancellations within 24 hours are not refundable.';
 
 const FAQ =
-  'সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে, তাই আমাদের টিম নির্ধারিত সময়ের অন্তত ২ ঘণ্টা ' +
-  'আগে সৈকতে পৌঁছে যায়। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।';
+  'The setup takes about 45 to 60 minutes, so our team reaches the beach at least ' +
+  'two hours before your time. If it rains, the date can be moved at no cost.';
 
-// Twenty packages, each with its own name, its own reason to exist, and a
-// description that says what actually happens rather than repeating the
-// inclusions list back.
 const CATALOGUE = [
   // ---------------------------------------------------------------- sunset
   {
     slug: 'sweet-beginnings', name: 'Sweet Beginnings', tier: 'simple', when: 'sunset',
-    desc: 'প্রথমবার প্রপোজ করার জন্য সবচেয়ে সহজ আর সুন্দর আয়োজন। সূর্য ডোবার ঠিক আগে সৈকতে ' +
-      'ছোট্ট একটি সাজানো কর্নার, কেক আর ওয়েলকাম ড্রিংকস — যা লাগে ঠিক ততটুকুই, বাড়তি কিছু নয়।',
+    // One of the three that carry a price: the easiest way in.
+    featured: true, price: '৳ 7,500',
+    desc: 'The simplest way to do this properly. A decorated corner on the sand just ' +
+      'before the sun goes down, a cake, welcome drinks and music — exactly what the ' +
+      'moment needs and nothing you will not use.',
   },
   {
     slug: 'ocean-breeze', name: 'Ocean Breeze', tier: 'simple', when: 'sunset',
-    desc: 'খোলা হাওয়ায় সমুদ্রের ধারে সাজানো একটি হালকা সেটআপ। বন্ধুবান্ধব নিয়ে ছোট আয়োজন ' +
-      'কিংবা জন্মদিনের চমকের জন্য আদর্শ — কম খরচে সুন্দর একটি সন্ধ্যা।',
+    desc: 'A light setup in the open air by the water. Good for a small group or a ' +
+      'birthday surprise — a beautiful evening without a large budget.',
   },
   {
     slug: 'golden-sunset', name: 'Golden Sunset', tier: 'standard', when: 'sunset',
-    desc: 'কক্সবাজারের বিখ্যাত সোনালি আলোটা যখন সবচেয়ে সুন্দর, ঠিক তখনই গোলাপের পাপড়ি বিছানো ' +
-      'পথ ধরে আপনার মুহূর্তটি। সাথে প্রফেশনাল ফটোগ্রাফার, যিনি আলোটা চলে যাওয়ার আগেই ছবিগুলো তুলে নেন।',
+    featured: true, price: '৳ 12,000',
+    desc: 'Cox’s Bazar is famous for twenty minutes of golden light, and this package ' +
+      'is built around them: a rose petal walkway, and a photographer who gets the ' +
+      'shots before the light goes.',
   },
   {
     slug: 'seashell-promise', name: 'Seashell Promise', tier: 'standard', when: 'sunset',
-    desc: 'সৈকতের বালিতে ঝিনুক আর ফুল দিয়ে সাজানো হৃদয়ের নকশা, মাঝখানে আপনি দুজন। ' +
-      'সহজ, কিন্তু ছবিতে অসাধারণ দেখায় — আমাদের সবচেয়ে বেশি বুক হওয়া সাজগুলোর একটি।',
+    desc: 'A heart laid out on the sand in shells and flowers, with the two of you in ' +
+      'the middle of it. Simple, and it photographs beautifully — one of the most ' +
+      'booked setups we do.',
   },
   {
     slug: 'horizon-glow', name: 'Horizon Glow', tier: 'premium', when: 'sunset',
-    desc: 'সম্পূর্ণ সাজানো একটি সন্ধ্যা — ফুলের তোড়া, লাক্সারি ডেকোরেশন, ফটোগ্রাফি ও ' +
-      'সিনেমাটিক ভিডিও। হোটেল থেকে পিকআপ, অনুষ্ঠান শেষে ড্রপ — আপনাকে কিছু ভাবতে হবে না।',
+    desc: 'A complete evening — flower bouquet, luxury decoration, photography and a ' +
+      'cinematic video. We collect you from your hotel and drop you back afterwards, ' +
+      'so there is nothing for you to arrange.',
   },
   {
     slug: 'marine-drive-magic', name: 'Marine Drive Magic', tier: 'premium', when: 'sunset',
-    desc: 'পৃথিবীর দীর্ঘতম সমুদ্র সৈকত সড়কের পাশে, তুলনামূলক নিরিবিলি একটি জায়গায় সাজানো আয়োজন। ' +
-      'ভিড় থেকে দূরে থাকতে চাইলে এটিই সেরা পছন্দ।',
+    desc: 'Set up along the longest beach road in the world, on a quieter stretch away ' +
+      'from the crowd. The right choice if you would rather not have an audience.',
   },
   {
     slug: 'sunlit-vows', name: 'Sunlit Vows', tier: 'luxury', when: 'sunset',
-    desc: 'এনগেজমেন্ট বা অ্যানিভার্সারির মতো বড় দিনের জন্য পূর্ণাঙ্গ আয়োজন। বেলুন ও ফুলের তোরণ, ' +
-      'লাক্সারি ডেকোর, আর উপর থেকে ড্রোনে তোলা সিনেমাটিক শট — পুরো সৈকতসহ আপনার মুহূর্ত।',
+    desc: 'A full production for an engagement or an anniversary. A balloon and floral ' +
+      'arch, luxury decor, and a cinematic drone shot that puts the whole beach in the ' +
+      'frame with you.',
   },
   {
     slug: 'amber-tide', name: 'Amber Tide', tier: 'luxury', when: 'sunset',
-    desc: 'সূর্যাস্তের কমলা আলোয় সাজানো বড় পরিসরের সেটআপ, পরিবার বা বন্ধুদের নিয়ে উদযাপনের জন্য। ' +
-      'ফটো, ভিডিও আর ড্রোন — তিনভাবেই ধরা থাকবে দিনটি।',
+    desc: 'A larger sunset setup for celebrating with family or friends. Photography, ' +
+      'cinematic video and drone — the day is captured three ways.',
   },
   {
     slug: 'coral-horizon', name: 'Coral Horizon', tier: 'grand', when: 'sunset',
-    desc: 'আমাদের সবচেয়ে বড় সূর্যাস্ত আয়োজন। নামের নিয়ন সাইন, পূর্ণ ডেকোরেশন, ডেডিকেটেড হোস্ট, ' +
-      'কোল্ড ফায়ার মুহূর্ত আর ছাপানো ফটো অ্যালবাম — অনুষ্ঠানের দিনই হাতে পাবেন স্মৃতিটা।',
+    desc: 'Our largest sunset event. A neon sign with your name, full decoration, a ' +
+      'dedicated host, a cold fire moment and a printed photo album you take home on ' +
+      'the day.',
   },
   {
     slug: 'golden-hour-bliss', name: 'Golden Hour Bliss', tier: 'grand', when: 'sunset',
-    desc: 'সোনালি ঘণ্টাটা পুরোপুরি আপনার। শুরু থেকে শেষ পর্যন্ত একজন হোস্ট সব সামলান, ' +
-      'আপনি শুধু মুহূর্তটায় থাকেন। বড় প্রপোজাল বা সারপ্রাইজ অনুষ্ঠানের জন্য।',
+    desc: 'The golden hour, entirely yours. A host runs the evening from start to ' +
+      'finish so you are only ever in the moment. For a large proposal or a surprise ' +
+      'with everyone there.',
   },
 
   // ----------------------------------------------------------------- night
   {
     slug: 'candlelit-shore', name: 'Candlelit Shore', tier: 'simple', when: 'night',
-    desc: 'অন্ধকার সৈকতে মোমবাতি আর লণ্ঠনের আলোয় ঘেরা ছোট্ট একটি কর্নার। শান্ত, ঘরোয়া, ' +
-      'আর ছবিতে দারুণ — রাতের আয়োজনের সবচেয়ে সহজ শুরু।',
+    desc: 'A small corner on a dark beach, surrounded by candles and lanterns. Quiet, ' +
+      'private, and it photographs far better than it sounds — the simplest way into ' +
+      'an evening setup.',
   },
   {
     slug: 'moonlight-romance', name: 'Moonlight Romance', tier: 'simple', when: 'night',
-    desc: 'চাঁদের আলো আর ঢেউয়ের শব্দ — এর সাথে শুধু কয়েকটা মোমবাতি, কেক আর একটু সাজ। ' +
-      'দুজনের নিরিবিলি একটি রাতের জন্য যতটুকু দরকার।',
+    desc: 'Moonlight and the sound of the waves, with candles, a cake and a little ' +
+      'decoration. As much as a quiet night for two actually needs.',
   },
   {
     slug: 'lantern-nights', name: 'Lantern Nights', tier: 'standard', when: 'night',
-    desc: 'মাথার উপরে পরির আলোর ছাউনি, নিচে গোলাপের পাপড়ি বিছানো পথ। আলো এমনভাবে বসানো ' +
-      'হয় যাতে রাতের ছবিও পরিষ্কার আর উষ্ণ আসে — এটাই এই প্যাকেজের আসল কাজ।',
+    desc: 'A canopy of fairy lights overhead and a rose petal walkway below. The lighting ' +
+      'is placed so the night photographs come out clean and warm — that is the real ' +
+      'work in this one.',
   },
   {
     slug: 'starlight-dinner', name: 'Starlight Dinner', tier: 'standard', when: 'night',
-    desc: 'তারাভরা আকাশের নিচে সাজানো টেবিল, ফেয়ারি লাইট আর মোমবাতি। ডিনার যোগ করতে চাইলে ' +
-      'আমরা ব্যবস্থা করে দিই — শুধু বুকিংয়ের সময় বলে দিন।',
+    desc: 'A table set under an open sky, with fairy lights and candles. Dinner can be ' +
+      'added — tell us when you book and we will arrange it.',
   },
   {
     slug: 'velvet-night', name: 'Velvet Night', tier: 'premium', when: 'night',
-    desc: 'দুজনের জন্য মোমবাতির আলোয় ডিনার, পূর্ণ লাক্সারি ডেকোরেশন, ফটোগ্রাফি ও সিনেমাটিক ভিডিও। ' +
-      'হোটেল থেকে নিয়ে আসা ও পৌঁছে দেওয়াসহ সম্পূর্ণ আয়োজন।',
+    desc: 'Candlelight dinner for two, full luxury decoration, photography and a ' +
+      'cinematic video, with pickup and drop from your hotel. A complete evening.',
   },
   {
     slug: 'nocturne-elegance', name: 'Nocturne Elegance', tier: 'premium', when: 'night',
-    desc: 'শান্ত, অভিজাত একটি রাতের সাজ — সাদা ফুল, উষ্ণ আলো আর ক্যান্ডেললাইট ডিনার। ' +
-      'অ্যানিভার্সারির জন্য আমাদের সবচেয়ে পছন্দের আয়োজন।',
+    desc: 'A quiet, elegant night — white flowers, warm light and a candlelight dinner. ' +
+      'Our own favourite for an anniversary.',
   },
   {
     slug: 'midnight-serenade', name: 'Midnight Serenade', tier: 'luxury', when: 'night',
-    desc: 'বেলুন ও ফুলের তোরণ, ক্যান্ডেললাইট ডিনার আর ড্রোন শট — রাতের বড় আয়োজনের জন্য পূর্ণাঙ্গ প্যাকেজ। ' +
-      'উপর থেকে আলোর সাজটা যেমন দেখায়, সেটাই ভিডিওর সবচেয়ে সুন্দর অংশ।',
+    desc: 'A balloon and floral arch, candlelight dinner and a drone shot. Seen from ' +
+      'above, the lighting is the best part of the video.',
   },
   {
     slug: 'aurora-night', name: 'Aurora Night', tier: 'luxury', when: 'night',
-    desc: 'রঙিন আলোয় সাজানো বড় পরিসরের রাতের সেটআপ, পরিবার বা বন্ধুদের নিয়ে উদযাপনের জন্য। ' +
-      'ফটো, সিনেমাটিক ভিডিও আর ড্রোন — সবই এর মধ্যে।',
+    desc: 'A large night setup in colour, for celebrating with family or friends. ' +
+      'Photography, cinematic video and drone are all included.',
   },
   {
     slug: 'royal-luxury', name: 'Royal Luxury', tier: 'grand', when: 'night',
-    desc: 'আমাদের সবচেয়ে বড় আয়োজন। নামের নিয়ন সাইন, পূর্ণ ডেকোরেশন, ক্যান্ডেললাইট ডিনার, ' +
-      'কোল্ড ফায়ার, ড্রোন, ছাপানো অ্যালবাম আর সারাক্ষণ একজন ডেডিকেটেড হোস্ট।',
+    featured: true, price: '৳ 25,000',
+    desc: 'Our largest event. A neon sign with your name, full decoration, candlelight ' +
+      'dinner, cold fire, drone, a printed album, and a dedicated host with you all ' +
+      'evening.',
   },
   {
     slug: 'celestial-bliss', name: 'Celestial Bliss', tier: 'grand', when: 'night',
-    desc: 'রাতের আকাশ, সমুদ্র আর আলো — সব মিলিয়ে সবচেয়ে বড় পরিসরের উদযাপন। বিয়ের প্রস্তাব, ' +
-      'অ্যানিভার্সারি বা বড় সারপ্রাইজ — যে উপলক্ষই হোক, পুরো সন্ধ্যাটা আমরা সামলাই।',
+    desc: 'The night sky, the sea and the lights together — our largest celebration. ' +
+      'A proposal, an anniversary or a big surprise: whatever the occasion, we run ' +
+      'the whole evening.',
   },
 ];
 
@@ -204,15 +216,17 @@ const packages = CATALOGUE.map((entry, index) => {
     slug: entry.slug,
     code: `CDM ${101 + index}`,
     name: `${entry.name} Package`,
-    // The badge says when it happens; the tier is what separates the packages
-    // within a time of day, so it goes in the line underneath.
     badge: entry.when === 'sunset' ? 'Sunset' : 'Night',
-    trust_extra: `${TIER_LABEL[entry.tier]} • ${entry.when === 'sunset' ? 'সূর্যাস্তের সময়' : 'রাতের আয়োজন'}`,
-    price: '',
+    trust_extra: `${TIER_LABEL[entry.tier]} • ${entry.when === 'sunset' ? 'Sunset setup' : 'Evening setup'}`,
+    // Only the featured three carry a price; the rest are quoted in conversation.
+    featured: entry.featured === true,
+    price: entry.price || '',
     old_price: '',
     discount: '',
     categories: [entry.when],
     main_image: '',
+    // Four photographs per package: the main one and three more. Left empty
+    // for the admin to fill in.
     thumbnails: [],
     inclusions,
     description: entry.desc,
@@ -227,9 +241,9 @@ fs.writeFileSync(
   'utf8',
 );
 
+const featured = packages.filter((p) => p.featured);
 console.log(`Wrote ${packages.length} packages`);
 console.log('  sunset:', packages.filter((p) => p.categories[0] === 'sunset').length);
 console.log('  night :', packages.filter((p) => p.categories[0] === 'night').length);
-console.log('  inclusions range:',
-  Math.min(...packages.map((p) => p.inclusions.length)), '-',
-  Math.max(...packages.map((p) => p.inclusions.length)));
+console.log('  featured (with a price):', featured.map((p) => `${p.name} ${p.price}`).join(', '));
+console.log('  priced but not featured:', packages.filter((p) => p.price && !p.featured).length);

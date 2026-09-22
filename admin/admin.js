@@ -133,6 +133,9 @@ const SETTINGS_TEXT_FIELDS = [
   ['topbar_announcement', 'Top bar announcement'],
   ['phone_display', 'Phone number (as displayed)'],
   ['whatsapp_number', 'WhatsApp number (digits only, including country code)'],
+  ['helpline_number', 'Helpline number for urgent calls (digits only, including country code)'],
+  ['helpline_display', 'Helpline number as displayed'],
+  ['helpline_note', 'Small line under the helpline number'],
   ['email', 'Email'],
   ['facebook_url', 'Facebook page link'],
   ['facebook_label', 'Facebook label text'],
@@ -380,6 +383,23 @@ function renderPackageCard(pkg, idx) {
   field('Badge', 'badge');
   field('Trust line text', 'trust_extra');
   field('Price', 'price');
+
+  // Featured packages sit in their own row at the top of the shop and are the
+  // only ones showing a price, so this sits next to the price field.
+  const featField = document.createElement('div');
+  featField.className = 'field full';
+  featField.innerHTML = '<label>Featured</label>';
+  const featRow = document.createElement('div');
+  featRow.className = 'chip-row';
+  const featChip = document.createElement('label');
+  featChip.className = 'chip-check';
+  featChip.innerHTML = `<input type="checkbox" ${pkg.featured ? 'checked' : ''}> Show at the top of the shop with its price`;
+  featChip.querySelector('input').addEventListener('change', e => {
+    pkg.featured = e.target.checked;
+  });
+  featRow.appendChild(featChip);
+  featField.appendChild(featRow);
+  grid.appendChild(featField);
   field('Old price (struck through)', 'old_price');
   field('Discount label', 'discount');
 

@@ -291,70 +291,49 @@ runOnce('catalogue-of-twenty', () => {
 });
 
 
-// Owner is re-pricing the whole catalogue from the admin panel, so clear the
-// prices that are already deployed and let each be set fresh. A package with no
-// price simply hides its price line and total until one is entered.
-runOnce('clear-package-prices', () => {
-  const data = readJSON(PACKAGES_FILE, null);
-  if (!data || !Array.isArray(data.packages)) return false;
-  let cleared = 0;
-  data.packages.forEach(p => {
-    for (const key of ['price', 'old_price', 'discount']) {
-      if (p[key]) { p[key] = ''; cleared++; }
-    }
-  });
-  if (!cleared) return false;
-  writeJSON(PACKAGES_FILE, data);
-  return true;
-});
-
-// Half the catalogue is a sunset setting and half is after dark, and the
-// descriptive copy moved to Bangla while names, codes, inclusions and prices
-// stay in English. Both are content, so the deployed volume needs them applied
-// directly rather than through the seed.
-runOnce('sunset-night-bangla', () => {
-  const sunset = ["simple", "sunset", "luxury", "sunset-serenade", "ocean-breeze"];
-  const night = ["royal", "moonlight-romance", "starlight-dinner", "grand-celebration", "signature-elite"];
-  const copy = {
-    sunset: { trust_extra: "সূর্যাস্তের সময়", description: "সূর্যাস্তের সোনালি আলোয় কক্সবাজার সৈকতে সাজানো একটি সম্পূর্ণ প্রিমিয়াম সেটআপ। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।" },
-    night: { trust_extra: "রাতের আয়োজন", description: "রাতের আকাশের নিচে আলো-ঝলমলে একটি সম্পূর্ণ প্রিমিয়াম সেটআপ, কক্সবাজার সৈকতে। কাস্টমাইজড কেক, ওয়েলকাম ড্রিংকস, মিউজিক সিস্টেম, পিকআপ ও ড্রপ সার্ভিস এবং প্রফেশনাল ফটোগ্রাফি ও সিনেমাটোগ্রাফি — সবকিছু মিলিয়ে আপনার বিশেষ মুহূর্তটি হয়ে উঠবে স্মরণীয়।" },
-  };
-  const policy = "বুকিং নিশ্চিত করতে ৩০% অগ্রিম প্রয়োজন। ইভেন্টের ৪৮ ঘণ্টা আগে তারিখ পরিবর্তন করা যাবে বিনামূল্যে। ২৪ ঘণ্টার মধ্যে বাতিল করলে অগ্রিম ফেরতযোগ্য নয়।";
-  const faq = "সেটআপে সাধারণত ৪৫–৬০ মিনিট সময় লাগে। বৃষ্টি হলে বিনামূল্যে তারিখ পরিবর্তনের সুযোগ থাকবে।";
-
-  const data = readJSON(PACKAGES_FILE, null);
-  if (data && Array.isArray(data.packages)) {
-    data.packages.forEach(p => {
-      const group = sunset.includes(p.slug) ? 'sunset'
-                  : night.includes(p.slug) ? 'night'
-                  : null;
-      if (!group) return;   // something the owner added since - leave it alone
-      p.badge = group === 'sunset' ? 'Sunset' : 'Night';
-      p.categories = [group];
-      p.trust_extra = copy[group].trust_extra;
-      p.description = copy[group].description;
-      p.booking_policy = policy;
-      p.faq = faq;
-    });
-    writeJSON(PACKAGES_FILE, data);
-  }
-
+// The front end is English now, and the three featured packages publish a
+// price. The live volume still holds the Bengali copy, the old phone number
+// and no featured flags, so the seed's settings and the seed's catalogue text
+// are brought across here, once.
+//
+// This replaces two earlier migrations - one that cleared every price, one
+// that wrote Bengali copy into settings - both of which now describe the
+// opposite of what the site is meant to say.
+runOnce('english-front-end', () => {
+  const seedSettings = readJSON(path.join(APP_DIR, 'content', 'settings.json'), null);
   const settings = readJSON(SETTINGS_FILE, null);
-  if (settings) {
-    Object.assign(settings, {"topbar_announcement": "কক্সবাজার জুড়ে সার্ভিস প্রদান করি 🌊", "service_area": "কক্সবাজার সমুদ্র সৈকত ও আশেপাশের এলাকা", "address": "কক্সবাজার, বাংলাদেশ", "hours_note": "ইভেন্টের দিন আমাদের টিম সেটআপের ২ ঘণ্টা আগে থেকেই সৈকতে উপস্থিত থাকে।", "footer_desc": "কক্সবাজার সমুদ্র সৈকতে স্বপ্নের প্রপোজাল ও ডেকোরেশন সার্ভিস। আপনার বিশেষ মুহূর্তকে করে তুলি স্মরণীয়।"});
-    settings.hours = [{"days": "শনি – বৃহস্পতি", "time": "সকাল ৯টা – রাত ৯টা"}, {"days": "শুক্রবার", "time": "দুপুর ২টা – রাত ৯টা"}];
-    settings.hero = Object.assign({}, settings.hero, {"eyebrow": "কক্সবাজারের সমুদ্র সৈকতে সেরা মুহূর্ত", "heading": "আপনার স্বপ্নের প্রপোজাল মুহূর্ত<br>আমরা সাজিয়ে দিই", "subheading": "সূর্যাস্তের আলোয়, ফুলের সাজে — কক্সবাজার সৈকতে বুক করুন আপনার বিশেষ সন্ধ্যা।", "cta_text": "প্যাকেজ দেখুন"});
+
+  if (seedSettings && settings) {
+    // Text and phone numbers come from the seed. Anything the admin owns and
+    // the seed cannot know - the uploaded hero image, the add-on list they
+    // have been editing - is left as it is.
+    for (const key of [
+      'topbar_announcement', 'phone_display', 'whatsapp_number',
+      'helpline_number', 'helpline_display', 'helpline_note',
+      'service_area', 'address', 'hours_note', 'footer_desc', 'hours',
+    ]) {
+      if (seedSettings[key] !== undefined) settings[key] = seedSettings[key];
+    }
+
+    settings.hero = Object.assign({}, settings.hero, {
+      eyebrow: seedSettings.hero.eyebrow,
+      heading: seedSettings.hero.heading,
+      subheading: seedSettings.hero.subheading,
+      cta_text: seedSettings.hero.cta_text,
+    });
+
     writeJSON(SETTINGS_FILE, settings);
   }
 
   const gallery = readJSON(GALLERY_FILE, null);
-  if (gallery) {
-    gallery.note = "* বর্তমানে ডেমো গ্যালারি — শীঘ্রই আরও বাস্তব ইভেন্টের ছবি যুক্ত হবে।";
+  if (gallery && gallery.note && /[ঀ-৿]/.test(gallery.note)) {
+    gallery.note = '* Sample gallery for now — photographs from real events are being added.';
     writeJSON(GALLERY_FILE, gallery);
   }
 
   return true;
 });
+
 
 // Booking extras became a list so more than one can be offered, and the second
 // one - Special Dinner - is quoted on request rather than at a set fee.
@@ -466,6 +445,18 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
     if (!Array.isArray(pkg.categories)) pkg.categories = [];
     if (!Array.isArray(pkg.thumbnails)) pkg.thumbnails = [];
     if (!Array.isArray(pkg.inclusions)) pkg.inclusions = [];
+    // Stored as a real boolean so the shop can filter on it without having to
+    // guess what "false", 0 or "" were meant to mean.
+    pkg.featured = pkg.featured === true;
+  }
+
+  // The featured row is the first thing on the shop page and it holds three
+  // cards. More than that and it stops being a recommendation.
+  const featuredCount = body.packages.filter(p => p.featured).length;
+  if (featuredCount > 4) {
+    return res.status(400).json({
+      error: `${featuredCount} packages are marked Featured. Keep it to four or fewer — the top row is a recommendation, not a second catalogue.`,
+    });
   }
 
   // Fill in any package saved without a code, reusing the same numbering

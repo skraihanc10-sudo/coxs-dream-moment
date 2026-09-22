@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const waBtn = document.querySelector('.bb-wa-btn');
   // content.js publishes the number from site settings; the literal is only a
   // fallback for when the settings request has not landed yet.
-  const waNumber = () => document.body.dataset.waNumber || '8801898841305';
+  const waNumber = () => document.body.dataset.waNumber || '8801347059522';
 
   function buildMessage() {
     const productName = document.querySelector('.pd-info h1') ? document.querySelector('.pd-info h1').textContent.trim() : 'Package';
@@ -33,10 +33,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const addons = document.body.dataset.addons || '';
 
-    const codeLine = packageCode ? `%0A🔖 প্যাকেজ কোড: ${encodeURIComponent(packageCode)}` : '';
-    const addonLine = addons ? `%0A➕ অতিরিক্ত সার্ভিস: ${encodeURIComponent(addons)}` : '';
+    const codeLine = packageCode ? `%0A🔖 Package code: ${encodeURIComponent(packageCode)}` : '';
+    const addonLine = addons ? `%0A➕ Add-ons: ${encodeURIComponent(addons)}` : '';
 
-    return `আসসালামু আলাইকুম, আমি বুকিং করতে চাই।%0A%0A🎁 প্যাকেজ: ${encodeURIComponent(productName)}${codeLine}%0A📍 লোকেশন: ${encodeURIComponent(location)}%0A📅 তারিখ: ${encodeURIComponent(date)}%0A👥 গেস্ট: ${encodeURIComponent(guests)}%0A⏰ সময়: ${encodeURIComponent(slot)}%0A💐 উপলক্ষ: ${encodeURIComponent(occasion)}${addonLine}%0A💰 সর্বমোট: ${encodeURIComponent(total)}`;
+    return `Hello! I would like to book.%0A%0A🎁 Package: ${encodeURIComponent(productName)}${codeLine}%0A📍 Location: ${encodeURIComponent(location)}%0A📅 Date: ${encodeURIComponent(date)}%0A👥 Guests: ${encodeURIComponent(guests)}%0A⏰ Time: ${encodeURIComponent(slot)}%0A💐 Occasion: ${encodeURIComponent(occasion)}${addonLine}%0A💰 Total: ${encodeURIComponent(total)}`;
   }
 
   if (bookBtn) {
@@ -181,9 +181,9 @@ window.initShopFilters = function () {
     return value.trim();
   }
 
-  // 2026-04-18 reads as nothing in particular; ১৮ এপ্রিল ২০২৬ reads as a date.
-  const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-                  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+  // 2026-04-18 reads as nothing in particular; 18 April 2026 reads as a date.
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
 
   function prettyDate(value) {
     if (!value) return '';
@@ -224,13 +224,13 @@ window.initShopFilters = function () {
     let ok = true;
 
     if (!name.value.trim()) {
-      showError(name, 'নামটা লিখুন');
+      showError(name, 'Enter your name');
       ok = false;
     }
 
     const digits = phone.value.replace(/\D/g, '');
     if (digits.length < 10) {
-      showError(phone, 'সঠিক মোবাইল নম্বর দিন');
+      showError(phone, 'Enter a valid mobile number');
       ok = false;
     }
 
@@ -242,20 +242,20 @@ window.initShopFilters = function () {
     const value = id => (document.getElementById(id).value || '').trim();
 
     const lines = [
-      "আসসালামু আলাইকুম! Cox's Dream Moment-এ বুকিং করতে চাই।",
+      "Hello! I would like to book with Cox's Dream Moment.",
       '',
-      `নাম: ${name.value.trim()}`,
-      `মোবাইল: ${tidyPhone(phone.value)}`,
+      `Name: ${name.value.trim()}`,
+      `Mobile: ${tidyPhone(phone.value)}`,
     ];
 
     // Everything optional is only mentioned if it was filled in, so the
     // message never arrives full of blank labels.
     const optional = [
-      ['প্যাকেজ', value('ef-package')],
-      ['তারিখ', prettyDate(value('ef-date'))],
-      ['সময়', value('ef-time')],
-      ['কতজন', value('ef-people')],
-      ['উপলক্ষ', value('ef-occasion')],
+      ['Packages', value('ef-package')],
+      ['Date', prettyDate(value('ef-date'))],
+      ['Time', value('ef-time')],
+      ['People', value('ef-people')],
+      ['Occasion', value('ef-occasion')],
     ];
 
     for (const [label, text] of optional) {
@@ -263,13 +263,13 @@ window.initShopFilters = function () {
     }
 
     const note = value('ef-note');
-    if (note) lines.push('', `বিশেষ অনুরোধ: ${note}`);
+    if (note) lines.push('', `Special request: ${note}`);
 
-    lines.push('', 'তারিখটি খালি আছে কি না জানাবেন please?');
+    lines.push('', 'Could you let me know if this date is free?');
 
     // The number lives in content/settings.json and content.js puts it on the
     // body, so the admin can change it in one place.
-    const number = document.body.dataset.waNumber || '8801898841305';
+    const number = document.body.dataset.waNumber || '8801347059522';
     const url = `https://wa.me/${number}?text=${encodeURIComponent(lines.join('\n'))}`;
 
     window.open(url, '_blank', 'noopener');
@@ -278,7 +278,7 @@ window.initShopFilters = function () {
     if (button) {
       const original = button.innerHTML;
       button.classList.add('is-sent');
-      button.innerHTML = 'WhatsApp খোলা হয়েছে — Send চাপুন';
+      button.innerHTML = 'WhatsApp is open — press Send';
       setTimeout(() => {
         button.classList.remove('is-sent');
         button.innerHTML = original;
