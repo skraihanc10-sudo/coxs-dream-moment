@@ -210,7 +210,7 @@ const ADDON_DEFAULTS = [
   { label: 'Special Dinner', fee: '' },
 ];
 
-const ON_REQUEST_LABEL = '\u0986\u09b2\u09cb\u099a\u09a8\u09be \u09b8\u09be\u09aa\u09c7\u0995\u09cd\u09b7\u09c7';
+const ON_REQUEST_LABEL = 'Price on request';
 
 // Prices are authored as display strings ("\u09f314,999"), so read the amount out of
 // the digits and keep whatever symbol the owner typed.
@@ -331,12 +331,34 @@ function applyProductDetail(packages) {
 function applyGallery(gallery) {
   const grid = document.querySelector('.gallery-grid');
   if (!grid || !gallery) return;
-  grid.innerHTML = gallery.items.map(item =>
-    `<figure class="gal-item${item.size ? ' ' + item.size : ''}">` +
-    `<img src="${item.image}" alt="${item.alt}" loading="lazy">` +
-    `<figcaption>${item.caption}</figcaption></figure>`
-  ).join('');
+
+  const items = Array.isArray(gallery.items) ? gallery.items : [];
+
+  if (items.length === 0) {
+    // An empty grid is just a gap, and a gap reads as a broken page. Say what
+    // is happening and give the visitor the one thing they can still do.
+    grid.classList.add('is-empty');
+    grid.innerHTML =
+      '<div class="gallery-empty">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
+      '<rect x="3" y="5" width="18" height="14" rx="2"/>' +
+      '<circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5L5 19"/></svg>' +
+      '<p>Photographs from our events are being added here.</p>' +
+      '<a class="btn-ghost" href="shop.html">See the packages</a>' +
+      '</div>';
+  } else {
+    grid.classList.remove('is-empty');
+    grid.innerHTML = items.map(item =>
+      `<figure class="gal-item${item.size ? ' ' + item.size : ''}">` +
+      `<img src="${item.image}" alt="${item.alt || ''}" loading="lazy">` +
+      (item.caption ? `<figcaption>${item.caption}</figcaption>` : '') +
+      `</figure>`
+    ).join('');
+  }
+
   const note = document.querySelector('.gallery-note');
+  // With nothing in the gallery the note repeats what the empty state says.
+  if (note) note.hidden = items.length === 0;
   if (note && gallery.note) note.textContent = gallery.note;
 }
 
@@ -472,7 +494,7 @@ function setupAddons(pkg) {
       if (onRequest) {
         totalNote.textContent = '* '
           + chosen.filter(a => a.fee === null).map(a => a.label).join(', ')
-          + '-\u098f\u09b0 \u09ae\u09c2\u09b2\u09cd\u09af \u0986\u09b2\u09cb\u099a\u09a8\u09be \u09b8\u09be\u09aa\u09c7\u0995\u09cd\u09b7\u09c7 \u09a8\u09bf\u09b0\u09cd\u09a7\u09be\u09b0\u09bf\u09a4 \u09b9\u09ac\u09c7\u0964';
+          + ' — price agreed with you before the booking is confirmed.';
       }
     }
 

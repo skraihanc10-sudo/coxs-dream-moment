@@ -927,14 +927,15 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 .product-card.is-featured .product-price{color:var(--coral);}
 
 /* A quiet ribbon rather than a loud one - the price is the real signal. */
-.product-card.is-featured::before{
+.product-card.is-featured .product-thumb::after{
   content:'Popular';
-  position:absolute; top:10px; right:0; z-index:3;
+  position:absolute; left:11px; bottom:9px; z-index:3;
   background:var(--gold); color:var(--night);
-  font-size:10.5px; font-weight:700; letter-spacing:0.06em;
+  font-size:10px; font-weight:700; letter-spacing:0.07em;
   text-transform:uppercase;
-  padding:3px 10px 3px 12px;
-  border-radius:100px 0 0 100px;
+  padding:3px 9px;
+  border-radius:100px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.25);
 }
 .product-card{position:relative;}
 
@@ -1069,3 +1070,34 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   /* On the narrowest phones the tagline is the first thing that can go. */
   .brand-text .tag, .brand-text .sub{display:none;}
 }
+
+/* -------------------- keeping clear of the floating button -------------------- */
+/* The button is fixed to the bottom right, so on a phone it lands on top of
+   whatever happens to be there - in practice, the name and price of the last
+   card in a row. Giving every scrolling section room underneath means the
+   button covers empty page rather than something that needs reading. */
+@media (max-width:760px){
+  .product-grid{padding-bottom:78px;}
+  .contact-section, .gallery-section, .product-detail{padding-bottom:78px;}
+  .site-footer{padding-bottom:84px;}
+}
+
+/* Dragging a finger up the page should not be interrupted by the button
+   catching the touch. It is small enough not to need a large hit area. */
+.float-wa{touch-action:manipulation;}
+
+/* -------------------- empty gallery -------------------- */
+/* Until photographs are uploaded the grid has nothing in it, and an empty
+   grid reads as a page that failed to load. This says what is happening and
+   offers the one thing the visitor can still usefully do. */
+.gallery-grid.is-empty{
+  display:block; grid-auto-rows:auto;
+}
+.gallery-empty{
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+  text-align:center; padding:56px 24px;
+  background:var(--sand-2); border:1px dashed var(--line);
+  border-radius:var(--radius);
+}
+.gallery-empty svg{width:38px; height:38px; color:var(--ink-3);}
+.gallery-empty p{color:var(--ink-2); font-size:14.5px; max-width:340px;}

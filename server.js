@@ -384,6 +384,56 @@ runOnce('packages-any-time', () => {
   return true;
 });
 
+// Prices come off the site until the owner sets them. The deployed volume
+// still carries numbers from an earlier catalogue - including discount labels
+// like "30% OFF" against packages that no longer have a price for the discount
+// to apply to - and a stale number reaching a customer is worse than no number
+// at all.
+//
+// Four packages are featured; those are the ones a price is meant to go on,
+// and they are set in the admin panel.
+runOnce('clear-prices-four-featured', () => {
+  const seed = readJSON(path.join(APP_DIR, 'content', 'packages.json'), null);
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!seed || !Array.isArray(seed.packages)) return false;
+  if (!data || !Array.isArray(data.packages)) return false;
+
+  const featuredSlugs = new Set(seed.packages.filter(p => p.featured).map(p => p.slug));
+
+  data.packages.forEach(p => {
+    p.price = '';
+    p.old_price = '';
+    p.discount = '';
+    p.featured = featuredSlugs.has(p.slug);
+  });
+
+  writeJSON(PACKAGES_FILE, data);
+  console.log(`Prices cleared; featured set on ${featuredSlugs.size} packages`);
+  return true;
+});
+
+// The gallery shipped with ten stock photographs so the page had something to
+// show. They are not this business's work, so they come off; the owner uploads
+// their own through the admin panel.
+runOnce('empty-demo-gallery', () => {
+  const gallery = readJSON(GALLERY_FILE, null);
+  if (!gallery || !Array.isArray(gallery.items) || gallery.items.length === 0) return false;
+
+  // Only the images that shipped with the template. Anything uploaded since
+  // lives under a different name and is the owner's, so it stays.
+  const SHIPPED = /^images\/(full-setup|neon-sign|petal-walkway|setup-arch|candle-jars|fairy-lights|dinner-table|seating-area|flower-bouquet|sunset-sea)\.(jpg|png)$/i;
+
+  const before = gallery.items.length;
+  gallery.items = gallery.items.filter(item => !SHIPPED.test(String(item.image || '')));
+
+  if (gallery.items.length === before) return false;
+
+  gallery.note = 'Photographs from our events are being added here.';
+  writeJSON(GALLERY_FILE, gallery);
+  console.log(`Demo gallery cleared: ${before - gallery.items.length} stock photos removed`);
+  return true;
+});
+
 runOnce('booking-extras-list', () => {
   const settings = readJSON(SETTINGS_FILE, null);
   if (!settings) return false;
@@ -500,9 +550,9 @@ app.put('/admin/api/packages', requireAuth, (req, res) => {
   // The featured row is the first thing on the shop page and it holds three
   // cards. More than that and it stops being a recommendation.
   const featuredCount = body.packages.filter(p => p.featured).length;
-  if (featuredCount > 4) {
+  if (featuredCount > 5) {
     return res.status(400).json({
-      error: `${featuredCount} packages are marked Featured. Keep it to four or fewer — the top row is a recommendation, not a second catalogue.`,
+      error: `${featuredCount} packages are marked Featured. Keep it to five or fewer — the top row is a recommendation, not a second catalogue.`,
     });
   }
 

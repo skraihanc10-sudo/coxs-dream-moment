@@ -10,9 +10,12 @@
 // package, and printing it on the card only rules things out. The enquiry form
 // asks for the time instead.
 //
-// Three packages are marked `featured`. They sit in their own row at the top
-// of the shop and are the only ones showing a price. The prices below are
-// placeholders - set the real ones in the admin panel.
+// Four packages are marked `featured`. They sit in their own row at the top of
+// the shop and are the only ones meant to carry a price.
+//
+// No price is written here. A number invented by this file could reach a
+// customer before anyone noticed it was wrong, so every package ships without
+// one and the four featured prices are set in the admin panel.
 //
 // Run with: node build-packages.js
 // ==========================================================================
@@ -94,7 +97,7 @@ const CATALOGUE = [
   // ------------------------------------------------------------- simple
   {
     slug: 'sweet-beginnings', name: 'Sweet Beginnings', tier: 'simple',
-    featured: true, price: '৳ 7,500',
+    featured: true,
     desc: 'The simplest way to do this properly. A decorated corner on the sand, a cake ' +
       'and welcome drinks — exactly what the moment needs and nothing you will not use. ' +
       'Our most booked first setup.',
@@ -119,7 +122,7 @@ const CATALOGUE = [
   // ----------------------------------------------------------- standard
   {
     slug: 'golden-sunset', name: 'Golden Sunset', tier: 'standard',
-    featured: true, price: '৳ 12,000',
+    featured: true,
     desc: 'A rose petal walkway, candles, and a professional photographer who knows ' +
       'the beach and gets the shots while the light is right. The step most couples ' +
       'take when they want photographs they will actually keep.',
@@ -143,6 +146,7 @@ const CATALOGUE = [
   // ------------------------------------------------------------ premium
   {
     slug: 'horizon-glow', name: 'Horizon Glow', tier: 'premium',
+    featured: true,
     desc: 'A complete evening — flower bouquet, fairy light canopy, luxury decoration, ' +
       'photography and a cinematic video. We collect you from your hotel and drop you ' +
       'back, so there is nothing for you to arrange.',
@@ -188,7 +192,7 @@ const CATALOGUE = [
   // -------------------------------------------------------------- grand
   {
     slug: 'royal-luxury', name: 'Royal Luxury', tier: 'grand',
-    featured: true, price: '৳ 25,000',
+    featured: true,
     desc: 'Our largest event. A neon sign with your name, full decoration, dinner for ' +
       'two, cold fire, a drone shot, a printed album, and a dedicated host with you ' +
       'the whole evening.',
@@ -222,7 +226,8 @@ const packages = CATALOGUE.map((entry, index) => {
     badge: tier.label,
     trust_extra: `${tier.label} setup • Cox's Bazar`,
     featured: entry.featured === true,
-    price: entry.price || '',
+    // Prices are the owner's to set, for the four featured packages only.
+    price: '',
     old_price: '',
     discount: '',
     // No time-of-day categories. The filter only ever ran from a ?cat= link,
@@ -251,7 +256,8 @@ packages.forEach((p) => {
 
 console.log(`Wrote ${packages.length} packages`);
 console.log('  per tier:', Object.entries(byTier).map(([k, v]) => `${k} ${v}`).join(', '));
-console.log('  featured:', packages.filter((p) => p.featured).map((p) => `${p.name} ${p.price}`).join(', '));
+console.log('  featured:', packages.filter((p) => p.featured).map((p) => p.name).join(', '));
+console.log('  packages carrying a price:', packages.filter((p) => p.price).length);
 console.log('  inclusions range:',
   Math.min(...packages.map((p) => p.inclusions.length)), '-',
   Math.max(...packages.map((p) => p.inclusions.length)));
