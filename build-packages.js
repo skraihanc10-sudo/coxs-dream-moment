@@ -1,86 +1,46 @@
 // ==========================================================================
 // Rebuilds content/packages.json.
 //
-// Twenty packages on a five-step ladder, four to a step, rising from a simple
-// setup to a full production. What separates them is what is in them, so the
-// inclusion lists differ rather than repeating.
+// Every package includes the same five things:
 //
-// No package is tied to a time of day. A setup can be done at sunset or after
-// dark - that is the customer's choice when they book, not a property of the
-// package, and printing it on the card only rules things out. The enquiry form
-// asks for the time instead.
+//   Premium beach decoration setup
+//   Mineral water
+//   Welcome drinks
+//   Free music system
+//   Customized cake
+//
+// That is the whole package. Nothing is added on top of it here, because a
+// list printed on the website is a promise, and the only safe promise is the
+// one the owner actually made. Anything beyond these five - photography, a
+// drone shot, dinner - is a paid extra offered at booking, which is where it
+// can be priced and agreed rather than assumed.
+//
+// What differs between the twenty is the setting: where on the beach, how it
+// is dressed, who it suits. So the descriptions describe the look, and none of
+// them mentions a service that is not in the list above.
+//
+// There is no tier either. Simple, Premium and Grand meant something when the
+// inclusion lists differed; with one list they would only claim a difference
+// that is not there.
 //
 // Four packages are marked `featured`. They sit in their own row at the top of
-// the shop and are the only ones meant to carry a price.
-//
-// No price is written here. A number invented by this file could reach a
-// customer before anyone noticed it was wrong, so every package ships without
-// one and the four featured prices are set in the admin panel.
+// the shop and are the only ones meant to carry a price, which is set in the
+// admin panel - never here, where an invented number could reach a customer.
 //
 // Run with: node build-packages.js
 // ==========================================================================
 
 const fs = require('node:fs');
 
-const I = {
-  decor: 'Premium beach decoration setup',
-  decorLux: 'Premium luxury decoration setup',
-  water: 'Mineral water',
-  drinks: 'Welcome drinks',
-  music: 'Free music system',
-  cake: 'Customized cake',
-  petals: 'Rose petal walkway',
-  candles: 'Candle & lantern arrangement',
-  photos: 'Professional photography',
-  fairy: 'Fairy light canopy',
-  bouquet: 'Fresh flower bouquet',
-  cinema: 'Professional cinematography & cinematic video shoot',
-  pickup: 'Pickup & drop service',
-  balloon: 'Balloon & floral arch',
-  dinner: 'Candlelight dinner for two',
-  drone: 'Cinematic drone shot',
-  neon: 'Custom neon name sign',
-  album: 'Printed photo album',
-  host: 'Dedicated event host on site',
-  coldfire: 'Cold fire & sparkler moment',
-  more: 'And many more attractive facilities!',
-};
-
-// Each step is the step below it plus what is named here, so the list a
-// customer reads grows in a way that matches what they are paying for.
-const TIERS = {
-  simple: {
-    label: 'Simple',
-    items: [I.decor, I.water, I.drinks, I.music, I.cake],
-  },
-  standard: {
-    label: 'Standard',
-    items: [I.decor, I.water, I.drinks, I.music, I.cake, I.petals, I.candles, I.photos],
-  },
-  premium: {
-    label: 'Premium',
-    items: [
-      I.decorLux, I.water, I.drinks, I.music, I.cake, I.petals, I.candles,
-      I.fairy, I.bouquet, I.photos, I.cinema, I.pickup,
-    ],
-  },
-  luxury: {
-    label: 'Luxury',
-    items: [
-      I.decorLux, I.water, I.drinks, I.music, I.cake, I.petals, I.candles,
-      I.fairy, I.bouquet, I.balloon, I.dinner, I.photos, I.cinema, I.pickup,
-      I.drone, I.more,
-    ],
-  },
-  grand: {
-    label: 'Grand',
-    items: [
-      I.decorLux, I.water, I.drinks, I.music, I.cake, I.petals, I.candles,
-      I.fairy, I.bouquet, I.balloon, I.neon, I.dinner, I.photos, I.cinema,
-      I.pickup, I.drone, I.album, I.host, I.coldfire, I.more,
-    ],
-  },
-};
+// The package. One list, shared by all twenty, so there is exactly one place
+// to change what is included.
+const INCLUSIONS = [
+  'Premium beach decoration setup',
+  'Mineral water',
+  'Welcome drinks',
+  'Free music system',
+  'Customized cake',
+];
 
 const POLICY =
   'A 30% advance confirms the booking. The date can be changed free of charge ' +
@@ -88,160 +48,138 @@ const POLICY =
 
 const FAQ =
   'The setup takes about 45 to 60 minutes, so our team reaches the beach at least ' +
-  'two hours before your time. Every package can be arranged at sunset or after dark — ' +
-  'tell us which you want when you book. If it rains, the date can be moved at no cost.';
+  'two hours before your time. Every setup can be arranged at sunset or after dark - ' +
+  'tell us which you want when you book. Photography, a drone shot and dinner can be ' +
+  'added as extras. If it rains, the date can be moved at no cost.';
 
-// Four to a tier. The descriptions say what makes each one different from its
-// neighbours, and none of them commits the customer to a time of day.
+// Twenty settings for the same five things. Each description says what the
+// setup looks like and who it suits - never what else comes with it.
 const CATALOGUE = [
-  // ------------------------------------------------------------- simple
   {
-    slug: 'sweet-beginnings', name: 'Sweet Beginnings', tier: 'simple',
-    featured: true,
-    desc: 'The simplest way to do this properly. A decorated corner on the sand, a cake ' +
-      'and welcome drinks — exactly what the moment needs and nothing you will not use. ' +
-      'Our most booked first setup.',
+    slug: 'sweet-beginnings', name: 'Sweet Beginnings', featured: true,
+    desc: 'A decorated corner on the open sand, kept simple and clean. The one most ' +
+      'people choose the first time, and the easiest to shoot on your own phone.',
   },
   {
-    slug: 'ocean-breeze', name: 'Ocean Breeze', tier: 'simple',
-    desc: 'A light setup in the open air by the water, with room for a few friends to ' +
-      'stand around. Good for a birthday surprise or a small celebration without a ' +
-      'large budget.',
+    slug: 'ocean-breeze', name: 'Ocean Breeze',
+    desc: 'Set close to the water with room for a few friends to stand around. Good for ' +
+      'a birthday surprise where the group matters as much as the couple.',
   },
   {
-    slug: 'candlelit-shore', name: 'Candlelit Shore', tier: 'simple',
-    desc: 'A small corner ringed with candles and lanterns. Quiet and private, and it ' +
-      'photographs far better than it sounds — the warm light does most of the work.',
+    slug: 'candlelit-shore', name: 'Candlelit Shore',
+    desc: 'Ringed with candles and lanterns, low to the ground. Quiet and private, and ' +
+      'it looks far warmer in real life than it sounds on a page.',
   },
   {
-    slug: 'moonlight-romance', name: 'Moonlight Romance', tier: 'simple',
-    desc: 'Just the two of you, the waves and a decorated table. As much as a quiet ' +
-      'evening actually needs, and nothing more.',
-  },
-
-  // ----------------------------------------------------------- standard
-  {
-    slug: 'golden-sunset', name: 'Golden Sunset', tier: 'standard',
-    featured: true,
-    desc: 'A rose petal walkway, candles, and a professional photographer who knows ' +
-      'the beach and gets the shots while the light is right. The step most couples ' +
-      'take when they want photographs they will actually keep.',
+    slug: 'moonlight-romance', name: 'Moonlight Romance',
+    desc: 'A dressed table for two facing the water, with nothing behind it but the sea. ' +
+      'As much as a quiet evening needs, and nothing you will not use.',
   },
   {
-    slug: 'seashell-promise', name: 'Seashell Promise', tier: 'standard',
+    slug: 'golden-sunset', name: 'Golden Sunset', featured: true,
+    desc: 'Placed to face the sun as it goes down, so the light falls across the setup ' +
+      'rather than behind it. Timed to the sunset for your date.',
+  },
+  {
+    slug: 'seashell-promise', name: 'Seashell Promise',
     desc: 'A heart laid out on the sand in shells and flowers, with the two of you in ' +
-      'the middle of it. Simple, and it photographs beautifully.',
+      'the middle of it. Simple, and one of the most asked for.',
   },
   {
-    slug: 'lantern-nights', name: 'Lantern Nights', tier: 'standard',
-    desc: 'Lanterns and candles arranged around a decorated seating area. The lighting ' +
-      'is placed so the photographs come out clean and warm rather than flat.',
+    slug: 'lantern-nights', name: 'Lantern Nights',
+    desc: 'Hanging lanterns over a dressed seating area, lit so the whole setup glows ' +
+      'evenly instead of throwing hard shadows.',
   },
   {
-    slug: 'starlight-dinner', name: 'Starlight Dinner', tier: 'standard',
-    desc: 'A table set under an open sky, with candles and a petal walkway leading to ' +
-      'it. Dinner can be added — tell us when you book and we will arrange it.',
-  },
-
-  // ------------------------------------------------------------ premium
-  {
-    slug: 'horizon-glow', name: 'Horizon Glow', tier: 'premium',
-    featured: true,
-    desc: 'A complete evening — flower bouquet, fairy light canopy, luxury decoration, ' +
-      'photography and a cinematic video. We collect you from your hotel and drop you ' +
-      'back, so there is nothing for you to arrange.',
+    slug: 'starlight-dinner', name: 'Starlight Dinner',
+    desc: 'A table set under an open sky with a dressed walkway leading to it. The meal ' +
+      'itself can be arranged as an extra - tell us when you book.',
   },
   {
-    slug: 'marine-drive-magic', name: 'Marine Drive Magic', tier: 'premium',
-    desc: 'Set up along the longest beach road in the world, on a quieter stretch away ' +
-      'from the crowd. The right choice if you would rather not have an audience.',
+    slug: 'horizon-glow', name: 'Horizon Glow', featured: true,
+    desc: 'A wide, open setting facing the horizon, dressed in warm tones. The easiest ' +
+      'of our layouts to fit a group into without crowding the middle.',
   },
   {
-    slug: 'velvet-night', name: 'Velvet Night', tier: 'premium',
-    desc: 'Deep colour, heavy drapes and warm light, with full photography and a ' +
-      'cinematic video. The most dramatic of the premium setups.',
+    slug: 'marine-drive-magic', name: 'Marine Drive Magic',
+    desc: 'Set along the longest beach road in the world, on a quieter stretch away from ' +
+      'the crowd. The right choice if you would rather not have an audience.',
   },
   {
-    slug: 'nocturne-elegance', name: 'Nocturne Elegance', tier: 'premium',
-    desc: 'White flowers, soft light and a restrained, elegant setting. Our own ' +
-      'favourite for an anniversary.',
-  },
-
-  // ------------------------------------------------------------- luxury
-  {
-    slug: 'sunlit-vows', name: 'Sunlit Vows', tier: 'luxury',
-    desc: 'A full production for an engagement. A balloon and floral arch, dinner for ' +
-      'two, and a cinematic drone shot that puts the whole beach in frame with you.',
+    slug: 'velvet-night', name: 'Velvet Night',
+    desc: 'Deep colour and heavy draping, lit low. The most dramatic setting we do, and ' +
+      'the one that reads best after dark.',
   },
   {
-    slug: 'amber-tide', name: 'Amber Tide', tier: 'luxury',
-    desc: 'A larger setup with room for family or friends to be there. Photography, ' +
-      'cinematic video and drone — the day is captured three ways.',
+    slug: 'nocturne-elegance', name: 'Nocturne Elegance',
+    desc: 'White flowers, pale draping and soft light. Restrained rather than bright - ' +
+      'our own favourite for an anniversary.',
   },
   {
-    slug: 'midnight-serenade', name: 'Midnight Serenade', tier: 'luxury',
-    desc: 'A floral arch, a candlelight dinner and a drone shot. Seen from above, the ' +
-      'lighting is the best part of the video.',
+    slug: 'sunlit-vows', name: 'Sunlit Vows',
+    desc: 'An open frame as the centrepiece, facing the water. Built for the moment ' +
+      'someone kneels, with a clear line of sight from every side.',
   },
   {
-    slug: 'aurora-night', name: 'Aurora Night', tier: 'luxury',
-    desc: 'Colour throughout — lighting, flowers and drapes worked into one scheme, ' +
-      'with the full photography and video package.',
-  },
-
-  // -------------------------------------------------------------- grand
-  {
-    slug: 'royal-luxury', name: 'Royal Luxury', tier: 'grand',
-    featured: true,
-    desc: 'Our largest event. A neon sign with your name, full decoration, dinner for ' +
-      'two, cold fire, a drone shot, a printed album, and a dedicated host with you ' +
-      'the whole evening.',
+    slug: 'amber-tide', name: 'Amber Tide',
+    desc: 'Warm amber tones across the whole setup, with space around it for family or ' +
+      'friends to gather without standing in the way.',
   },
   {
-    slug: 'coral-horizon', name: 'Coral Horizon', tier: 'grand',
-    desc: 'The full production in warm coral and gold. Neon sign, dedicated host, cold ' +
-      'fire moment and a printed photo album you take home on the day.',
+    slug: 'midnight-serenade', name: 'Midnight Serenade',
+    desc: 'A late setting, dressed darker, with the lighting doing most of the work. ' +
+      'For couples who would rather do this once the beach has emptied.',
   },
   {
-    slug: 'golden-hour-bliss', name: 'Golden Hour Bliss', tier: 'grand',
-    desc: 'A host runs the whole evening from start to finish so you are only ever in ' +
-      'the moment. For a large proposal or a surprise with everyone there.',
+    slug: 'aurora-night', name: 'Aurora Night',
+    desc: 'Colour worked through the lighting and the draping together rather than left ' +
+      'to one or the other. The brightest of the evening settings.',
   },
   {
-    slug: 'celestial-bliss', name: 'Celestial Bliss', tier: 'grand',
-    desc: 'The sea, the sky and the lights together — our largest celebration, arranged ' +
-      'end to end. Whatever the occasion, we run the evening.',
+    slug: 'royal-luxury', name: 'Royal Luxury', featured: true,
+    desc: 'Our largest layout, dressed end to end. Built for a group, wide enough that ' +
+      'everyone has somewhere to stand and can still see.',
+  },
+  {
+    slug: 'coral-horizon', name: 'Coral Horizon',
+    desc: 'Coral and gold throughout, facing the water. Warm in daylight and warmer ' +
+      'still once the lights come on.',
+  },
+  {
+    slug: 'golden-hour-bliss', name: 'Golden Hour Bliss',
+    desc: 'Positioned and timed for the twenty minutes of good light before sunset. ' +
+      'The setup is dressed to catch it rather than block it.',
+  },
+  {
+    slug: 'celestial-bliss', name: 'Celestial Bliss',
+    desc: 'Open to the sky, with the lighting kept low so the stars still read above it. ' +
+      'The quietest of our large settings.',
   },
 ];
 
-const packages = CATALOGUE.map((entry, index) => {
-  const tier = TIERS[entry.tier];
-
-  return {
-    slug: entry.slug,
-    code: `CDM ${101 + index}`,
-    name: `${entry.name} Package`,
-    // The badge carries the tier now. It used to say Sunset or Night, which
-    // ruled out half the bookings each package could have taken.
-    badge: tier.label,
-    trust_extra: `${tier.label} setup • Cox's Bazar`,
-    featured: entry.featured === true,
-    // Prices are the owner's to set, for the four featured packages only.
-    price: '',
-    old_price: '',
-    discount: '',
-    // No time-of-day categories. The filter only ever ran from a ?cat= link,
-    // and there is nothing left to filter on.
-    categories: [],
-    main_image: '',
-    // Four photographs per package: the main one and three more.
-    thumbnails: [],
-    inclusions: tier.items,
-    description: entry.desc,
-    booking_policy: POLICY,
-    faq: FAQ,
-  };
-});
+const packages = CATALOGUE.map((entry, index) => ({
+  slug: entry.slug,
+  code: `CDM ${101 + index}`,
+  name: `${entry.name} Package`,
+  // No tier. With one inclusion list there is nothing for a tier to describe.
+  badge: '',
+  // The line under the title on the package page. The location is appended to
+  // it by the renderer, so this says the thing the customer still has to
+  // decide rather than repeating where we are.
+  trust_extra: 'Sunset or after dark - you choose',
+  featured: entry.featured === true,
+  price: '',
+  old_price: '',
+  discount: '',
+  categories: [],
+  main_image: '',
+  // Four photographs per package: the main one and three more.
+  thumbnails: [],
+  inclusions: INCLUSIONS.slice(),
+  description: entry.desc,
+  booking_policy: POLICY,
+  faq: FAQ,
+}));
 
 fs.writeFileSync(
   'content/packages.json',
@@ -249,17 +187,19 @@ fs.writeFileSync(
   'utf8',
 );
 
-const byTier = {};
-packages.forEach((p) => {
-  byTier[p.badge] = (byTier[p.badge] || 0) + 1;
-});
+const lists = new Set(packages.map((p) => p.inclusions.join('|')));
 
 console.log(`Wrote ${packages.length} packages`);
-console.log('  per tier:', Object.entries(byTier).map(([k, v]) => `${k} ${v}`).join(', '));
+console.log('  inclusions per package:', packages[0].inclusions.length);
+console.log('  distinct inclusion lists:', lists.size, lists.size === 1 ? '(all identical)' : '(MISMATCH)');
 console.log('  featured:', packages.filter((p) => p.featured).map((p) => p.name).join(', '));
-console.log('  packages carrying a price:', packages.filter((p) => p.price).length);
-console.log('  inclusions range:',
-  Math.min(...packages.map((p) => p.inclusions.length)), '-',
-  Math.max(...packages.map((p) => p.inclusions.length)));
-console.log('  any time-of-day text left:',
-  packages.some((p) => /sunset|night|evening|dark/i.test(p.badge + p.trust_extra)) ? 'YES' : 'no');
+console.log('  carrying a price:', packages.filter((p) => p.price).length);
+
+// A description that names something not in the list is a promise the package
+// does not keep. Checked here rather than left for a customer to find.
+const PROMISES =
+  /photograph|photography|cinemat|video|drone|album|neon sign|dedicated host|pickup|bouquet|rose petal|cold fire|sparkler/i;
+
+const offenders = packages.filter((p) => PROMISES.test(p.description));
+console.log('  descriptions promising extras:',
+  offenders.length ? offenders.map((p) => p.slug).join(', ') : 'none');

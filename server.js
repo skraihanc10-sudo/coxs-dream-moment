@@ -460,6 +460,48 @@ runOnce('about-and-stats', () => {
   return true;
 });
 
+// Every package includes the same five things. The deployed volume still
+// carries the tiered lists - up to twenty items on the largest - which promise
+// photography, a drone shot, dinner and a dedicated host that are not part of
+// the package. A list on the website is a promise, so it is brought back to
+// what is actually included, and the descriptions with it.
+//
+// Photographs, prices and featured flags stay with the admin.
+runOnce('one-inclusion-list', () => {
+  const seed = readJSON(path.join(APP_DIR, 'content', 'packages.json'), null);
+  const live = readJSON(PACKAGES_FILE, null);
+  if (!seed || !Array.isArray(seed.packages)) return false;
+  if (!live || !Array.isArray(live.packages)) return false;
+
+  const liveBySlug = new Map(live.packages.map(p => [p.slug, p]));
+
+  const next = seed.packages.map(pkg => {
+    const previous = liveBySlug.get(pkg.slug) || {};
+    return {
+      ...JSON.parse(JSON.stringify(pkg)),
+      main_image: previous.main_image || pkg.main_image,
+      thumbnails: Array.isArray(previous.thumbnails) && previous.thumbnails.length
+        ? previous.thumbnails
+        : pkg.thumbnails,
+      price: previous.price || pkg.price,
+      old_price: previous.old_price || pkg.old_price,
+      discount: previous.discount || pkg.discount,
+      featured: typeof previous.featured === 'boolean' ? previous.featured : pkg.featured,
+    };
+  });
+
+  writeJSON(PACKAGES_FILE, { packages: next });
+
+  const record = readJSON(INTRODUCED_FILE, null);
+  const seen = new Set(record && Array.isArray(record.slugs) ? record.slugs : []);
+  live.packages.forEach(p => seen.add(p.slug));
+  next.forEach(p => seen.add(p.slug));
+  writeJSON(INTRODUCED_FILE, { slugs: Array.from(seen) });
+
+  console.log(`Inclusions levelled: every package now lists ${next[0].inclusions.length} items`);
+  return true;
+});
+
 runOnce('booking-extras-list', () => {
   const settings = readJSON(SETTINGS_FILE, null);
   if (!settings) return false;

@@ -321,8 +321,12 @@ function applyProductDetail(packages) {
 
   const trustText = document.querySelector('.pd-trust-text');
   if (trustText) {
-    trustText.textContent = [pkg.trust_extra, pkg.discount, "Cox's Bazar"]
-      .filter(Boolean).join(' · ');
+    // De-duplicated: the location is appended, but trust_extra has said it
+    // before now, and "Cox's Bazar · Cox's Bazar" reads as a bug.
+    const parts = [pkg.trust_extra, pkg.price ? pkg.discount : '', "Cox's Bazar"]
+      .filter(Boolean)
+      .filter((part, i, all) => all.indexOf(part) === i);
+    trustText.textContent = parts.join(' · ');
   }
 
   // Stashed on <body> so the booking buttons in script.js can pull the code
