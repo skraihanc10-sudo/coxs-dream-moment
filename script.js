@@ -67,6 +67,11 @@ document.addEventListener('DOMContentLoaded', function () {
       const occasion = document.querySelector('#bb-occasion');
       if (occasion && occasion.value) params.set('occasion', occasion.value);
 
+      // Whatever photography they ticked travels with them, so the form
+      // does not quietly forget it.
+      const extras = document.body.dataset.addons || '';
+      if (extras) params.set('extras', extras);
+
       window.location.href = 'contact?' + params.toString();
     });
   }
@@ -326,6 +331,14 @@ window.initShopFilters = function () {
   (function prefillFromQuery() {
     const q = new URLSearchParams(location.search);
     const map = { date: 'ef-date', time: 'ef-time', people: 'ef-people', occasion: 'ef-occasion' };
+
+    // Photography chosen on the package page is written into the note, where
+    // the owner will actually read it.
+    const extras = q.get('extras');
+    if (extras) {
+      const note = document.getElementById('ef-note');
+      if (note && !note.value) note.value = 'Also want: ' + extras;
+    }
     for (const key in map) {
       const value = q.get(key);
       if (!value) continue;

@@ -17,6 +17,9 @@ const state = {
   staffSummary: null,
   customers: [],
   mailReady: false,
+  threads: [],
+  chatUnread: 0,
+  openThread: null,
   filter: { status: 'all', q: '' },
 };
 
@@ -157,8 +160,17 @@ async function enter(session) {
 /** Pulls everything the dashboard and lists read. One call site, so a
  *  screen can never render against half-stale data. */
 async function refresh() {
-  const expenses = await api('/admin/api/expenses');
+  const [expenses, chats] = await Promise.all([
+    api('/admin/api/expenses'),
+    api('/admin/api/chats'),
+  ]);
   state.expenses = expenses.expenses || [];
+  state.threads = chats.threads || [];
+  state.chatUnread = chats.unread || 0;
+
+  const chatBadge = $('#nav-chat');
+  chatBadge.textContent = state.chatUnread;
+  chatBadge.hidden = state.chatUnread === 0;
 
   if (!isOwner()) {
     // A staff session would be refused by these, and asking anyway would
@@ -197,6 +209,7 @@ const VIEWS = {
   dashboard: { title: 'Dashboard', render: () => (isOwner() ? renderDashboard() : renderStaffHome()) },
   bookings: { title: 'Bookings', owner: true, render: renderBookings },
   accounts: { title: 'Accounts', render: () => (isOwner() ? renderAccounts() : renderStaffCosts()) },
+  messages: { title: 'Messages', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
   team: { title: 'Team', owner: true, render: renderTeam },
   content: { title: 'Website content', render: () => window.ContentEditor.mount($('#view-content')) },
@@ -373,18 +386,49 @@ function bookingTable(list) {
         <td class="num">${b.price ? tk(b.price) : '—'}</td>
         <td class="num">${b.paid ? tk(b.paid) : '—'}</td>
         <td class="num" style="${b.due ? 'color:var(--warn);font-weight:700' : ''}">${b.due ? tk(b.due) : '—'}</td>
-        <td><span class="pill pill-${esc(b.status)}">${esc((STATUSES.find((s) => s.id === b.status) || {}).label || b.status)}</span></td>
+        <td>
+          <span class="pill pill-${esc(b.status)}">${esc((STATUSES.find((s) => s.id === b.status) || {}).label || b.status)}</span>
+          ${b.status === 'new' ? `<button class="btn btn-sm btn-primary" style="margin-left:8px" data-approve="${esc(b.id)}">Approve</button>` : ''}
+        </td>
       </tr>`).join('')}
     </tbody></table></div>`;
 }
 
 function wireBookingRows(root) {
   $$('.row-link', root).forEach((tr) => {
-    tr.addEventListener('click', () => {
+    tr.addEventListener('click', (e) => {
+      // The Approve button lives inside the row; clicking it must not also
+      // open the booking behind the dialog.
+      if (e.target.closest('[data-approve]')) return;
       const booking = state.bookings.find((b) => b.id === tr.dataset.id);
       if (booking) editBooking(booking);
     });
   });
+
+  $$('[data-approve]', root).forEach((btn) => btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const booking = state.bookings.find((b) => b.id === btn.dataset.approve);
+    if (!booking) return;
+    if (!booking.price) {
+      // Confirming without a price emails the customer a booking with no
+      // figure in it, and then the number has to be walked back.
+      toast('Set the agreed price first, then approve.', 'bad');
+      editBooking(booking);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      await api('/admin/api/bookings/' + encodeURIComponent(booking.id), {
+        method: 'PUT', body: JSON.stringify({ status: 'confirmed' }),
+      });
+      await refresh();
+      go(currentView());
+      toast(booking.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 tell them on WhatsApp', 'good');
+    } catch (err) {
+      btn.disabled = false;
+      toast(err.message, 'bad');
+    }
+  }));
 }
 
 function renderBookings() {
@@ -515,6 +559,12 @@ function editBooking(booking) {
     `}
 
     ${isNew ? '' : `
+      <h3 class="section-title" style="margin-top:22px">Send a message</h3>
+      <p class="hint" style="margin:-6px 0 10px">
+        Emails this customer straight away. Nothing here changes the booking.</p>
+      <div id="remind-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"></div>
+      <p class="hint" id="remind-note" style="margin:8px 0 0"></p>
+
       <h3 class="section-title" style="margin-top:22px">Payments</h3>
       <div id="pay-list"></div>
       <button type="button" class="btn btn-sm" id="pay-add">+ Record a payment</button>`}
@@ -526,7 +576,8 @@ function editBooking(booking) {
   const noEmail = !isNew && !(b.email || (account && account.email));
 
   const extraFoot = isNew ? '' :
-    `${wa ? `<a class="btn btn-sm ${noEmail ? 'btn-primary' : ''}" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+    `${b.status === 'new' ? '<button type="button" class="btn btn-sm btn-primary" data-approve-now>Approve &amp; notify</button>' : ''}
+     ${wa ? `<a class="btn btn-sm ${noEmail ? 'btn-primary' : ''}" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
      <button type="button" class="btn btn-sm btn-danger" data-delete>Delete</button>`;
 
   const sheet = openSheet({
@@ -596,6 +647,58 @@ function editBooking(booking) {
   }
 
   if (!isNew) {
+    // The reminder buttons. Loaded from the server so the wording lives in
+    // one place rather than being duplicated here.
+    api('/admin/api/reminders').then(({ reminders, mailReady }) => {
+      const row = $('#remind-row', body);
+      if (!row) return;
+      row.innerHTML = reminders
+        .map((r) => `<button type="button" class="btn btn-sm" data-remind="${esc(r.id)}">${esc(r.label)}</button>`)
+        .join('');
+
+      const note = $('#remind-note', body);
+      if (!mailReady) note.textContent = 'Email is not switched on yet, so these will not send.';
+      else if (!b.email) note.textContent = 'This customer gave no email address, so use WhatsApp instead.';
+
+      $$('[data-remind]', row).forEach((btn) => btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const original = btn.textContent;
+        btn.textContent = 'Sending\u2026';
+        try {
+          const r = await api(`/admin/api/bookings/${encodeURIComponent(b.id)}/remind`, {
+            method: 'POST', body: JSON.stringify({ kind: btn.dataset.remind }),
+          });
+          toast(r.sent ? 'Email sent' : `Not sent \u2014 ${r.reason}`, r.sent ? 'good' : 'bad');
+        } catch (e) {
+          toast(e.message, 'bad');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      }));
+    }).catch(() => {});
+
+    const approveNow = $('[data-approve-now]');
+    if (approveNow) {
+      approveNow.addEventListener('click', async () => {
+        const price = Number($('#f-price', body).value || 0);
+        if (!price) { toast('Set the agreed price first.', 'bad'); $('#f-price', body).focus(); return; }
+        approveNow.disabled = true;
+        try {
+          await api('/admin/api/bookings/' + encodeURIComponent(b.id), {
+            method: 'PUT', body: JSON.stringify({ price, status: 'confirmed' }),
+          });
+          await refresh();
+          sheet.dialog.close();
+          go(currentView());
+          toast(b.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 tell them on WhatsApp', 'good');
+        } catch (e) {
+          approveNow.disabled = false;
+          toast(e.message, 'bad');
+        }
+      });
+    }
+
     drawPayments();
     $('#f-price', body).addEventListener('input', drawPayments);
 
@@ -694,6 +797,7 @@ function renderStaffHome() {
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" data-go="accounts">+ Add a cost</button>
         <button class="btn" data-go="content">Edit the packages</button>
+        <button class="btn" data-go="messages">Answer messages${state.chatUnread ? ' (' + state.chatUnread + ')' : ''}</button>
       </div>
     </div>`;
 
@@ -728,6 +832,143 @@ function renderStaffCosts() {
 
   $('#ex-add', el).addEventListener('click', () => addCost(renderStaffCosts));
   $('#topbar-actions').innerHTML = '';
+}
+
+// ================================================================ MESSAGES
+//
+// A list of conversations on the left, the open one on the right. Everyone
+// who works here can answer: a customer asking whether a date is free should
+// not have to wait for the owner to be free.
+
+function renderMessages() {
+  const el = $('#view-messages');
+  const list = state.threads;
+
+  el.innerHTML = `
+    <div class="chat-wrap">
+      <div class="chat-list">
+        ${list.length ? list.map((t) => `
+          <button class="chat-row ${state.openThread === t.customerId ? 'is-open' : ''}" data-thread="${esc(t.customerId)}">
+            <span class="cr-top">
+              <strong>${esc(t.name)}</strong>
+              ${t.unread ? `<span class="cr-dot">${t.unread}</span>` : ''}
+            </span>
+            <span class="cr-preview">${t.lastFrom === 'team' ? 'You: ' : ''}${esc(t.preview)}</span>
+            <span class="cr-when">${esc(relativeTime(t.lastAt))}</span>
+          </button>`).join('')
+          : '<div class="empty"><strong>No messages yet</strong>When a customer writes from the website, it lands here.</div>'}
+      </div>
+      <div class="chat-panel" id="chat-panel">
+        <div class="empty"><strong>Pick a conversation</strong>Choose someone on the left to read and answer.</div>
+      </div>
+    </div>`;
+
+  $$('[data-thread]', el).forEach((b) => b.addEventListener('click', () => openThread(b.dataset.thread)));
+  if (state.openThread && list.some((t) => t.customerId === state.openThread)) openThread(state.openThread);
+
+  $('#topbar-actions').innerHTML = state.mailReady || !isOwner() ? ''
+    : '<span class="hint" style="margin:0;align-self:center">Email is off — replies will not be emailed</span>';
+}
+
+/** "3 minutes ago" rather than an ISO string: on this screen the only thing
+ *  that matters about a time is how long someone has been waiting. */
+function relativeTime(iso) {
+  if (!iso) return '';
+  const then = new Date(iso);
+  if (isNaN(then)) return '';
+  const mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+  const days = Math.round(hours / 24);
+  if (days < 7) return days + (days === 1 ? ' day ago' : ' days ago');
+  return humanDate(iso);
+}
+
+async function openThread(customerId) {
+  state.openThread = customerId;
+  $$('[data-thread]').forEach((b) => b.classList.toggle('is-open', b.dataset.thread === customerId));
+
+  const panel = $('#chat-panel');
+  panel.innerHTML = '<div class="empty">Loading…</div>';
+
+  let data;
+  try {
+    data = await api('/admin/api/chats/' + encodeURIComponent(customerId));
+  } catch (e) {
+    panel.innerHTML = `<div class="empty"><strong>Could not load</strong>${esc(e.message)}</div>`;
+    return;
+  }
+
+  const wa = waNumber(data.phone);
+  panel.innerHTML = `
+    <div class="chat-head">
+      <div>
+        <strong>${esc(data.name)}</strong>
+        <span>${esc(data.phone || data.email || '')}</span>
+      </div>
+      ${wa ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+    </div>
+    <div class="chat-log" id="chat-log">
+      ${data.messages.map(bubble).join('') ||
+        '<div class="empty" style="padding:28px 16px">Nothing said yet.</div>'}
+    </div>
+    <form class="chat-form" id="chat-form">
+      <textarea id="chat-text" rows="2" placeholder="Write a reply…"></textarea>
+      <button class="btn btn-primary" type="submit" id="chat-send">Send</button>
+    </form>
+    <p class="hint" style="padding:0 16px 14px;margin:0">
+      ${data.email ? 'They get this on the website and by email.' : 'They gave no email address, so this shows on the website only.'}
+    </p>`;
+
+  const log = $('#chat-log');
+  log.scrollTop = log.scrollHeight;
+
+  // Reading a thread clears its unread count, so the sidebar has to catch up.
+  await refresh();
+  $$('[data-thread]').forEach((b) => b.classList.toggle('is-open', b.dataset.thread === customerId));
+
+  $('#chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const box = $('#chat-text');
+    const text = box.value.trim();
+    if (!text) return;
+
+    const send = $('#chat-send');
+    send.disabled = true;
+    try {
+      const r = await api('/admin/api/chats/' + encodeURIComponent(customerId), {
+        method: 'POST', body: JSON.stringify({ text }),
+      });
+      box.value = '';
+      $('#chat-log').innerHTML = r.messages.map(bubble).join('');
+      $('#chat-log').scrollTop = $('#chat-log').scrollHeight;
+      await refresh();
+      $$('[data-thread]').forEach((b) => b.classList.toggle('is-open', b.dataset.thread === customerId));
+    } catch (err) {
+      toast(err.message, 'bad');
+    } finally {
+      send.disabled = false;
+      box.focus();
+    }
+  });
+
+  // Enter sends, shift+Enter makes a new line — what everyone expects.
+  $('#chat-text').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      $('#chat-form').requestSubmit();
+    }
+  });
+}
+
+function bubble(m) {
+  const mine = m.from === 'team';
+  return `<div class="msg ${mine ? 'mine' : 'theirs'}">
+    <div class="msg-body">${esc(m.text)}</div>
+    <div class="msg-meta">${mine ? esc(m.byName) + ' · ' : ''}${esc(relativeTime(m.at))}</div>
+  </div>`;
 }
 
 // ================================================================ CUSTOMERS

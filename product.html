@@ -83,10 +83,6 @@
 <header class="site-header">
   <div class="container header-main">
     <a href="/" class="brand">
-      <img class="brand-logo" src="images/logo-mark.png" alt="Cox's Dream Moment"
-           width="220" height="102"
-           onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
-      <span class="brand-mark" hidden>CDM</span>
       <span class="brand-text">
         <span class="name">Cox's Dream Moment</span>
         <span class="tag">Your Dream Moment</span>
@@ -208,7 +204,7 @@
         </div>
 
         <div class="bb-addons" hidden>
-          <p class="bb-addons-label">Add-ons</p>
+          <p class="bb-addons-label">Add photography</p>
           <div class="bb-addons-list"></div>
         </div>
 
@@ -228,10 +224,15 @@
           and how many days are left. No password needed &mdash; just your number.
         </p>
 
-        <div class="bb-footer-note">
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>Safe booking</span>
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0114 0v1"/></svg>Personal help</span>
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>Flexible support</span>
+        <!-- Filled from site settings, so the owner can change what is
+             promised here without a deploy. -->
+        <ul class="bb-trust"></ul>
+
+        <div class="bb-warning" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>
+          </svg>
+          <p></p>
         </div>
       </div>
 

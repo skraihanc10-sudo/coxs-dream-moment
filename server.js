@@ -1861,6 +1861,92 @@ async function mailBookingUpdated(booking, previous) {
   recordNotice(booking.id, kind, result);
 }
 
+// ------------------------------------------------------------ reminders
+//
+// Messages the owner sends because they want to, not because a field
+// changed: the nudge the day before, the "we are ready" on the morning.
+// Kept here rather than typed each time, so every customer gets the same
+// wording and nobody has to compose one at eleven at night.
+
+const REMINDERS = {
+  tomorrow: {
+    label: 'Tomorrow \u2014 gentle reminder',
+    heading: 'We see you tomorrow',
+    subject: (b) => `See you tomorrow \u2014 ${b.id}`,
+    body: (b) =>
+      `<p style="margin:0 0 16px;line-height:1.6">Just a quick note that your setup is tomorrow. `
+      + `Our team will be on the beach two hours before your time, so everything is finished `
+      + `before you arrive.</p>`,
+  },
+  ready: {
+    label: 'Today \u2014 we are ready and waiting',
+    heading: 'Everything is ready',
+    subject: (b) => `We are ready for you \u2014 ${b.id}`,
+    body: () =>
+      `<p style="margin:0 0 16px;line-height:1.6">Your setup is ready and we are waiting for you. `
+      + `Take your time \u2014 we are here until you arrive.</p>`,
+  },
+  balance: {
+    label: 'Payment still due',
+    heading: 'A note about your booking',
+    subject: (b) => `Your booking \u2014 ${b.id}`,
+    body: (b, paid, due) =>
+      `<p style="margin:0 0 16px;line-height:1.6">A gentle reminder about the balance on your `
+      + `booking. You can pay it on the day, or send it ahead if that is easier \u2014 whichever `
+      + `suits you.</p>`,
+  },
+  thanks: {
+    label: 'After the event \u2014 thank you',
+    heading: 'Thank you',
+    subject: (b) => `Thank you from Cox's Dream Moment \u2014 ${b.id}`,
+    body: () =>
+      `<p style="margin:0 0 16px;line-height:1.6">We hope your evening was everything you wanted. `
+      + `It was a pleasure to set it up for you. If you have a moment, we would love to hear how `
+      + `it went \u2014 and if you would share a photograph, even better.</p>`,
+  },
+};
+
+app.get('/admin/api/reminders', requireOwner, (req, res) => {
+  res.json({
+    reminders: Object.keys(REMINDERS).map((id) => ({ id, label: REMINDERS[id].label })),
+    mailReady: mailReady(),
+  });
+});
+
+app.post('/admin/api/bookings/:id/remind', requireOwner, async (req, res) => {
+  const kind = String((req.body || {}).kind || '');
+  const template = REMINDERS[kind];
+  if (!template) return res.status(400).json({ error: 'Unknown reminder.' });
+
+  const booking = readBookings().bookings.find((b) => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+
+  const paid = bookingPaid(booking);
+  const due = Math.max(money(booking.price) - paid, 0);
+
+  if (!booking.email) {
+    recordNotice(booking.id, kind, { skipped: 'no email address' });
+    return res.json({ ok: true, sent: false, reason: 'no email address' });
+  }
+
+  const result = await sendMail(booking.email, template.subject(booking), mailShell(
+    template.heading,
+    `<p style="margin:0 0 16px;line-height:1.6">Hello ${escapeHtml(booking.name)},</p>`
+    + template.body(booking, paid, due)
+    + bookingRows(booking)
+    + (booking.price ? `<div style="margin-top:16px;padding:14px 16px;background:#FBF7F1;border-radius:10px">
+        ${rowsHtml([
+          ['Total', '\u09f3' + money(booking.price).toLocaleString('en-IN')],
+          ['Paid', '\u09f3' + paid.toLocaleString('en-IN')],
+          ['Still to pay', due ? '\u09f3' + due.toLocaleString('en-IN') : 'Nothing \u2014 fully paid'],
+        ])}
+      </div>` : ''),
+    'See your booking', `${SITE_URL}/my-bookings`));
+
+  recordNotice(booking.id, kind, result);
+  res.json({ ok: true, sent: !!result.ok, reason: result.error || result.skipped || '' });
+});
+
 // ---------------------------------------------------------------- admin bookings
 
 app.get('/admin/api/bookings', requireOwner, (req, res) => {
@@ -2041,6 +2127,216 @@ app.get('/admin/api/staff-summary', requireAuth, (req, res) => {
     myCostsTotal: mine.reduce((sum, e) => sum + money(e.amount), 0),
     myCostCount: mine.length,
   });
+});
+
+// ---------------------------------------------------------------- chat
+//
+// One conversation per customer, kept in a single file. Not a chat product:
+// a laundry-list of messages between a customer and whoever is working, with
+// an email on each side so nobody has to sit watching the page.
+//
+// Both sides are emailed, but not on every message. A conversation is a
+// burst of four or five lines, and five emails for one exchange teaches
+// people to ignore our emails. One goes out, then nothing for MAIL_GAP_MS
+// unless the other side has spoken since.
+
+const CHAT_FILE = path.join(CONTENT_DIR, 'chats.json');
+const MAIL_GAP_MS = 10 * 60 * 1000;
+const MAX_MESSAGE = 2000;
+
+function readChats() {
+  const data = readJSON(CHAT_FILE, null);
+  if (data && Array.isArray(data.threads)) return data;
+  return { threads: [] };
+}
+
+function threadFor(store, customerId, create) {
+  let thread = store.threads.find((t) => t.customerId === customerId);
+  if (!thread && create) {
+    thread = {
+      customerId,
+      messages: [],
+      // When each side last had an email about this thread, so a burst of
+      // replies does not become a burst of emails.
+      lastMailedTeam: 0,
+      lastMailedCustomer: 0,
+    };
+    store.threads.push(thread);
+  }
+  return thread;
+}
+
+/** Everyone who should hear about a customer message: the owner, and every
+ *  member of staff who is still active. */
+function teamAddresses() {
+  const settings = readJSON(SETTINGS_FILE, {});
+  const list = [];
+  if (GMAIL_USER) list.push(GMAIL_USER);
+  if (settings.email && settings.email !== GMAIL_USER) list.push(settings.email);
+  for (const u of readUsers().users) {
+    if (u.role === 'staff' && u.active !== false && u.email) list.push(u.email);
+  }
+  return Array.from(new Set(list));
+}
+
+const unreadFor = (thread, side) =>
+  (thread.messages || []).filter((m) => m.from !== side && !m.readBy[side]).length;
+
+function markRead(thread, side) {
+  for (const m of thread.messages || []) {
+    if (m.from !== side) m.readBy[side] = true;
+  }
+}
+
+/** What the other side sees. `readBy` is bookkeeping, not content. */
+const publicMessage = (m) => ({
+  id: m.id,
+  from: m.from,
+  byName: m.byName,
+  text: m.text,
+  at: m.at,
+});
+
+// ---------------------------------------------------------------- customer side
+
+app.get('/api/chat', requireCustomer, (req, res) => {
+  const store = readChats();
+  const thread = threadFor(store, req.user.id, false);
+  if (!thread) return res.json({ messages: [] });
+
+  markRead(thread, 'customer');
+  writeJSON(CHAT_FILE, store);
+  res.json({ messages: thread.messages.map(publicMessage) });
+});
+
+app.post('/api/chat', requireCustomer, async (req, res) => {
+  const text = String((req.body || {}).text || '').trim().slice(0, MAX_MESSAGE);
+  if (!text) return res.status(400).json({ error: 'Write something first.' });
+
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (tooManyFrom('chat:' + ip)) {
+    return res.status(429).json({ error: 'Too many messages. Please wait a moment.' });
+  }
+
+  const store = readChats();
+  const thread = threadFor(store, req.user.id, true);
+  thread.messages.push({
+    id: 'm' + Date.now() + crypto.randomBytes(3).toString('hex'),
+    from: 'customer',
+    byName: req.user.name || 'Customer',
+    text,
+    at: new Date().toISOString(),
+    readBy: { customer: true, team: false },
+  });
+
+  const shouldMail = Date.now() - (thread.lastMailedTeam || 0) > MAIL_GAP_MS;
+  if (shouldMail) thread.lastMailedTeam = Date.now();
+  writeJSON(CHAT_FILE, store);
+
+  res.json({ ok: true, messages: thread.messages.map(publicMessage) });
+
+  if (!shouldMail) return;
+
+  // After the reply: the customer should never wait on our mail provider.
+  const who = req.user.name || 'A customer';
+  const phone = req.user.phone || '';
+  for (const address of teamAddresses()) {
+    sendMail(address, `New message from ${who}`, mailShell(
+      'A customer has written to you',
+      `${rowsHtml([['From', who], ['Mobile', phone], ['Email', req.user.email || '']])}
+       <div style="margin-top:16px;padding:14px 16px;background:#FBF7F1;border-radius:10px;
+                   font-size:14px;line-height:1.65;white-space:pre-wrap">${escapeHtml(text)}</div>
+       <p style="margin:16px 0 0;font-size:13px;color:#6B7A93;line-height:1.6">
+         Reply in the Control Room and it reaches them on the website and by email.</p>`,
+      'Open the Control Room', `${SITE_URL}/admin/`)).catch(() => {});
+  }
+});
+
+// ---------------------------------------------------------------- team side
+//
+// Staff can read and answer. They still cannot see a booking, a price or
+// what anyone owes — answering a question is the job; the money is not.
+
+app.get('/admin/api/chats', requireAuth, (req, res) => {
+  const store = readChats();
+  const users = readUsers().users;
+
+  const threads = store.threads.map((t) => {
+    const user = users.find((u) => u.id === t.customerId);
+    const last = t.messages[t.messages.length - 1];
+    return {
+      customerId: t.customerId,
+      name: (user && user.name) || 'Customer',
+      phone: (user && user.phone) || '',
+      email: (user && user.email) || '',
+      unread: unreadFor(t, 'team'),
+      total: t.messages.length,
+      lastAt: last ? last.at : '',
+      lastFrom: last ? last.from : '',
+      preview: last ? last.text.slice(0, 90) : '',
+    };
+  });
+
+  // Unanswered first, then most recent: the list is a queue, not an archive.
+  threads.sort((a, b) =>
+    (b.unread - a.unread) || String(b.lastAt).localeCompare(String(a.lastAt)));
+
+  res.json({ threads, unread: threads.reduce((n, t) => n + t.unread, 0) });
+});
+
+app.get('/admin/api/chats/:customerId', requireAuth, (req, res) => {
+  const store = readChats();
+  const thread = threadFor(store, req.params.customerId, false);
+  if (!thread) return res.json({ messages: [] });
+
+  markRead(thread, 'team');
+  writeJSON(CHAT_FILE, store);
+
+  const user = readUsers().users.find((u) => u.id === req.params.customerId);
+  res.json({
+    messages: thread.messages.map(publicMessage),
+    name: (user && user.name) || 'Customer',
+    phone: (user && user.phone) || '',
+    email: (user && user.email) || '',
+  });
+});
+
+app.post('/admin/api/chats/:customerId', requireAuth, async (req, res) => {
+  const text = String((req.body || {}).text || '').trim().slice(0, MAX_MESSAGE);
+  if (!text) return res.status(400).json({ error: 'Write something first.' });
+
+  const user = readUsers().users.find((u) => u.id === req.params.customerId && u.role === 'customer');
+  if (!user) return res.status(404).json({ error: 'Customer not found.' });
+
+  const store = readChats();
+  const thread = threadFor(store, req.params.customerId, true);
+  thread.messages.push({
+    id: 'm' + Date.now() + crypto.randomBytes(3).toString('hex'),
+    from: 'team',
+    // Signed, so the customer is talking to a person and the owner can see
+    // who answered.
+    byName: req.user.name || 'Cox’s Dream Moment',
+    text,
+    at: new Date().toISOString(),
+    readBy: { customer: false, team: true },
+  });
+
+  const shouldMail = Date.now() - (thread.lastMailedCustomer || 0) > MAIL_GAP_MS;
+  if (shouldMail) thread.lastMailedCustomer = Date.now();
+  writeJSON(CHAT_FILE, store);
+
+  res.json({ ok: true, messages: thread.messages.map(publicMessage) });
+
+  if (!shouldMail || !user.email) return;
+
+  sendMail(user.email, 'We have replied to your message', mailShell(
+    'We have replied',
+    `<p style="margin:0 0 16px;line-height:1.6">Hello ${escapeHtml(user.name || '')},</p>
+     <div style="padding:14px 16px;background:#FBF7F1;border-radius:10px;
+                 font-size:14px;line-height:1.65;white-space:pre-wrap">${escapeHtml(text)}</div>
+     <p style="margin:16px 0 0;line-height:1.6;font-size:13px;color:#6B7A93">
+       You can answer on the website — the whole conversation is there.</p>`,
+    'Open the conversation', `${SITE_URL}/my-bookings`)).catch(() => {});
 });
 
 // ---------------------------------------------------------------- image upload

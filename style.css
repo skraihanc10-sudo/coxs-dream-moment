@@ -1645,3 +1645,148 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 @media (prefers-reduced-motion: reduce) {
   .pd-loading span::after { animation: none; transform: scaleX(1); }
 }
+
+
+/* ==========================================================================
+   Photography added to a booking.
+
+   These are real packages with a page of their own, so they are shown the
+   way a package is shown — a photograph and a price — rather than as a
+   line of text with a tick box.
+   ========================================================================== */
+.bb-addon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #E7E2D8);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color .15s, background .15s;
+}
+.bb-addon:hover { border-color: #C9C0B2; }
+.bb-addon input { position: absolute; opacity: 0; pointer-events: none; }
+
+.bb-addon-tick {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid #C9C0B2;
+  position: relative;
+  transition: background .15s, border-color .15s;
+}
+.bb-addon-tick::after {
+  content: "";
+  position: absolute;
+  left: 6px; top: 2px;
+  width: 5px; height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform .15s;
+}
+.bb-addon input:checked ~ .bb-addon-tick {
+  background: var(--coral, #E2613C);
+  border-color: var(--coral, #E2613C);
+}
+.bb-addon input:checked ~ .bb-addon-tick::after { transform: rotate(45deg) scale(1); }
+.bb-addon:has(input:checked) {
+  border-color: var(--coral, #E2613C);
+  background: #FDF6F3;
+}
+.bb-addon input:focus-visible ~ .bb-addon-tick {
+  outline: 2px solid var(--coral, #E2613C);
+  outline-offset: 2px;
+}
+
+.bb-addon-photo {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--sand-2, #F6EFE6);
+  display: grid;
+  place-items: center;
+}
+.bb-addon-photo img { width: 100%; height: 100%; object-fit: cover; }
+.bb-addon-photo img.is-placeholder { width: 66%; height: auto; object-fit: contain; opacity: .5; }
+
+.bb-addon-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bb-addon-name { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.bb-addon-sub { font-size: 11.5px; color: var(--ink-2, #6B7A93); line-height: 1.4; }
+.bb-addon-fee {
+  flex: 0 0 auto;
+  font-size: 14.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bb-addon-fee.is-on-request { font-size: 12.5px; font-weight: 600; color: var(--ink-2, #6B7A93); }
+
+@media (max-width: 420px) {
+  .bb-addon { gap: 9px; padding: 9px 10px; }
+  .bb-addon-photo { flex-basis: 44px; width: 44px; height: 44px; }
+}
+
+
+/* ==========================================================================
+   What the booking box promises, and the warning under it.
+
+   The old three-word badges ("Safe booking") were decoration. These are
+   sentences somebody can check, so they are set as text rather than chips.
+   ========================================================================== */
+.bb-trust {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line, #E7E2D8);
+}
+.bb-trust li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2, #6B7A93);
+}
+.bb-trust li:last-child { margin-bottom: 0; }
+.bb-trust li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 5px;
+  width: 11px;
+  height: 6px;
+  border: solid var(--coral, #E2613C);
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg);
+}
+
+.bb-warning {
+  display: flex;
+  gap: 11px;
+  margin-top: 16px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: #FDF3E7;
+  border: 1px solid #F0DCBC;
+}
+.bb-warning svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  stroke: #B8860B;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.bb-warning p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #7A5B14;
+}

@@ -26,11 +26,13 @@
   .wrap{max-width:720px;margin:0 auto;padding:0 16px 56px}
 
   header.top{background:var(--night);padding:16px 0}
-  header.top .wrap{display:flex;align-items:center;gap:10px;padding-bottom:0}
-  header.top img{width:34px;height:34px;object-fit:contain}
-  header.top strong{color:#fff;font-size:15px}
-  header.top a{margin-left:auto;color:#8FA3BF;font-size:13px;font-weight:600;text-decoration:none}
-  header.top a:hover{color:#fff}
+  header.top .wrap{display:flex;align-items:center;gap:14px;padding-bottom:0}
+  .top-brand{
+    color:#fff;font-size:15.5px;font-weight:700;text-decoration:none;
+    font-family:'Fraunces',Georgia,serif;letter-spacing:.01em;
+  }
+  .top-back{margin-left:auto;color:#8FA3BF;font-size:13px;font-weight:600;text-decoration:none}
+  .top-back:hover{color:#fff}
 
   h1{font-family:'Fraunces',Georgia,serif;font-size:27px;margin:32px 0 6px;text-wrap:balance}
   .sub{color:var(--muted);margin:0 0 26px;font-size:14.5px;line-height:1.6}
@@ -92,6 +94,38 @@
                   background:#fff;font:inherit;font-weight:700;font-size:13.5px;color:var(--muted);cursor:pointer}
   .tab-row button.on{background:var(--night);border-color:var(--night);color:#fff}
 
+  /* ---------------------------------------------------------- chat
+     A conversation with us, on the same page as the bookings it is about.
+     Nobody should have to find a separate place to ask a question. */
+  .chat-card{padding:0;overflow:hidden}
+  .chat-card h2{
+    font-family:'Fraunces',Georgia,serif;font-size:19px;margin:0;
+    padding:18px 20px 14px;border-bottom:1px solid var(--line);
+  }
+  .chat-card h2 span{display:block;font-size:13px;font-weight:400;color:var(--muted);
+                     font-family:'Hind Siliguri',system-ui,sans-serif;margin-top:3px;line-height:1.5}
+  #chat-log{
+    max-height:380px;overflow-y:auto;padding:16px 20px;
+    display:flex;flex-direction:column;gap:10px;background:#FAF7F2;
+  }
+  .msg{max-width:80%;display:flex;flex-direction:column;gap:3px}
+  .msg.them{align-self:flex-start}
+  .msg.me{align-self:flex-end;align-items:flex-end}
+  .msg-body{
+    padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.55;
+    white-space:pre-wrap;overflow-wrap:anywhere;
+  }
+  .msg.them .msg-body{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+  .msg.me .msg-body{background:var(--night);color:#fff;border-bottom-right-radius:4px}
+  .msg-meta{font-size:10.5px;color:var(--muted);padding:0 4px}
+  .chat-empty{text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;padding:26px 10px}
+  #chat-form{display:flex;gap:8px;padding:14px 20px 18px;border-top:1px solid var(--line)}
+  #chat-form textarea{
+    flex:1;resize:none;padding:11px 13px;border:1px solid var(--line);
+    border-radius:10px;font:inherit;background:#fff;
+  }
+  #chat-form button{align-self:flex-end}
+
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -100,9 +134,8 @@
 
 <header class="top">
   <div class="wrap">
-    <img src="images/logo.png" alt="">
-    <strong>Cox's Dream Moment</strong>
-    <a href="/">Back to the site</a>
+    <a class="top-brand" href="/">Cox&#39;s Dream Moment</a>
+    <a class="top-back" href="/">All packages</a>
   </div>
 </header>
 
@@ -360,7 +393,19 @@
       ) :
         '<div class="card"><p style="margin:0;line-height:1.6">You have no bookings yet. ' +
         '<a href="/">Have a look at the packages</a> — we would love to set something up for you.</p></div>') +
+      '<section class="card chat-card">' +
+        '<h2>Message us' +
+          '<span>Ask anything about your booking. We answer here, and you get an email too.</span>' +
+        '</h2>' +
+        '<div id="chat-log"></div>' +
+        '<form id="chat-form">' +
+          '<textarea id="chat-text" rows="2" placeholder="Write a message\u2026"></textarea>' +
+          '<button class="btn" type="submit" id="chat-send">Send</button>' +
+        '</form>' +
+      '</section>' +
       '<p class="note"><button class="btn ghost" id="out">Sign out</button></p>';
+
+    mountChat();
 
     const upgrade = document.getElementById('upgrade');
     if (upgrade) upgrade.addEventListener('click', (e) => { e.preventDefault(); linkForm(); });
@@ -377,6 +422,98 @@
       await fetch('/api/logout', { method: 'POST' });
       signInForm('You are signed out.', 'good');
     });
+  }
+
+  // ---------------------------------------------------------------- chat
+
+  function relativeTime(iso) {
+    if (!iso) return '';
+    const then = new Date(iso);
+    if (isNaN(then)) return '';
+    const mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const hours = Math.round(mins / 60);
+    if (hours < 24) return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+    const days = Math.round(hours / 24);
+    if (days < 7) return days + (days === 1 ? ' day ago' : ' days ago');
+    return prettyDate(iso);
+  }
+
+  function drawChat(messages) {
+    const log = document.getElementById('chat-log');
+    if (!log) return;
+    if (!messages.length) {
+      log.innerHTML = '<p class="chat-empty">No messages yet.<br>' +
+        'Ask us anything \u2014 whether your date is free, what is included, anything at all.</p>';
+      return;
+    }
+    log.innerHTML = messages.map((m) => {
+      const mine = m.from === 'customer';
+      return '<div class="msg ' + (mine ? 'me' : 'them') + '">' +
+        '<div class="msg-body">' + esc(m.text) + '</div>' +
+        '<div class="msg-meta">' + (mine ? '' : esc(m.byName) + ' \u00b7 ') + esc(relativeTime(m.at)) + '</div>' +
+      '</div>';
+    }).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  let chatTimer = null;
+
+  function mountChat() {
+    const form = document.getElementById('chat-form');
+    if (!form) return;
+
+    fetch('/api/chat')
+      .then((r) => (r.ok ? r.json() : { messages: [] }))
+      .then((d) => drawChat(d.messages || []))
+      .catch(() => {});
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const box = document.getElementById('chat-text');
+      const text = box.value.trim();
+      if (!text) return;
+
+      const send = document.getElementById('chat-send');
+      send.disabled = true;
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || 'Could not send.');
+        box.value = '';
+        drawChat(d.messages || []);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        send.disabled = false;
+        box.focus();
+      }
+    });
+
+    // Enter sends, shift+Enter starts a new line.
+    document.getElementById('chat-text').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    // A reply written while the page is open should appear without a
+    // refresh. Twenty seconds is often enough for a conversation and cheap
+    // enough for a server doing nothing else.
+    clearInterval(chatTimer);
+    chatTimer = setInterval(() => {
+      if (document.hidden || !document.getElementById('chat-log')) return;
+      fetch('/api/chat')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d) drawChat(d.messages || []); })
+        .catch(() => {});
+    }, 20000);
   }
 
   async function load() {

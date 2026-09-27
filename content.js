@@ -179,6 +179,47 @@ function phoneDigits(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+// What the booking box promises, and the warning under it. Both come from
+// settings so the owner can change them; the defaults below are only what a
+// brand-new install starts with.
+const TRUST_DEFAULTS = [
+  'We are a registered Cox\u2019s Bazar business \u2014 our own team, our own equipment',
+  'Your date is held the moment we confirm; a 30% advance secures it',
+  'Free date change if it rains, and free up to 48 hours before',
+  'We arrive two hours early and set up before you get there',
+  'Pay after you see the setup, or send the advance to our own account',
+];
+
+const FAKE_WARNING_DEFAULT =
+  'We work only through this website, our own WhatsApp number and our verified Facebook page. '
+  + 'Several pages copy our name and our photographs. Before paying anyone, check the number '
+  + 'against the one shown here \u2014 we will never ask you to send money to a different account.';
+
+function applyTrust(settings) {
+  const list = document.querySelector('.bb-trust');
+  if (list) {
+    const points = Array.isArray(settings.trust_points) && settings.trust_points.length
+      ? settings.trust_points
+      : TRUST_DEFAULTS;
+    list.innerHTML = points
+      .filter(Boolean)
+      .map(t => `<li>${t}</li>`)
+      .join('');
+  }
+
+  const box = document.querySelector('.bb-warning');
+  if (box) {
+    // An empty string is the owner switching the warning off on purpose,
+    // which is different from never having set one.
+    const text = settings.fake_warning === undefined
+      ? FAKE_WARNING_DEFAULT
+      : settings.fake_warning;
+    const p = box.querySelector('p');
+    if (p) p.textContent = text;
+    box.hidden = !text;
+  }
+}
+
 function applySettings(settings) {
   if (!settings) return;
 
@@ -498,7 +539,7 @@ function applyProductDetail(packages) {
   const totalValue = document.querySelector('.bb-total-value');
   if (totalValue && money.has) totalValue.textContent = money.now;
 
-  setupAddons(pkg);
+  setupAddons(pkg, packages);
 
   const descP = document.querySelector('.pd-tab-content[data-tab-content="desc"] p');
   if (descP) descP.textContent = pkg.description;
@@ -613,6 +654,7 @@ document.addEventListener('DOMContentLoaded', function () {
       applyHero(settings.hero);
       applyContactPage(settings);
       applyAbout(settings);
+  applyTrust(settings);
     }
     if (packages) {
       buildMobileMenu(packages);
@@ -633,68 +675,90 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-// Keeps the total, the checkbox label and the values script.js reads for the
-// WhatsApp message in step with each other.
-function setupAddons(pkg) {
+// ---------------------------------------------------------------- extras
+//
+// What can be added to a booking. These used to be two lines of text typed
+// into settings; they are now the photo-and-video packages themselves, so
+// what a customer sees here is the same name, price and picture they would
+// find on that package's own page, and changing it in one place changes it
+// everywhere.
+//
+// Keeps the total, the tick boxes and the values script.js reads for the
+// booking message in step with each other.
+function setupAddons(pkg, packages) {
   const wrap = document.querySelector('.bb-addons-list');
   const section = document.querySelector('.bb-addons');
   const totalValue = document.querySelector('.bb-total-value');
   const totalNote = document.querySelector('.bb-total-note');
   if (!wrap) return;
 
-  const addons = bookingAddons(window.__siteSettings);
-  const base = priceAmount(pkg.price);
-  const symbol = priceSymbol(pkg.price);
+  // A media package never offers itself as its own extra.
+  const extras = (packages || []).filter(p => isMedia(p) && p.slug !== pkg.slug);
 
-  if (section) section.hidden = !addons.length;
+  if (section) section.hidden = !extras.length;
+  if (!extras.length) return;
 
-  wrap.innerHTML = addons.map((a, i) => {
-    const fee = a.fee === null
-      ? `<span class="bb-addon-fee is-on-request">${ON_REQUEST_LABEL}</span>`
-      : `<span class="bb-addon-fee">+${formatPrice(a.fee, symbol)}</span>`;
+  const base = priceOf(pkg);
+
+  wrap.innerHTML = extras.map((extra, i) => {
+    const money = priceOf(extra);
+    const photo = extra.main_image
+      ? `<img src="${extra.main_image}" alt="">`
+      : `<img class="is-placeholder" src="${PLACEHOLDER}" alt="">`;
+    const fee = money.has
+      ? `<span class="bb-addon-fee">+${money.now}</span>`
+      : `<span class="bb-addon-fee is-on-request">${ON_REQUEST_LABEL}</span>`;
+
     return `<label class="bb-addon" for="bb-addon-${i}">`
       + `<input type="checkbox" id="bb-addon-${i}" data-addon-index="${i}">`
-      + `<span class="bb-addon-name">${a.label}</span>${fee}</label>`;
+      + `<span class="bb-addon-tick"></span>`
+      + `<span class="bb-addon-photo">${photo}</span>`
+      + `<span class="bb-addon-text">`
+      +   `<span class="bb-addon-name">${extra.name}</span>`
+      +   (extra.trust_extra ? `<span class="bb-addon-sub">${extra.trust_extra}</span>` : '')
+      + `</span>${fee}</label>`;
   }).join('');
 
   const boxes = Array.from(wrap.querySelectorAll('input[data-addon-index]'));
 
   const render = () => {
-    const chosen = boxes
-      .map((b, i) => (b.checked ? addons[i] : null))
-      .filter(Boolean);
+    const chosen = boxes.map((b, i) => (b.checked ? extras[i] : null)).filter(Boolean);
 
-    // script.js reads these off <body> when it builds the booking message.
+    // script.js reads these off <body> when it builds the booking message and
+    // the link into the booking form.
     if (chosen.length) {
       document.body.dataset.addons = chosen
-        .map(a => a.fee === null
-          ? `${a.label} (${ON_REQUEST_LABEL})`
-          : `${a.label} \u2014 +${formatPrice(a.fee, symbol)}`)
+        .map(e => {
+          const m = priceOf(e);
+          return m.has ? `${e.name} \u2014 +${m.now}` : `${e.name} (${ON_REQUEST_LABEL})`;
+        })
         .join(', ');
+      document.body.dataset.addonSlugs = chosen.map(e => e.slug).join(',');
     } else {
       delete document.body.dataset.addons;
+      delete document.body.dataset.addonSlugs;
     }
 
-    const extra = chosen.reduce((sum, a) => sum + (a.fee || 0), 0);
-    const onRequest = chosen.some(a => a.fee === null);
+    const extraTotal = chosen.reduce((sum, e) => sum + priceOf(e).amount, 0);
+    const onRequest = chosen.some(e => !priceOf(e).has);
 
     if (totalNote) {
       totalNote.hidden = !onRequest;
       if (onRequest) {
         totalNote.textContent = '* '
-          + chosen.filter(a => a.fee === null).map(a => a.label).join(', ')
-          + ' — price agreed with you before the booking is confirmed.';
+          + chosen.filter(e => !priceOf(e).has).map(e => e.name).join(', ')
+          + ' \u2014 price agreed with you before the booking is confirmed.';
       }
     }
 
     if (!totalValue) return;
-    if (base === null) {
-      // No price on this package yet - show the extras alone rather than
+    if (!base.has) {
+      // No price on this package yet: show the extras alone rather than
       // inventing a total.
-      totalValue.textContent = extra ? `+${formatPrice(extra, symbol)}` : '';
+      totalValue.textContent = extraTotal ? '+' + tk(extraTotal) : '';
       return;
     }
-    totalValue.textContent = formatPrice(base + extra, symbol);
+    totalValue.textContent = tk(base.amount + extraTotal);
   };
 
   boxes.forEach(b => b.addEventListener('change', render));

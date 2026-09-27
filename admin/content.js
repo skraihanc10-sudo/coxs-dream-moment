@@ -466,6 +466,23 @@ window.ContentEditor = (function () {
       </div>
 
       <div class="card card-pad" style="margin-bottom:14px">
+        <h2 class="section-title">Why people can trust us</h2>
+        <p class="hint" style="margin:-4px 0 12px">
+          Shown under the booking button on every package page. Write things a customer can
+          check \u2014 “Safe booking” persuades nobody, “we arrive two hours early” does.</p>
+        <div id="st-trust"></div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:14px">
+        <h2 class="section-title">Warning about fake pages</h2>
+        <p class="hint" style="margin:-4px 0 12px">
+          Shown in an amber box under the trust points. Leave it empty to hide the box.</p>
+        <div class="field" style="margin:0">
+          <textarea data-s="fake_warning" rows="4">${esc(s.fake_warning === undefined ? '' : s.fake_warning)}</textarea>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="margin-bottom:14px">
         <h2 class="section-title">Paid extras</h2>
         <div id="st-addons"></div>
       </div>
@@ -480,6 +497,10 @@ window.ContentEditor = (function () {
     $$('[data-about]', panel).forEach((i) => i.addEventListener('input', () => { s.about[i.dataset.about] = i.value; }));
 
     pairEditor($('#st-stats', panel), s.stats, [['value', 'Number'], ['label', 'What it counts']], () => ({ value: '', label: '' }));
+
+    s.trust_points = s.trust_points || [];
+    $('#st-trust', panel).appendChild(
+      lineList(s.trust_points, 'e.g. We arrive two hours early and set up before you get there'));
     pairEditor($('#st-addons', panel), s.addons, [['label', 'Extra'], ['fee', 'Fee (blank = on request)']], () => ({ label: '', fee: '' }));
     pairEditor($('#st-hours', panel), s.hours, [['days', 'Days'], ['time', 'Hours']], () => ({ days: '', time: '' }));
 
