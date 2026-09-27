@@ -1409,3 +1409,239 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   color: var(--muted, #6B7A93);
   text-align: center;
 }
+
+
+/* ==========================================================================
+   Prices.
+
+   The figure the customer pays is the loud one. The old price sits beside
+   it, struck through and quiet, because a saving only reads as a saving
+   when both numbers are visible at once.
+   ========================================================================== */
+.product-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.product-price .now {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink, #1b2848);
+  font-variant-numeric: tabular-nums;
+}
+.product-price .old {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2, #6B7A93);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+.product-saved {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #14926B;
+}
+
+/* The price row inside the booking box on a package page. */
+.bb-price-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.bb-price-value .now {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.bb-price-value .old {
+  font-size: 14px;
+  color: var(--ink-2, #6B7A93);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+.bb-price-value .off-pill {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #FDEEE8;
+  color: #E2613C;
+  white-space: nowrap;
+}
+
+/* The tabs now sit below the two-column grid rather than inside it, so they
+   get a reading width of their own instead of the full page. */
+.pd-tabs { max-width: 760px; }
+
+/* ==========================================================================
+   Photo & video services.
+
+   A separate row from the setups, because they are bought alongside one
+   rather than instead of one. Dark, so the section reads as a different
+   kind of thing without needing a heading to explain that.
+   ========================================================================== */
+.media-section {
+  background: #0D1B2A;
+  color: #fff;
+  padding: 64px 0;
+  margin-top: 8px;
+}
+.media-head { max-width: 640px; margin-bottom: 30px; }
+.media-head .eyebrow { color: #D9A441; }
+.media-head h2 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: clamp(25px, 4vw, 33px);
+  margin: 8px 0 10px;
+  color: #fff;
+  text-wrap: balance;
+}
+.media-head p { color: #9FB0C8; margin: 0; line-height: 1.7; font-size: 15px; }
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 18px;
+}
+.media-card {
+  background: #142842;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 18px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+}
+.media-card .m-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(217, 164, 65, .16);
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+.media-card .m-icon svg {
+  width: 22px; height: 22px;
+  fill: none; stroke: #D9A441; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.media-card h3 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: 20px;
+  margin: 0 0 6px;
+  color: #fff;
+}
+.media-card .m-tag { font-size: 12.5px; color: #D9A441; font-weight: 600; margin: 0 0 14px; }
+.media-card ul { list-style: none; margin: 0 0 20px; padding: 0; }
+.media-card li {
+  position: relative;
+  padding-left: 22px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #C9D6E6;
+}
+.media-card li::before {
+  content: "";
+  position: absolute;
+  left: 2px; top: 7px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #D9A441;
+}
+.media-card .m-foot {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .09);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.media-card .m-price {
+  font-size: 19px;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.media-card .m-price .old {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8FA3BF;
+  text-decoration: line-through;
+  margin-right: 7px;
+}
+.media-card .m-ask { font-size: 14px; color: #9FB0C8; font-weight: 600; }
+.media-card .m-btn {
+  margin-left: auto;
+  background: #E2613C;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.media-card .m-btn:hover { background: #CE5433; }
+
+@media (max-width: 560px) {
+  .media-section { padding: 46px 0; }
+  .media-card { padding: 20px; }
+  .media-card .m-btn { margin-left: 0; width: 100%; text-align: center; }
+}
+
+
+/* ==========================================================================
+   The package photograph while it loads.
+
+   The logo, not a photograph: this box used to hold one package's picture,
+   so every other package showed the wrong image for a moment before its own
+   arrived. Waiting on nothing at all reads as broken, so it waits on us.
+   ========================================================================== */
+.pd-main-img.is-loading { background: var(--sand-2, #F6EFE6); }
+
+.pd-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.pd-loading img {
+  width: min(180px, 46%);
+  height: auto;
+  opacity: .55;
+  object-fit: contain;
+}
+.pd-loading span {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-2, #6B7A93);
+  position: relative;
+}
+.pd-loading span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -7px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--coral, #E2613C);
+  transform-origin: left;
+  animation: pd-load 1.1s ease-in-out infinite;
+}
+@keyframes pd-load {
+  0%   { transform: scaleX(0); opacity: .25; }
+  50%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(0); opacity: .25; transform-origin: right; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pd-loading span::after { animation: none; transform: scaleX(1); }
+}

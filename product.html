@@ -82,7 +82,7 @@
 
 <header class="site-header">
   <div class="container header-main">
-    <a href="shop.html" class="brand">
+    <a href="/" class="brand">
       <img class="brand-logo" src="images/logo-mark.png" alt="Cox's Dream Moment"
            width="220" height="102"
            onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
@@ -101,7 +101,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>
         <span>Saved</span>
       </a>
-      <a href="contact.html" class="header-action">
+      <a href="contact" class="header-action">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <span>Contact</span>
       </a>
@@ -110,10 +110,10 @@
   </div>
   <div class="nav-bar">
     <div class="container">
-      <a href="shop.html" class="nav-link" data-cat="all">All packages</a>
-      <a href="gallery.html" class="nav-link">Gallery</a>
-      <a href="contact.html" class="nav-link">Contact</a>
-      <a href="my-bookings.html" class="nav-link">My bookings</a>
+      <a href="/" class="nav-link" data-cat="all">All packages</a>
+      <a href="gallery" class="nav-link">Gallery</a>
+      <a href="contact" class="nav-link">Contact</a>
+      <a href="my-bookings" class="nav-link">My bookings</a>
     </div>
   </div>
 </header>
@@ -122,24 +122,33 @@
   <button class="close-btn">&times;</button>
   <img class="mobile-menu-logo" src="images/logo.png" alt="Cox's Dream Moment"
        width="200" height="52" onerror="this.hidden=true;">
-  <a href="shop.html">All packages</a>
+  <a href="/">All packages</a>
   <div id="mm-categories"></div>
-  <a href="gallery.html">Gallery</a>
-  <a href="contact.html">Contact</a>
-  <a href="my-bookings.html">My bookings</a>
+  <a href="gallery">Gallery</a>
+  <a href="contact">Contact</a>
+  <a href="my-bookings">My bookings</a>
   <a href="tel:+8801347059522">Call us</a>
 </div>
 
 <section class="page-banner">
   <h1>Loading…</h1>
-  <p class="crumb"><a href="shop.html">All packages</a> / <span class="crumb-current">Loading…</span></p>
+  <p class="crumb"><a href="/">All packages</a> / <span class="crumb-current">Loading…</span></p>
 </section>
 
 <section class="product-detail">
   <div class="container pd-grid">
 
     <div class="pd-gallery">
-      <div class="pd-main-img"><img src="images/hero-wide.jpg" alt="Loading"></div>
+      <!-- No photograph here on purpose. This used to hold one package's
+           picture, so every other package flashed the wrong image before its
+           own loaded. It waits on the logo instead. -->
+      <div class="pd-main-img is-loading">
+        <div class="pd-loading">
+          <img src="images/logo.png" alt="Cox's Dream Moment"
+               onerror="this.onerror=null;this.src='images/logo-mark.png';">
+          <span>Loading</span>
+        </div>
+      </div>
       <div class="pd-thumbs"></div>
     </div>
 
@@ -226,21 +235,26 @@
         </div>
       </div>
 
-      <div class="pd-tabs">
-        <div class="pd-tab-headers">
-          <div class="pd-tab-head active" data-tab="desc">Description</div>
-          <div class="pd-tab-head" data-tab="policy">Booking policy</div>
-          <div class="pd-tab-head" data-tab="faq">Common questions</div>
-        </div>
-        <div class="pd-tab-content active-tab" data-tab-content="desc">
-          <p></p>
-        </div>
-        <div class="pd-tab-content" data-tab-content="policy">
-          <p>A 30% advance confirms the booking. The date can be changed free of charge up to 48 hours before the event. Cancellations within 24 hours are not refundable.</p>
-        </div>
-        <div class="pd-tab-content" data-tab-content="faq">
-          <p>The setup takes about 45 to 60 minutes. If it rains, the date can be moved at no cost.</p>
-        </div>
+    </div>
+  </div>
+
+  <!-- Out of the grid on purpose: the photographs column is short, so tabs
+       inside it left a column of blank space beside the description. -->
+  <div class="container">
+    <div class="pd-tabs">
+      <div class="pd-tab-headers">
+        <div class="pd-tab-head active" data-tab="desc">Description</div>
+        <div class="pd-tab-head" data-tab="policy">Booking policy</div>
+        <div class="pd-tab-head" data-tab="faq">Common questions</div>
+      </div>
+      <div class="pd-tab-content active-tab" data-tab-content="desc">
+        <p></p>
+      </div>
+      <div class="pd-tab-content" data-tab-content="policy">
+        <p>A 30% advance confirms the booking. The date can be changed free of charge up to 48 hours before the event. Cancellations within 24 hours are not refundable.</p>
+      </div>
+      <div class="pd-tab-content" data-tab-content="faq">
+        <p>The setup takes about 45 to 60 minutes. If it rains, the date can be moved at no cost.</p>
       </div>
     </div>
   </div>
@@ -250,7 +264,7 @@
   <div class="container">
     <div class="section-head">
       <h2>More packages</h2>
-      <a href="shop.html">See all →</a>
+      <a href="/">See all →</a>
     </div>
     <div class="product-grid" style="padding:0;"></div>
   </div>
@@ -265,9 +279,9 @@
       </div>
       <div class="footer-col">
         <h4>Pages</h4>
-        <a href="shop.html">All packages</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="contact.html">Contact</a>
+        <a href="/">All packages</a>
+        <a href="gallery">Gallery</a>
+        <a href="contact">Contact</a>
       </div>
       <div class="footer-col">
         <h4>Packages</h4>

@@ -185,9 +185,21 @@ window.ContentEditor = (function () {
 
   // ------------------------------------------------------------- packages
 
+  // The same arithmetic the website does, so the admin sees exactly the
+  // figure the customer will see rather than a second opinion about it.
+  const tk = (n) => '৳' + Math.round(n).toLocaleString('en-IN');
+
+  function finalPrice(pkg) {
+    const full = Number(pkg.price_amount) || 0;
+    if (!full) return 0;
+    const pct = Math.min(Math.max(Number(pkg.discount_percent) || 0, 0), 95);
+    return Math.round(full * (1 - pct / 100));
+  }
+
   function blankPackage() {
     return {
       slug: '', code: '', name: 'New package', badge: '', trust_extra: '',
+      kind: '', price_amount: 0, discount_percent: 0,
       price: '', old_price: '', discount: '', featured: false, categories: [],
       main_image: '', thumbnails: [], inclusions: [], description: '',
       booking_policy: '', faq: '',
@@ -237,7 +249,7 @@ window.ContentEditor = (function () {
         <img alt="" src="${pkg.main_image ? '../' + esc(pkg.main_image) : ''}">
         <div class="t">
           <strong>${esc(pkg.name)}</strong>
-          <span>${esc(pkg.code || 'code assigned on save')}${pkg.featured ? ' · featured' : ''}${pkg.price ? ' · ' + esc(pkg.price) : ''}</span>
+          <span>${esc(pkg.code || 'code assigned on save')}${pkg.featured ? ' · featured' : ''}${pkg.kind === 'media' ? ' · photo/video' : ''}${finalPrice(pkg) ? ' · ' + esc(tk(finalPrice(pkg))) : ''}</span>
         </div>
         <button type="button" class="btn btn-sm" data-toggle>Edit</button>
       </div>
@@ -279,14 +291,26 @@ window.ContentEditor = (function () {
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13.5px;color:var(--ink)">
           <input type="checkbox" data-featured ${pkg.featured ? 'checked' : ''} style="width:auto">
-          Featured — shown at the top of the shop, and the only kind that displays a price
+          Featured — shown at the top of the shop
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:13.5px;color:var(--ink);margin-top:8px">
+          <input type="checkbox" data-media ${pkg.kind === 'media' ? 'checked' : ''} style="width:auto">
+          Photo &amp; video service — shown in its own dark row, not with the beach setups
         </label>
       </div>
       <div class="field-row">
-        ${text('Price', 'price', 'Blank shows “For contact”.')}
-        ${text('Old price (struck through)', 'old_price')}
+        <div class="field">
+          <label>Full price (৳)</label>
+          <input data-money="price_amount" type="number" min="0" step="100" value="${esc(pkg.price_amount || '')}">
+          <p class="hint" style="margin:6px 0 0">Leave at 0 and the site shows “For contact”.</p>
+        </div>
+        <div class="field">
+          <label>Discount (%)</label>
+          <input data-money="discount_percent" type="number" min="0" max="95" step="1" value="${esc(pkg.discount_percent || '')}">
+          <p class="hint" style="margin:6px 0 0">0 means no offer.</p>
+        </div>
       </div>
-      ${text('Discount label', 'discount', 'For example “20% OFF”. Needs a price to show.')}
+      <div class="price-preview" data-preview></div>
 
       <div class="field"><label>Main image</label><div data-main></div></div>
       <div class="field"><label>Extra photos</label><div data-thumbs></div>
@@ -307,6 +331,53 @@ window.ContentEditor = (function () {
     });
 
     $('[data-featured]', bodyEl).addEventListener('change', (e) => { pkg.featured = e.target.checked; });
+
+    // The customer-facing result, updated as you type. A price and a
+    // percentage in two boxes are easy to get wrong; seeing the answer is
+    // the only reliable check.
+    const preview = $('[data-preview]', bodyEl);
+    function drawPreview() {
+      const full = Number(pkg.price_amount) || 0;
+      const pct = Math.min(Math.max(Number(pkg.discount_percent) || 0, 0), 95);
+      const now = finalPrice(pkg);
+
+      if (!full) {
+        preview.innerHTML = '<span class="pp-none">No price — the site will show “For contact”.</span>';
+      } else if (pct > 0) {
+        preview.innerHTML =
+          `<span class="pp-label">Customer sees</span>` +
+          `<span class="pp-old">${tk(full)}</span>` +
+          `<span class="pp-now">${tk(now)}</span>` +
+          `<span class="pp-off">${pct}% OFF</span>` +
+          `<span class="pp-save">they save ${tk(full - now)}</span>`;
+      } else {
+        preview.innerHTML =
+          `<span class="pp-label">Customer sees</span><span class="pp-now">${tk(full)}</span>`;
+      }
+      $('.pkg-head span', card).textContent =
+        (pkg.code || 'code assigned on save') +
+        (pkg.featured ? ' · featured' : '') +
+        (pkg.kind === 'media' ? ' · photo/video' : '') +
+        (now ? ' · ' + tk(now) : '');
+    }
+
+    $$('[data-money]', bodyEl).forEach((input) => {
+      input.addEventListener('input', () => {
+        pkg[input.dataset.money] = Number(input.value) || 0;
+        // Clear the old hand-typed strings, or the site would still prefer
+        // them on a package that has not been touched since.
+        pkg.price = '';
+        pkg.old_price = '';
+        pkg.discount = '';
+        drawPreview();
+      });
+    });
+    drawPreview();
+
+    $('[data-media]', bodyEl).addEventListener('change', (e) => {
+      pkg.kind = e.target.checked ? 'media' : '';
+      drawPreview();
+    });
 
     $('[data-main]', bodyEl).appendChild(imageField(pkg.main_image, (path) => {
       pkg.main_image = path;

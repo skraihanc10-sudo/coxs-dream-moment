@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const occasion = document.querySelector('#bb-occasion');
       if (occasion && occasion.value) params.set('occasion', occasion.value);
 
-      window.location.href = 'contact.html?' + params.toString();
+      window.location.href = 'contact?' + params.toString();
     });
   }
   if (waBtn) {
@@ -294,7 +294,14 @@ window.initShopFilters = function () {
         for (const pkg of list) {
           const option = document.createElement('option');
           option.value = pkg.code ? `${pkg.name} (${pkg.code})` : pkg.name;
-          option.textContent = option.value;
+          // The price goes in the label but not the value: the value is what
+          // gets written into the WhatsApp message and matched in the admin
+          // panel, and a price frozen into it would go stale the day it
+          // changes. window.cdmPriceOf comes from content.js.
+          const money = window.cdmPriceOf ? window.cdmPriceOf(pkg) : { has: false };
+          option.textContent = money.has
+            ? `${option.value} — ${money.now}${money.off ? ' (' + money.off + ')' : ''}`
+            : option.value;
           option.dataset.slug = pkg.slug || '';
           option.dataset.name = pkg.name || '';
           select.appendChild(option);

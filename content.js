@@ -24,6 +24,54 @@ function packageUrl(pkg) {
 // as a broken-image icon, so show a labelled placeholder instead.
 const PLACEHOLDER = 'images/logo-mark.png';
 
+// ---------------------------------------------------------------- pricing
+//
+// The owner types one number and, if there is an offer on, a percentage. The
+// figure the customer pays is worked out here rather than typed, because a
+// price and a discount typed separately drift apart the moment one of them
+// changes, and the wrong number on a price tag is the one mistake a customer
+// always notices.
+//
+// `price_amount` is the full price in taka. `discount_percent` is 0 when
+// there is no offer. The older `price` / `old_price` strings are still read
+// for any package that has not been moved over.
+
+const tk = (n) => '৳' + Math.round(n).toLocaleString('en-IN');
+
+function priceOf(pkg) {
+  const full = Number(pkg.price_amount) || 0;
+  const pct = Math.min(Math.max(Number(pkg.discount_percent) || 0, 0), 95);
+
+  if (full > 0) {
+    const now = Math.round(full * (1 - pct / 100));
+    return {
+      has: true,
+      now: tk(now),
+      was: pct > 0 ? tk(full) : '',
+      off: pct > 0 ? pct + '% OFF' : '',
+      saved: pct > 0 ? tk(full - now) : '',
+      amount: now,
+    };
+  }
+
+  // A package still carrying the old hand-typed strings.
+  if (pkg.price) {
+    return {
+      has: true,
+      now: pkg.price,
+      was: pkg.old_price || '',
+      off: pkg.discount || '',
+      saved: '',
+      amount: 0,
+    };
+  }
+
+  return { has: false, now: '', was: '', off: '', saved: '', amount: 0 };
+}
+
+// Exposed so the booking form can show the price beside each package name.
+window.cdmPriceOf = priceOf;
+
 function imageOrPlaceholder(src) {
   return src || PLACEHOLDER;
 }
@@ -39,10 +87,9 @@ function productCardHTML(pkg, isFeatured) {
   // A discount is a reduction from a price. Without a price there is nothing
   // for it to reduce, so neither the pill nor the struck-through old price is
   // drawn on a package that is quoted in conversation.
-  const discount = pkg.price && pkg.discount
-    ? `<span class="product-discount">${pkg.discount}</span>` : '';
-  const oldPrice = pkg.price && pkg.old_price
-    ? `<span class="old">${pkg.old_price}</span>` : '';
+  const money = priceOf(pkg);
+  const discount = money.off ? `<span class="product-discount">${money.off}</span>` : '';
+  const oldPrice = money.was ? `<span class="old">${money.was}</span>` : '';
   return (
     `<div class="product-card${isFeatured ? ' is-featured' : ''}" data-cat="${pkg.categories.join(' ')}">` +
     `<a href="${url}"><div class="product-thumb">` +
@@ -52,10 +99,12 @@ function productCardHTML(pkg, isFeatured) {
     `<a href="${url}"><h3 class="product-name">${pkg.name}</h3></a>` +
     code +
     `<div class="product-loc">${PIN_SVG}Cox's Bazar</div>` +
-    (pkg.price
-      ? `<div class="product-price"><span class="from">From</span>${oldPrice}${pkg.price}</div>`
+    (money.has
+      // The price they pay is the biggest thing here; the old one sits beside
+      // it, struck through and small, so the saving reads at a glance.
+      ? `<div class="product-price">${oldPrice}<span class="now">${money.now}</span></div>`
+        + (money.saved ? `<div class="product-saved">You save ${money.saved}</div>` : '')
       // No price set: say so, rather than leaving a gap where one would be.
-      // Every package is quoted on request, so this is the normal case.
       : `<div class="is-on-request">${ON_REQUEST_LABEL}</div>`) +
     `<div class="product-actions"><button class="wish-btn">${HEART_SVG}</button>` +
     `<a href="${url}" class="book-btn">Book Now</a></div></div></div>`
@@ -66,6 +115,60 @@ function productCardHTML(pkg, isFeatured) {
 // two spots (shop grid vs. related section) are easy to diverge on
 // purpose later.
 const relatedCardHTML = productCardHTML;
+
+// ---------------------------------------------------------------- media services
+//
+// Drone and camera work is sold alongside a setup, never instead of one, so
+// it gets its own row rather than a card in the grid where it would read as
+// a sixth beach package.
+
+const isMedia = (pkg) => pkg.kind === 'media';
+
+const DRONE_SVG =
+  '<svg viewBox="0 0 24 24"><path d="M5 5l3 3M19 5l-3 3M5 19l3-3M19 19l-3-3"/>' +
+  '<rect x="8" y="8" width="8" height="8" rx="2"/>' +
+  '<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/>' +
+  '<circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>';
+
+const CAMERA_SVG =
+  '<svg viewBox="0 0 24 24"><path d="M3 7h3l2-2h8l2 2h3a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z"/>' +
+  '<circle cx="12" cy="13" r="4"/></svg>';
+
+function mediaCardHTML(pkg) {
+  const url = packageUrl(pkg);
+  const money = priceOf(pkg);
+  const icon = pkg.slug === 'drone-video' ? DRONE_SVG : CAMERA_SVG;
+
+  const price = money.has
+    ? `<span class="m-price">${money.was ? `<span class="old">${money.was}</span>` : ''}${money.now}</span>`
+    : `<span class="m-ask">${ON_REQUEST_LABEL}</span>`;
+
+  return (
+    `<article class="media-card">` +
+    `<div class="m-icon">${icon}</div>` +
+    `<h3>${pkg.name}</h3>` +
+    (pkg.trust_extra ? `<p class="m-tag">${pkg.trust_extra}</p>` : '') +
+    `<ul>${(pkg.inclusions || []).map(i => `<li>${i}</li>`).join('')}</ul>` +
+    `<div class="m-foot">${price}<a class="m-btn" href="${url}">See details</a></div>` +
+    `</article>`
+  );
+}
+
+/** Fills any .media-grid on the page, and hides its section when there is
+ *  nothing to put in it — an empty dark band would look like a bug. */
+function applyMediaSection(packages) {
+  const grid = document.querySelector('.media-grid');
+  if (!grid) return;
+  const media = packages.filter(isMedia);
+  const section = grid.closest('.media-section');
+
+  if (!media.length) {
+    if (section) section.hidden = true;
+    return;
+  }
+  if (section) section.hidden = false;
+  grid.innerHTML = media.map(mediaCardHTML).join('');
+}
 
 // ---------------------------------------------------------------- settings (every page)
 // wa.me and tel: want bare digits. Admins reasonably type the number the way
@@ -307,7 +410,7 @@ function applyProductDetail(packages) {
   if (!pkg) {
     // Package no longer exists (deleted via CMS, or a stale/typo'd link) -
     // send visitors somewhere useful instead of a blank page.
-    window.location.replace('shop.html');
+    window.location.replace('/');
     return;
   }
 
@@ -323,7 +426,7 @@ function applyProductDetail(packages) {
   if (trustText) {
     // De-duplicated: the location is appended, but trust_extra has said it
     // before now, and "Cox's Bazar · Cox's Bazar" reads as a bug.
-    const parts = [pkg.trust_extra, pkg.price ? pkg.discount : '', "Cox's Bazar"]
+    const parts = [pkg.trust_extra, priceOf(pkg).off, "Cox's Bazar"]
       .filter(Boolean)
       .filter((part, i, all) => all.indexOf(part) === i);
     trustText.textContent = parts.join(' · ');
@@ -351,6 +454,20 @@ function applyProductDetail(packages) {
   const inclusionsList = document.querySelector('.pd-inclusions');
   if (inclusionsList) inclusionsList.innerHTML = pkg.inclusions.map(li => `<li>${li}</li>`).join('');
 
+  const mainBox = document.querySelector('.pd-main-img');
+  if (mainBox) {
+    const loader = mainBox.querySelector('.pd-loading');
+    if (loader) {
+      // Replace the loading block with a real <img> the rest of this
+      // function can set a source on.
+      loader.remove();
+      const img = document.createElement('img');
+      img.alt = pkg.name || '';
+      mainBox.appendChild(img);
+    }
+    mainBox.classList.remove('is-loading');
+  }
+
   const mainImg = document.querySelector('.pd-main-img img');
   if (mainImg) {
     mainImg.setAttribute('src', imageOrPlaceholder(pkg.main_image));
@@ -365,14 +482,21 @@ function applyProductDetail(packages) {
     window.initPdThumbs();
   }
 
+  const money = priceOf(pkg);
   const priceValue = document.querySelector('.bb-price-value');
   if (priceValue) {
-    const oldPrice = pkg.old_price ? `<span class="old">${pkg.old_price}</span>` : '';
-    priceValue.innerHTML = `${oldPrice}${pkg.price || ''}`;
+    priceValue.innerHTML =
+      (money.was ? `<span class="old">${money.was}</span>` : '') +
+      `<span class="now">${money.now}</span>` +
+      (money.off ? `<span class="off-pill">${money.off}</span>` : '');
     // No price yet - hide the whole row rather than leave a dangling label.
     const priceRow = priceValue.closest('.bb-price-row');
-    if (priceRow) priceRow.hidden = !pkg.price;
+    if (priceRow) priceRow.hidden = !money.has;
   }
+
+  // The total under the booking box has to agree with the price above it.
+  const totalValue = document.querySelector('.bb-total-value');
+  if (totalValue && money.has) totalValue.textContent = money.now;
 
   setupAddons(pkg);
 
@@ -408,7 +532,7 @@ function applyGallery(gallery) {
       '<rect x="3" y="5" width="18" height="14" rx="2"/>' +
       '<circle cx="8.5" cy="10" r="1.5"/><path d="M21 15l-5-5L5 19"/></svg>' +
       '<p>Photographs from our events are being added here.</p>' +
-      '<a class="btn-ghost" href="shop.html">See the packages</a>' +
+      '<a class="btn-ghost" href="/">See the packages</a>' +
       '</div>';
   } else {
     grid.classList.remove('is-empty');

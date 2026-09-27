@@ -693,6 +693,151 @@ runOnce('booking-extras-list', () => {
 
 
 
+// ------------------------------------------------------ five packages, plus media
+//
+// The catalogue was twenty variations on one setup, which made choosing hard
+// and made every package look like the same thing under a different name.
+// This keeps five, as a ladder from the simplest to the largest, and adds two
+// media services that are sold alongside a setup rather than instead of one.
+//
+// Nothing is deleted from disk: the photographs of the retired packages stay
+// in the images folder, so any of them can be put back from the admin panel.
+const KEEP = ['sweet-beginnings', 'ocean-breeze', 'golden-sunset', 'horizon-glow', 'royal-luxury'];
+
+const MEDIA_PACKAGES = [
+  {
+    slug: 'drone-video',
+    code: 'CDM 201',
+    name: 'Drone Video',
+    kind: 'media',
+    badge: 'Add to any package',
+    trust_extra: 'Shot on the day, edited and sent to you',
+    featured: false,
+    price: '', price_amount: 0, discount_percent: 0, old_price: '', discount: '',
+    categories: [], main_image: '', thumbnails: [],
+    inclusions: [
+      'Cinematic drone footage of your setup and the beach',
+      'Around 60 to 90 seconds, edited',
+      'Music of your choice',
+      'Sent to you within 48 hours',
+      'Full resolution file, yours to keep',
+    ],
+    description:
+      'A drone shot from above the setup, with the sea behind you. Flown while the light is '
+      + 'good and cut to a short film you can actually send to people, rather than an hour of '
+      + 'raw footage nobody watches.',
+    booking_policy:
+      'Added to any package when you book. Drone flying depends on the weather — if it is '
+      + 'unsafe to fly on the day, this is refunded in full.',
+    faq:
+      'The drone is flown by our own operator, who is there for the whole setup. It is quiet '
+      + 'enough not to spoil the moment, and it keeps its distance during the proposal itself.',
+  },
+  {
+    slug: 'full-media-coverage',
+    code: 'CDM 202',
+    name: 'Drone, Photo & Video',
+    kind: 'media',
+    badge: 'Complete coverage',
+    trust_extra: 'Everything filmed, everything photographed',
+    featured: true,
+    price: '', price_amount: 0, discount_percent: 0, old_price: '', discount: '',
+    categories: [], main_image: '', thumbnails: [],
+    inclusions: [
+      'Drone footage from above',
+      'A photographer for the whole setup',
+      'Video from the ground, focus-pulled',
+      'Edited highlight film, 2 to 3 minutes',
+      'Every edited photograph, full resolution',
+    ],
+    description:
+      'The full crew: a drone above, a camera on the ground and a photographer with you the '
+      + 'whole time. You get the short film to share and every photograph to keep.',
+    booking_policy:
+      'Added to any package when you book. Please tell us at least two days ahead so the crew '
+      + 'is free on your date.',
+    faq:
+      'The edited film arrives within three to five days and the photographs within a week. '
+      + 'Nothing is published anywhere without asking you first.',
+  },
+];
+
+runOnce('five-packages-and-media', () => fivePackagesAndMedia());
+
+// Prices used to be two free-text boxes: "15000" in one and "30000" struck
+// through in the other, with a separate "50% Discount" label typed by hand.
+// Three places to keep in step, and they drifted. The site now takes one
+// full price and one percentage, so this reads the old boxes and works out
+// what they meant rather than asking anyone to type it all again.
+runOnce('numeric-prices', () => {
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages)) return false;
+
+  // "\u09f315,000" and "15000 tk" both mean fifteen thousand.
+  const amount = (value) => {
+    const digits = String(value === undefined || value === null ? '' : value).replace(/[^0-9]/g, '');
+    return digits ? parseInt(digits, 10) : 0;
+  };
+
+  let moved = 0;
+  for (const pkg of data.packages) {
+    if (Number(pkg.price_amount) > 0) continue;   // already on the new fields
+
+    const now = amount(pkg.price);
+    const was = amount(pkg.old_price);
+    if (!now && !was) {
+      pkg.price_amount = 0;
+      pkg.discount_percent = 0;
+      continue;
+    }
+
+    // old_price is the full price and price is what they pay, so the
+    // percentage is whatever gets from one to the other.
+    if (was > now && now > 0) {
+      pkg.price_amount = was;
+      pkg.discount_percent = Math.round(((was - now) / was) * 100);
+    } else {
+      pkg.price_amount = now || was;
+      pkg.discount_percent = 0;
+    }
+
+    // The old boxes are cleared, or the site would keep preferring them.
+    pkg.price = '';
+    pkg.old_price = '';
+    pkg.discount = '';
+    moved += 1;
+  }
+
+  if (!moved) return false;
+  writeJSON(PACKAGES_FILE, data);
+  console.log(`Prices moved to full-price + discount on ${moved} packages`);
+  return true;
+});
+
+function fivePackagesAndMedia() {
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages)) return false;
+
+  const kept = data.packages.filter((p) => KEEP.indexOf(p.slug) !== -1);
+  // Only run if the catalogue is still the old one; a later hand edit in the
+  // admin panel must not be undone by a redeploy.
+  if (!kept.length) return false;
+
+  const have = new Set(kept.map((p) => p.slug));
+  for (const media of MEDIA_PACKAGES) {
+    if (!have.has(media.slug)) kept.push(Object.assign({}, media));
+  }
+
+  // The five setups are ordered simplest first; the media services follow.
+  const order = KEEP.concat(MEDIA_PACKAGES.map((m) => m.slug));
+  kept.sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
+
+  data.packages = kept;
+  writeJSON(PACKAGES_FILE, data);
+  console.log(`Catalogue trimmed: ${kept.length} packages (${MEDIA_PACKAGES.length} media)`);
+  return true;
+}
+
 // ---------------------------------------------------------------- app
 const app = express();
 app.disable('x-powered-by');
@@ -1925,8 +2070,33 @@ app.post('/admin/api/upload', requireAuth, upload.single('image'), (req, res) =>
 });
 
 // ---------------------------------------------------------------- static site + admin UI
+//
+// URLs without .html. /shop is the address; /shop.html redirects to it
+// permanently, so links already shared, bookmarked or indexed keep working
+// and search engines learn the new address rather than seeing two pages
+// with the same content.
+
+// shop.html is the home page — index.html has only ever been a redirect to
+// it — so it is served at / and its own two addresses point back here. One
+// page, one address.
+const HOME_ALIASES = new Set(['index', 'shop']);
+
+app.get(/^\/(.+)\.html$/, (req, res) => {
+  const name = req.params[0];
+  const target = HOME_ALIASES.has(name) ? '/' : '/' + name;
+  const query = req.originalUrl.slice(req.path.length);
+  res.redirect(301, target + query);
+});
+
+app.get('/shop', (req, res) => res.redirect(301, '/' + req.originalUrl.slice(req.path.length)));
+
+app.get('/', (req, res) => res.sendFile(path.join(APP_DIR, 'shop.html')));
+
 app.use('/admin', express.static(path.join(APP_DIR, 'admin')));
-app.use(express.static(APP_DIR));
+
+// `extensions` is what makes /shop find shop.html. index:false stops
+// express serving /some-folder/index.html for a bare directory.
+app.use(express.static(APP_DIR, { extensions: ['html'] }));
 
 app.listen(PORT, () => {
   console.log(`Cox's Dream Moment running on port ${PORT}`);
