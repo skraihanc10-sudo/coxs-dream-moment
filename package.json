@@ -10,8 +10,9 @@
     "node": ">=18"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
     "multer": "^2.0.1",
-    "cookie-parser": "^1.4.6"
+    "nodemailer": "^10.0.11"
   }
 }

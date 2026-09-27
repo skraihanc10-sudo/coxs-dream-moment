@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>My bookings — Cox's Dream Moment</title>
+<link rel="icon" href="images/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night:#0D1B2A; --sand:#FBF7F1; --coral:#E2613C; --gold:#D9A441;
+    --ink:#16233A; --muted:#6B7A93; --line:#EFE7DC; --card:#fff;
+    --good:#14926B; --good-soft:#E3F5EE; --warn:#B8860B; --warn-soft:#FBF2DE;
+    --bad:#CE3B4E; --bad-soft:#FCE9EC; --coral-soft:#FDEEE8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--sand);color:var(--ink);
+    font-family:'Hind Siliguri',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--coral)}
+  .wrap{max-width:720px;margin:0 auto;padding:0 16px 56px}
+
+  header.top{background:var(--night);padding:16px 0}
+  header.top .wrap{display:flex;align-items:center;gap:10px;padding-bottom:0}
+  header.top img{width:34px;height:34px;object-fit:contain}
+  header.top strong{color:#fff;font-size:15px}
+  header.top a{margin-left:auto;color:#8FA3BF;font-size:13px;font-weight:600;text-decoration:none}
+  header.top a:hover{color:#fff}
+
+  h1{font-family:'Fraunces',Georgia,serif;font-size:27px;margin:32px 0 6px;text-wrap:balance}
+  .sub{color:var(--muted);margin:0 0 26px;font-size:14.5px;line-height:1.6}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:14px}
+  .bk-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .bk-id{font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:700}
+  .pill{padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+  .pill-new{background:var(--coral-soft);color:var(--coral)}
+  .pill-confirmed{background:var(--warn-soft);color:var(--warn)}
+  .pill-completed{background:var(--good-soft);color:var(--good)}
+  .pill-cancelled{background:var(--bad-soft);color:var(--bad)}
+
+  /* The countdown is what people open this page to check, so it is the
+     biggest thing on the card. */
+  .countdown{
+    display:flex;align-items:baseline;gap:10px;
+    margin:14px 0 0;padding:14px 16px;border-radius:12px;
+    background:linear-gradient(135deg,#FDEEE8,#FBF2DE);
+  }
+  .countdown b{font-family:'Fraunces',Georgia,serif;font-size:32px;line-height:1;color:var(--coral)}
+  .countdown span{font-size:14px;font-weight:600;line-height:1.45}
+  .countdown.today b,.countdown.past b{font-size:22px}
+  .countdown.past{background:#F2F4F7}
+  .countdown.past b{color:var(--muted)}
+
+  dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:16px 0 0;font-size:14.5px}
+  dt{color:var(--muted)}
+  dd{margin:0;font-weight:600}
+
+  .money{margin-top:16px;padding:14px 16px;background:var(--sand);border-radius:12px;
+         display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14.5px}
+  .money .due{color:var(--warn);font-weight:700}
+  .money .clear{color:var(--good);font-weight:700}
+
+  .btn{display:inline-block;background:var(--coral);color:#fff;text-decoration:none;
+       padding:12px 22px;border-radius:10px;font-weight:700;border:0;font:inherit;cursor:pointer}
+  .btn:disabled{opacity:.6}
+  .btn.ghost{background:transparent;color:var(--coral);border:1px solid var(--coral)}
+  .field{margin:0 0 14px}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);
+               text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px}
+  .field input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .note{font-size:13px;color:var(--muted);line-height:1.6;margin:12px 0 0}
+  .flash{padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.55;margin-bottom:18px}
+  .flash.bad{background:var(--bad-soft);color:var(--bad)}
+  .flash.good{background:var(--good-soft);color:var(--good)}
+  .receipt{margin-top:14px;font-size:13.5px;color:var(--muted)}
+  .receipt img{max-width:150px;border-radius:10px;border:1px solid var(--line);display:block;margin-top:6px}
+
+  .or-line{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:12.5px}
+  .or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+  #gbtn{display:flex;justify-content:center;min-height:44px}
+
+  .weak-note{margin:0 0 18px;padding:12px 14px;border-radius:12px;
+             background:#F2F4F7;color:var(--muted);font-size:13px;line-height:1.6}
+  .tab-row{display:flex;gap:8px;margin-bottom:16px}
+  .tab-row button{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);
+                  background:#fff;font:inherit;font-weight:700;font-size:13.5px;color:var(--muted);cursor:pointer}
+  .tab-row button.on{background:var(--night);border-color:var(--night);color:#fff}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <img src="images/logo.png" alt="">
+    <strong>Cox's Dream Moment</strong>
+    <a href="index.html">Back to the site</a>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <h1>My bookings</h1>
+  <p class="sub">Loading&hellip;</p>
+</main>
+
+<script>
+(function () {
+  const main = document.getElementById('main');
+
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const tk = (n) => '৳' + Number(n || 0).toLocaleString('en-IN');
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  function prettyDate(value) {
+    if (!value) return '';
+    const parts = String(value).slice(0, 10).split('-').map(Number);
+    const [y, m, d] = parts;
+    if (!y || !m || !d) return value;
+    return d + ' ' + MONTHS[m - 1] + ' ' + y;
+  }
+
+  const LABEL = { new: 'Received', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled' };
+  const EXPLAIN = {
+    new: 'We have your booking and are checking the date. We will be in touch shortly.',
+    confirmed: 'Your date is held. Our team arrives two hours before your time to set everything up.',
+    completed: 'This one is done. Thank you for choosing us.',
+    cancelled: 'This booking was cancelled. If that is unexpected, please message us.',
+  };
+
+  // ---------------------------------------------------------------- Google
+  //
+  // The button only appears once the site has a Google client id AND
+  // Google's own script has loaded. A button that does nothing when tapped
+  // is worse than no button at all.
+  let googleClientId = null;
+
+  window.__googleSignIn = async function (response) {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sign-in failed.');
+      await load();
+    } catch (err) {
+      signInForm(err.message, 'bad');
+    }
+  };
+
+  function mountGoogle() {
+    const wrap = document.getElementById('gwrap');
+    if (!wrap || !googleClientId) return;
+    if (!(window.google && google.accounts && google.accounts.id)) {
+      setTimeout(mountGoogle, 250);
+      return;
+    }
+    google.accounts.id.initialize({ client_id: googleClientId, callback: window.__googleSignIn });
+    google.accounts.id.renderButton(document.getElementById('gbtn'),
+      { theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', width: 280 });
+    wrap.hidden = false;
+  }
+
+  // ---------------------------------------------------------------- signing in
+
+  /** Puts a message above the form without rebuilding it, so whatever was
+   *  already typed stays where it was. */
+  function flash(message, kind) {
+    const old = main.querySelector('.flash');
+    if (old) old.remove();
+    const el = document.createElement('div');
+    el.className = 'flash ' + kind;
+    el.textContent = message;
+    const card = main.querySelector('.card');
+    if (card) card.before(el);
+  }
+
+  /** The number alone. No password, because a customer who has to invent one
+   *  simply closes the page. */
+  function signInForm(message, kind) {
+    main.innerHTML =
+      '<h1>My bookings</h1>' +
+      '<p class="sub">Type the number you booked with. No password — that is all we need.</p>' +
+      (message ? '<div class="flash ' + kind + '">' + esc(message) + '</div>' : '') +
+      '<div class="card">' +
+        '<form id="phone-form">' +
+          '<div class="field"><label for="ph">Mobile number</label>' +
+            '<input id="ph" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required></div>' +
+          '<button class="btn" type="submit" id="ph-btn">See my bookings</button>' +
+        '</form>' +
+        '<div id="gwrap" hidden>' +
+          '<div class="or-line">or</div>' +
+          '<div id="gbtn"></div>' +
+        '</div>' +
+        '<p class="note">Booked with an email address? ' +
+          '<a href="#" id="want-link">Email me a sign-in link instead</a> — ' +
+          'that also shows your payment screenshots.</p>' +
+      '</div>';
+
+    mountGoogle();
+
+    document.getElementById('phone-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('ph-btn');
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+      try {
+        const res = await fetch('/api/login-phone', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: document.getElementById('ph').value.trim() }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not sign you in.');
+        await load();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'See my bookings';
+        flash(err.message, 'bad');
+      }
+    });
+
+    document.getElementById('want-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      linkForm();
+    });
+  }
+
+  /** The email route. A second screen rather than a second field, because
+   *  most people will only ever use their number. */
+  function linkForm(message, kind) {
+    main.innerHTML =
+      '<h1>Email me a link</h1>' +
+      '<p class="sub">We will email a link that signs you in. It works once and expires after 15 minutes.</p>' +
+      (message ? '<div class="flash ' + kind + '">' + esc(message) + '</div>' : '') +
+      '<div class="card">' +
+        '<form id="link-form">' +
+          '<div class="field"><label for="who">Mobile number or email</label>' +
+            '<input id="who" autocomplete="email" placeholder="01XXXXXXXXX or you@example.com" required></div>' +
+          '<button class="btn" type="submit" id="link-btn">Email me a link</button>' +
+        '</form>' +
+        '<p class="note"><a href="#" id="back-phone">Back to signing in with my number</a></p>' +
+      '</div>';
+
+    document.getElementById('back-phone').addEventListener('click', (e) => {
+      e.preventDefault();
+      signInForm();
+    });
+
+    document.getElementById('link-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const value = document.getElementById('who').value.trim();
+      const btn = document.getElementById('link-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      const body = value.includes('@') ? { email: value } : { phone: value };
+      try {
+        const res = await fetch('/api/login-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        linkForm(data.message || 'Check your email.', 'good');
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Email me a link';
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------- the list
+
+  /** How far away the event is, in words. */
+  function countdown(b) {
+    if (b.status === 'cancelled' || b.daysAway === null || b.daysAway === undefined) return '';
+    const n = b.daysAway;
+    const when = esc(prettyDate(b.eventDate));
+
+    if (n > 1) {
+      return '<div class="countdown"><b>' + n + '</b>' +
+        '<span>days to go<br>' + when + '</span></div>';
+    }
+    if (n === 1) {
+      return '<div class="countdown"><b>1</b><span>day to go — tomorrow!<br>' + when + '</span></div>';
+    }
+    if (n === 0) {
+      return '<div class="countdown today"><b>Today</b><span>' +
+        (b.eventTime ? esc(b.eventTime) : 'We will be there') + '</span></div>';
+    }
+    return '<div class="countdown past"><b>' + Math.abs(n) + ' days ago</b><span>' + when + '</span></div>';
+  }
+
+  function card(b) {
+    const due = b.due || 0;
+    const receipts = b.receipts || [];
+    return '<article class="card">' +
+      '<div class="bk-head">' +
+        '<span class="bk-id">' + esc(b.id) + '</span>' +
+        '<span class="pill pill-' + esc(b.status) + '">' + esc(LABEL[b.status] || b.status) + '</span>' +
+      '</div>' +
+      countdown(b) +
+      '<p class="note" style="margin-top:10px">' + esc(EXPLAIN[b.status] || '') + '</p>' +
+      '<dl>' +
+        (b.packageName ? '<dt>Package</dt><dd>' + esc(b.packageName) + '</dd>' : '') +
+        (b.eventDate ? '<dt>Date</dt><dd>' + esc(prettyDate(b.eventDate)) + '</dd>' : '') +
+        (b.eventTime ? '<dt>Time</dt><dd>' + esc(b.eventTime) + '</dd>' : '') +
+        (b.people ? '<dt>People</dt><dd>' + esc(b.people) + '</dd>' : '') +
+        (b.occasion ? '<dt>Occasion</dt><dd>' + esc(b.occasion) + '</dd>' : '') +
+      '</dl>' +
+      (b.price ?
+        '<div class="money">' +
+          '<span>Total</span><span>' + tk(b.price) + '</span>' +
+          '<span>Paid</span><span>' + tk(b.paid) + '</span>' +
+          '<span>Still to pay</span>' +
+          (due ? '<span class="due">' + tk(due) + '</span>'
+               : '<span class="clear">Nothing — fully paid</span>') +
+        '</div>'
+        : '<p class="note">We have not set a price yet. We will confirm it with you first.</p>') +
+      (receipts.length ?
+        '<div class="receipt">Payment screenshot you sent:' +
+          receipts.map((r) => '<img src="/receipts/' + encodeURIComponent(r.file) + '" alt="Payment screenshot">').join('') +
+        '</div>' : '') +
+    '</article>';
+  }
+
+  function render(data) {
+    const list = data.bookings || [];
+    // Anything still ahead of them, or with no date agreed yet.
+    const upcoming = list.filter((b) => b.status !== 'cancelled' && (b.daysAway === null || b.daysAway >= 0));
+    const past = list.filter((b) => upcoming.indexOf(b) === -1);
+
+    main.innerHTML =
+      '<h1>' + (data.name ? 'Hello, ' + esc(data.name) : 'My bookings') + '</h1>' +
+      '<p class="sub">Everything you have booked with us. If something looks wrong, message us and we will fix it.</p>' +
+      (data.weak ?
+        '<p class="weak-note">You signed in with your number, so payment screenshots are hidden. ' +
+        '<a href="#" id="upgrade">Email me a link</a> to see them.</p>' : '') +
+      (list.length ? (
+        (past.length && upcoming.length
+          ? '<div class="tab-row">' +
+            '<button class="on" data-tab="up">Coming up (' + upcoming.length + ')</button>' +
+            '<button data-tab="past">Finished (' + past.length + ')</button></div>'
+          : '') +
+        '<div id="list-up">' + upcoming.map(card).join('') + '</div>' +
+        '<div id="list-past"' + (upcoming.length ? ' hidden' : '') + '>' + past.map(card).join('') + '</div>'
+      ) :
+        '<div class="card"><p style="margin:0;line-height:1.6">You have no bookings yet. ' +
+        '<a href="shop.html">Have a look at the packages</a> — we would love to set something up for you.</p></div>') +
+      '<p class="note"><button class="btn ghost" id="out">Sign out</button></p>';
+
+    const upgrade = document.getElementById('upgrade');
+    if (upgrade) upgrade.addEventListener('click', (e) => { e.preventDefault(); linkForm(); });
+
+    main.querySelectorAll('[data-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        main.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('on', b === btn));
+        document.getElementById('list-up').hidden = btn.dataset.tab !== 'up';
+        document.getElementById('list-past').hidden = btn.dataset.tab !== 'past';
+      });
+    });
+
+    document.getElementById('out').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      signInForm('You are signed out.', 'good');
+    });
+  }
+
+  async function load() {
+    const res = await fetch('/api/my-bookings');
+    if (!res.ok) throw new Error('Not signed in');
+    render(await res.json());
+  }
+
+  // A link already used, or one that sat in an inbox too long, comes back
+  // here with ?expired — say so plainly rather than showing a bare form the
+  // person will fill in twice.
+  const expired = new URLSearchParams(location.search).get('expired');
+
+  fetch('/api/auth-config')
+    .then((r) => (r.ok ? r.json() : null))
+    .then((cfg) => {
+      if (cfg && cfg.googleClientId) {
+        googleClientId = cfg.googleClientId;
+        mountGoogle();
+      }
+    })
+    .catch(() => {});
+
+  load().catch(() => signInForm(
+    expired ? 'That link has already been used or has expired. Sign in again below.' : '',
+    'bad'));
+})();
+</script>
+</body>
+</html>

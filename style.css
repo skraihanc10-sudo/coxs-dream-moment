@@ -1313,3 +1313,99 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   .stat-grid li{padding:16px 14px;}
   .stat-grid span{font-size:12px;}
 }
+
+
+/* ==========================================================================
+   Booking form — the payment step.
+
+   Shown only once the site has payment details to show, so the section can
+   never appear as an empty promise with nowhere to send money.
+   ========================================================================== */
+.ef-pay {
+  margin: 22px 0 4px;
+  padding: 20px;
+  border: 1px dashed var(--gold, #D9A441);
+  border-radius: 14px;
+  background: rgba(217, 164, 65, .06);
+}
+.ef-pay-title {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: 17px;
+  margin: 0 0 6px;
+}
+.ef-pay-intro { margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: var(--muted, #6B7A93); }
+.ef-pay-intro:empty { display: none; }
+
+.ef-pay-grid { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 18px; }
+.ef-pay-methods { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.ef-pay-method {
+  background: #fff;
+  border: 1px solid rgba(13, 27, 42, .09);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.ef-pay-method .m-label { font-size: 12px; font-weight: 700; color: var(--muted, #6B7A93); text-transform: uppercase; letter-spacing: .04em; }
+.ef-pay-method .m-number {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 17px; font-weight: 700; margin-top: 3px;
+  font-variant-numeric: tabular-nums; word-break: break-all;
+}
+.ef-pay-method .m-note { font-size: 12.5px; color: var(--muted, #6B7A93); margin-top: 3px; line-height: 1.5; }
+.ef-pay-method .m-copy {
+  margin-left: auto; flex: 0 0 auto;
+  border: 1px solid rgba(13, 27, 42, .12); background: #fff;
+  border-radius: 8px; padding: 5px 10px;
+  font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.ef-pay-method .m-copy:hover { border-color: var(--coral, #E2613C); color: var(--coral, #E2613C); }
+
+.ef-pay-qr { flex: 0 0 168px; margin: 0; text-align: center; }
+.ef-pay-qr img {
+  width: 168px; max-width: 100%; height: auto;
+  border-radius: 12px; border: 1px solid rgba(13, 27, 42, .09); background: #fff;
+}
+.ef-pay-qr figcaption { font-size: 12px; color: var(--muted, #6B7A93); margin-top: 6px; line-height: 1.4; }
+
+.ef-pay-advance {
+  margin: 0; padding-top: 14px;
+  border-top: 1px solid rgba(13, 27, 42, .08);
+  font-size: 13px; color: var(--muted, #6B7A93); line-height: 1.6;
+}
+.ef-help { display: block; font-size: 12.5px; color: var(--muted, #6B7A93); margin-top: 5px; line-height: 1.5; }
+.ef-pay input[type="file"] {
+  width: 100%; padding: 10px; background: #fff;
+  border: 1px solid rgba(13, 27, 42, .12); border-radius: 10px;
+}
+
+@media (max-width: 560px) {
+  .ef-pay { padding: 16px; }
+  .ef-pay-qr { flex: 1 1 100%; }
+  .ef-pay-qr img { width: 200px; }
+}
+
+
+/* An "optional" tag beside a label, so nobody stops to wonder. */
+.ef-optional {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted, #6B7A93);
+  background: rgba(13, 27, 42, .05);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+
+/* The line under the two booking buttons, explaining why one of them is
+   worth choosing. Without it they read as the same button twice. */
+.bb-book-note {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted, #6B7A93);
+  text-align: center;
+}

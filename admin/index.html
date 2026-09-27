@@ -2,104 +2,112 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin | Cox's Dream Moment</title>
-<meta name="robots" content="noindex">
-<link rel="icon" href="../images/favicon.png" type="image/png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Cox's Dream Moment — Control Room</title>
+<link rel="icon" href="../images/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
-<div id="login-screen" class="login-screen">
-  <form id="login-form" class="login-box">
-    <div class="login-brand">
-      <img class="login-logo" src="../images/logo.png" alt="Cox's Dream Moment"
-           onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
-      <span class="login-brand-fallback" hidden>
-        <span class="brand-mark">CDM</span>
-        <span>
-          <span class="login-title">Cox's Dream Moment</span>
-          <span class="login-sub">Admin panel</span>
-        </span>
-      </span>
+<!-- ============================ login ============================ -->
+<div id="login" class="login" hidden>
+  <form class="login-card" id="login-form">
+    <img src="../images/logo.png" alt="" class="login-logo">
+    <h1>Control Room</h1>
+    <p class="login-sub">Cox's Dream Moment</p>
+    <div id="email-row" hidden>
+      <label for="email">Work email</label>
+      <input id="email" type="email" autocomplete="username">
     </div>
-    <p class="login-sub login-sub-standalone">Admin panel</p>
-    <label>Password</label>
-    <input type="password" id="login-password" autocomplete="current-password" required>
-    <button type="submit">Log in</button>
-    <p id="login-error" class="error-text" hidden></p>
+    <label for="password" id="password-label">Admin password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button type="submit" id="login-btn">Sign in</button>
+    <button type="button" class="login-switch" id="login-switch">I am a team member</button>
+    <p class="login-error" id="login-error" hidden></p>
   </form>
 </div>
 
-<div id="dashboard" class="dashboard" hidden>
-  <header class="admin-header">
-    <div class="admin-header-brand">
-      <img class="admin-logo" src="../images/logo-mark.png" alt="Cox's Dream Moment"
-           onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
-      <span class="brand-mark" hidden>CDM</span>
-      <span>Admin</span>
+<!-- ============================ app ============================ -->
+<div id="app" class="app" hidden>
+
+  <aside class="side">
+    <div class="side-brand">
+      <img src="../images/logo.png" alt="">
+      <div>
+        <strong>Control Room</strong>
+        <span id="who">Cox's Dream Moment</span>
+      </div>
     </div>
-    <div class="admin-header-actions">
-      <a href="../shop.html" target="_blank" rel="noopener" class="btn-ghost-sm">View site ↗</a>
-      <button id="logout-btn" class="btn-ghost-sm">Log out</button>
+
+    <nav class="side-nav">
+      <button class="nav-item is-active" data-view="dashboard">
+        <svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" data-view="bookings">
+        <svg viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 9h16M5 5h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"/></svg>
+        Bookings
+        <span class="nav-badge" id="nav-new" hidden></span>
+      </button>
+      <button class="nav-item" data-view="accounts">
+        <svg viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 11h18M7 15h4"/></svg>
+        Accounts
+      </button>
+      <button class="nav-item" data-view="customers" data-owner>
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z"/></svg>
+        Customers
+        <span class="nav-badge" id="nav-waiting" hidden></span>
+      </button>
+      <button class="nav-item" data-view="team" data-owner>
+        <svg viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 7a3 3 0 100 6 3 3 0 000-6zM22 20v-2a4 4 0 00-3-3.87M16 4.13a4 4 0 010 7.75"/></svg>
+        Team
+      </button>
+      <button class="nav-item" data-view="content">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 9h16M9 9v11"/></svg>
+        Website content
+      </button>
+    </nav>
+
+    <div class="side-foot">
+      <a href="../index.html" target="_blank" rel="noopener" class="side-link">View site &#8599;</a>
+      <button id="logout" class="side-link">Sign out</button>
     </div>
-  </header>
+  </aside>
 
-  <nav class="admin-tabs">
-    <button class="admin-tab active" data-tab="packages">Packages</button>
-    <button class="admin-tab" data-tab="settings">Site settings</button>
-    <button class="admin-tab" data-tab="gallery">Gallery</button>
-  </nav>
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menu-btn" aria-label="Menu">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <h1 id="view-title">Dashboard</h1>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </header>
 
-  <main class="admin-main">
-    <div id="toast" class="toast" hidden></div>
-
-    <!-- ===================== PACKAGES TAB ===================== -->
-    <section id="tab-packages" class="admin-panel">
-      <div class="panel-head">
-        <h2>Packages</h2>
-        <div>
-          <button id="add-package-btn" class="btn-primary-sm">+ New package</button>
-          <button id="save-packages-btn" class="btn-primary-sm">Save</button>
-        </div>
-      </div>
-      <div id="packages-list"></div>
-    </section>
-
-    <!-- ===================== SETTINGS TAB ===================== -->
-    <section id="tab-settings" class="admin-panel" hidden>
-      <div class="panel-head">
-        <h2>Site settings</h2>
-        <button id="save-settings-btn" class="btn-primary-sm">Save</button>
-      </div>
-      <div id="settings-form" class="form-grid"></div>
-    </section>
-
-    <!-- ===================== GALLERY TAB ===================== -->
-    <section id="tab-gallery" class="admin-panel" hidden>
-      <div class="panel-head">
-        <h2>Gallery</h2>
-        <div>
-          <button id="add-gallery-btn" class="btn-primary-sm">+ New image</button>
-          <button id="save-gallery-btn" class="btn-primary-sm">Save</button>
-        </div>
-      </div>
-      <div id="gallery-list"></div>
-    </section>
+    <div class="views">
+      <section class="view is-active" id="view-dashboard"></section>
+      <section class="view" id="view-bookings"></section>
+      <section class="view" id="view-accounts"></section>
+      <section class="view" id="view-customers"></section>
+      <section class="view" id="view-team"></section>
+      <section class="view" id="view-content"></section>
+    </div>
   </main>
+
+  <div class="scrim" id="scrim" hidden></div>
 </div>
 
-<template id="tpl-image-field">
-  <div class="image-field">
-    <img class="image-preview" src="" alt="">
-    <div class="image-field-actions">
-      <input type="file" accept="image/*" class="image-input" hidden>
-      <button type="button" class="btn-ghost-sm image-upload-btn">Change image</button>
-      <span class="image-path"></span>
-    </div>
-  </div>
-</template>
+<div class="toast-wrap" id="toasts"></div>
 
-<script src="admin.js"></script>
+<!-- A single dialog element, reused by every screen. -->
+<dialog id="sheet" class="sheet">
+  <form method="dialog" class="sheet-inner" id="sheet-inner"></form>
+</dialog>
+
+<script src="content.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

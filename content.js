@@ -330,7 +330,12 @@ function applyProductDetail(packages) {
   }
 
   // Stashed on <body> so the booking buttons in script.js can pull the code
-  // into the WhatsApp message without re-parsing any rendered text.
+  // into the WhatsApp message without re-parsing any rendered text. The slug
+  // goes with it: "Book on this website" hands it to the booking form so the
+  // enquiry is tied to a package rather than to whatever the heading says.
+  if (pkg.slug) document.body.dataset.packageSlug = pkg.slug;
+  else delete document.body.dataset.packageSlug;
+
   const codeEl = document.querySelector('.pd-code');
   if (pkg.code) {
     document.body.dataset.packageCode = pkg.code;
