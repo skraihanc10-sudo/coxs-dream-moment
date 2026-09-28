@@ -713,8 +713,10 @@ function setupAddons(pkg, packages) {
       ? `<span class="bb-addon-fee">+${money.now}</span>`
       : `<span class="bb-addon-fee is-on-request">${ON_REQUEST_LABEL}</span>`;
 
+    // A radio rather than a tick box: one crew, one booking. Ticking the
+    // second used to add both and double the total.
     return `<label class="bb-addon" for="bb-addon-${i}">`
-      + `<input type="checkbox" id="bb-addon-${i}" data-addon-index="${i}">`
+      + `<input type="radio" name="bb-addon" id="bb-addon-${i}" data-addon-index="${i}">`
       + `<span class="bb-addon-tick"></span>`
       + `<span class="bb-addon-photo">${photo}</span>`
       + `<span class="bb-addon-text">`
@@ -724,6 +726,22 @@ function setupAddons(pkg, packages) {
   }).join('');
 
   const boxes = Array.from(wrap.querySelectorAll('input[data-addon-index]'));
+
+  // A radio group cannot be emptied by clicking, so the chosen one is
+  // clicked again to drop it. Without this, a customer who changes their
+  // mind about photography has no way to say so.
+  boxes.forEach((box) => {
+    box.addEventListener('click', () => {
+      if (box.dataset.wasChecked === 'yes') {
+        box.checked = false;
+        box.dataset.wasChecked = 'no';
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      boxes.forEach((other) => {
+        other.dataset.wasChecked = other === box && box.checked ? 'yes' : 'no';
+      });
+    });
+  });
 
   const render = () => {
     const chosen = boxes.map((b, i) => (b.checked ? extras[i] : null)).filter(Boolean);

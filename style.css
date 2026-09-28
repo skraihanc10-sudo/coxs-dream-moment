@@ -1807,3 +1807,18 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   line-height: 1.7;
   font-size: 15px;
 }
+
+
+/* The photography choice is a radio now (one crew, one booking), so the
+   tick box is drawn as a circle. Clicking the chosen one again clears it. */
+.bb-addon:has(input[type="radio"]) .bb-addon-tick { border-radius: 50%; }
+.bb-addon:has(input[type="radio"]) .bb-addon-tick::after {
+  left: 50%; top: 50%;
+  width: 8px; height: 8px;
+  border: 0; border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%) scale(0);
+}
+.bb-addon:has(input[type="radio"]:checked) .bb-addon-tick::after {
+  transform: translate(-50%, -50%) scale(1);
+}

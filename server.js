@@ -903,7 +903,17 @@ app.get('/admin/api/session', (req, res) => {
 const publicUser = (u) => ({
   id: u.id, name: u.name, email: u.email, phone: u.phone,
   role: u.role, active: u.active !== false, createdAt: u.createdAt,
+  permissions: permissionsOf(u),
 });
+
+/** Takes only the permissions we actually have, and only as booleans. A set
+ *  copied straight out of a request body is a set anybody can invent. */
+function cleanPermissions(input) {
+  const out = {};
+  if (!input || typeof input !== 'object') return null;
+  for (const id of PERMISSION_IDS) out[id] = input[id] === true;
+  return out;
+}
 
 app.get('/admin/api/staff', requireOwner, (req, res) => {
   res.json({ staff: readUsers().users.filter((u) => u.role === 'staff').map(publicUser) });
@@ -934,6 +944,8 @@ app.post('/admin/api/staff', requireOwner, (req, res) => {
     hash,
     active: true,
     createdAt: new Date().toISOString(),
+    permissions: cleanPermissions(body.permissions) || cleanPermissions(
+      Object.fromEntries(PERMISSIONS.map((perm) => [perm.id, perm.fallback]))),
   };
   store.users.push(user);
   writeJSON(USERS_FILE, store);
@@ -959,6 +971,10 @@ app.put('/admin/api/staff/:id', requireOwner, (req, res) => {
   if (body.name !== undefined) user.name = text(body.name, 80);
   if (body.phone !== undefined) user.phone = tidyPhone(body.phone);
   if (body.active !== undefined) user.active = !!body.active;
+  if (body.permissions !== undefined) {
+    const cleaned = cleanPermissions(body.permissions);
+    if (cleaned) user.permissions = cleaned;
+  }
   if (body.password) {
     if (String(body.password).length < 8) {
       return res.status(400).json({ error: 'Use a password of at least 8 characters.' });
@@ -1375,6 +1391,21 @@ const receiptUpload = multer({
   fileFilter: (req, file, cb) => cb(null, /^image\/(jpeg|png|webp)$/.test(file.mimetype)),
 });
 
+/** A photograph sent in a conversation. Same store and same guard as a
+ *  payment screenshot: a customer showing us a rash or a receipt is not
+ *  something to publish at a guessable URL. */
+app.post('/api/chat-photo', receiptUpload.single('receipt'), (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Sign in first.' });
+
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (tooManyFrom('chat-photo:' + ip)) {
+    return res.status(429).json({ error: 'Too many uploads. Please wait a moment.' });
+  }
+  if (!req.file) return res.status(400).json({ error: 'Attach a photo (jpg, png or webp, up to 6MB).' });
+  res.json({ ok: true, file: req.file.filename });
+});
+
 app.post('/api/receipt', receiptUpload.single('receipt'), (req, res) => {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   if (tooManyFrom('receipt:' + ip)) {
@@ -1391,10 +1422,17 @@ app.get('/receipts/:file', (req, res) => {
 
   const user = currentUser(req);
   if (!user) return res.status(401).end();
+
   if (user.role === 'customer') {
-    const owns = readBookings().bookings.some(
+    // Their own booking's screenshot, or a photograph from their own
+    // conversation. Nothing else.
+    const onBooking = readBookings().bookings.some(
       (b) => b.customerId === user.id && (b.receipts || []).some((r) => r.file === name));
-    if (!owns) return res.status(403).end();
+
+    const thread = readChats().threads.find((t) => t.customerId === user.id);
+    const inChat = !!thread && (thread.messages || []).some((m) => m.photo === name);
+
+    if (!onBooking && !inChat) return res.status(403).end();
   }
   res.sendFile(full);
 });
@@ -1434,7 +1472,7 @@ app.put('/admin/api/settings', requireOwner, (req, res) => {
   res.json({ ok: true });
 });
 
-app.put('/admin/api/packages', requireAuth, (req, res) => {
+app.put('/admin/api/packages', requireAuth, allow('packages'), (req, res) => {
   const body = req.body;
   if (!body || !Array.isArray(body.packages)) return res.status(400).json({ error: 'Invalid data' });
 
@@ -1629,6 +1667,10 @@ function normaliseBooking(input, existing) {
 
     // Screenshots of bKash / bank transfers the customer sent in.
     receipts: Array.isArray(base.receipts) ? base.receipts : [],
+
+    // Which packages were chosen, so the price can be recomputed and a
+    // later edit knows what was actually ordered.
+    slugs: Array.isArray(base.slugs) ? base.slugs : [],
   };
 }
 
@@ -1644,6 +1686,25 @@ function daysUntil(date) {
   const todayDhaka = new Date(
     new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' })).toDateString() + ' 00:00:00 GMT+0600');
   return Math.round((target - todayDhaka) / 86400000);
+}
+
+/** What the packages a customer chose actually cost, read from the
+ *  catalogue. Never taken from the request: a price that arrives from a
+ *  browser is a price anybody can set. */
+function catalogueTotal(slugs) {
+  const data = readJSON(PACKAGES_FILE, { packages: [] });
+  const packages = Array.isArray(data.packages) ? data.packages : [];
+
+  let total = 0;
+  for (const slug of slugs) {
+    const pkg = packages.find((p) => p.slug === slug);
+    if (!pkg) continue;
+    const full = Number(pkg.price_amount) || 0;
+    if (!full) continue;   // quoted in conversation; nothing to add
+    const pct = Math.min(Math.max(Number(pkg.discount_percent) || 0, 0), 95);
+    total += Math.round(full * (1 - pct / 100));
+  }
+  return total;
 }
 
 const bookingPaid = (b) => (b.payments || []).reduce((sum, p) => sum + money(p.amount), 0);
@@ -1710,12 +1771,25 @@ app.post('/api/bookings', (req, res) => {
   // they have even asked a question.
   const customer = upsertCustomer({ name, phone, email });
 
+  // Everything they chose: the setup, plus any photography ticked with it.
+  const slugs = Array.from(new Set(
+    [text(body.packageSlug, 80)]
+      .concat(String(body.extraSlugs || '').split(',').map((x) => text(x, 80)))
+      .filter(Boolean)));
+
   const store = readBookings();
   const booking = normaliseBooking(
-    { ...body, name, phone, email, status: 'new', price: 0, cost: 0, payments: [], adminNote: '' },
+    {
+      ...body, name, phone, email, status: 'new',
+      // The figure the customer was shown, so the owner can approve without
+      // first going to look it up. They can still change it before they do.
+      price: catalogueTotal(slugs),
+      cost: 0, payments: [], adminNote: '',
+    },
     { source: 'website', customerId: customer.id },
   );
   booking.id = `CDM-${store.nextNumber}`;
+  booking.slugs = slugs;
 
   // A payment screenshot, if they paid before submitting. Only the filename
   // is taken: the file itself was already checked and stored by /api/receipt.
@@ -1949,9 +2023,26 @@ app.post('/admin/api/bookings/:id/remind', requireOwner, async (req, res) => {
 
 // ---------------------------------------------------------------- admin bookings
 
-app.get('/admin/api/bookings', requireOwner, (req, res) => {
+app.get('/admin/api/bookings', requireAuth, (req, res) => {
+  if (!can(req, 'bookings_view')) return res.status(403).json({ error: 'You do not have access to that.' });
+
   const store = readBookings();
-  res.json({ bookings: store.bookings.map(withTotals) });
+  const seesMoney = can(req, 'bookings_money');
+
+  res.json({
+    bookings: store.bookings.map((b) => {
+      const full = withTotals(b);
+      if (seesMoney) return full;
+      // A staff member who may see the diary but not the takings gets the
+      // diary: who, what, when, and nothing with a figure on it.
+      return {
+        ...full,
+        price: 0, paid: 0, due: 0, cost: 0,
+        payments: [], receipts: [], adminNote: '',
+      };
+    }),
+    seesMoney,
+  });
 });
 
 app.post('/admin/api/bookings', requireOwner, (req, res) => {
@@ -1994,7 +2085,7 @@ app.get('/admin/api/expenses', requireAuth, (req, res) => {
   res.json(readExpenses());
 });
 
-app.post('/admin/api/expenses', requireAuth, (req, res) => {
+app.post('/admin/api/expenses', requireAuth, allow('costs_add'), (req, res) => {
   const body = req.body || {};
   const store = readExpenses();
   const expense = {
@@ -2129,6 +2220,230 @@ app.get('/admin/api/staff-summary', requireAuth, (req, res) => {
   });
 });
 
+// ---------------------------------------------------------------- what staff may do
+//
+// Every member of staff gets their own set. The owner decides per person,
+// because "staff" is not one job: the person who buys flowers and the
+// person who answers customers need different things, and giving everyone
+// everything is how a small business ends up with no idea who changed what.
+//
+// Two of these are deliberately not simple yes/no. A staff member may
+// *propose* a change to a booking or a cost; it does not take effect until
+// the owner approves it. The work gets done without anyone being able to
+// quietly rewrite a price.
+
+const PERMISSIONS = [
+  { id: 'chat',            label: 'Answer customer messages',      fallback: true },
+  { id: 'packages',        label: 'Edit packages and prices',      fallback: true },
+  { id: 'costs_add',       label: 'Record what they spend',        fallback: true },
+  { id: 'bookings_view',   label: 'See bookings (no money)',       fallback: false },
+  { id: 'bookings_money',  label: 'See prices and what is owed',   fallback: false },
+  { id: 'bookings_edit',   label: 'Propose changes to a booking',  fallback: false },
+  { id: 'team_chat',       label: 'Use the team chat',             fallback: true },
+];
+
+const PERMISSION_IDS = PERMISSIONS.map((p) => p.id);
+
+/** An account made before permissions existed has none recorded, so it
+ *  falls back to what staff could always do. */
+function permissionsOf(user) {
+  if (!user) return {};
+  if (user.role === 'owner') {
+    const all = {};
+    for (const id of PERMISSION_IDS) all[id] = true;
+    return all;
+  }
+  const saved = user.permissions && typeof user.permissions === 'object' ? user.permissions : null;
+  const out = {};
+  for (const p of PERMISSIONS) {
+    out[p.id] = saved ? saved[p.id] === true : p.fallback;
+  }
+  return out;
+}
+
+function can(req, id) {
+  if (!req.user) return false;
+  if (req.user.role === 'owner') return true;
+  const user = readUsers().users.find((u) => u.id === req.user.id);
+  return permissionsOf(user)[id] === true;
+}
+
+/** Guards a route behind one permission.
+ *
+ *  A function declaration, not a const: routes further up the file call this
+ *  while the module is still loading, and a const would not exist yet. */
+function allow(id) {
+  return (req, res, next) => {
+    if (!can(req, id)) return res.status(403).json({ error: 'You do not have access to that.' });
+    next();
+  };
+}
+
+app.get('/admin/api/permissions', requireAuth, (req, res) => {
+  const user = req.user.role === 'owner'
+    ? null
+    : readUsers().users.find((u) => u.id === req.user.id);
+  res.json({
+    role: req.user.role,
+    name: req.user.name,
+    list: PERMISSIONS,
+    mine: req.user.role === 'owner' ? permissionsOf({ role: 'owner' }) : permissionsOf(user),
+  });
+});
+
+// ---------------------------------------------------------------- change requests
+//
+// A staff member's edit, waiting for the owner. Stored rather than applied,
+// so the booking the customer sees never changes until somebody with the
+// authority to change it has said yes.
+
+const CHANGES_FILE = path.join(CONTENT_DIR, 'changes.json');
+
+function readChanges() {
+  const data = readJSON(CHANGES_FILE, null);
+  if (data && Array.isArray(data.changes)) return data;
+  return { changes: [] };
+}
+
+const CHANGEABLE_BOOKING = ['price', 'eventDate', 'eventTime', 'people', 'occasion', 'note', 'adminNote', 'status'];
+
+app.post('/admin/api/changes', requireAuth, allow('bookings_edit'), (req, res) => {
+  const body = req.body || {};
+  const kind = body.kind === 'expense' ? 'expense' : 'booking';
+  const targetId = text(body.targetId, 60);
+  if (!targetId) return res.status(400).json({ error: 'Nothing to change.' });
+
+  const fields = {};
+  if (kind === 'booking') {
+    const booking = readBookings().bookings.find((b) => b.id === targetId);
+    if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+    for (const key of CHANGEABLE_BOOKING) {
+      if (body.fields && body.fields[key] !== undefined) fields[key] = body.fields[key];
+    }
+  } else {
+    const expense = readExpenses().expenses.find((e) => e.id === targetId);
+    if (!expense) return res.status(404).json({ error: 'Cost not found.' });
+    for (const key of ['amount', 'date', 'category', 'note']) {
+      if (body.fields && body.fields[key] !== undefined) fields[key] = body.fields[key];
+    }
+  }
+
+  if (!Object.keys(fields).length) return res.status(400).json({ error: 'Nothing changed.' });
+
+  const store = readChanges();
+  store.changes.unshift({
+    id: 'ch' + Date.now() + crypto.randomBytes(3).toString('hex'),
+    kind,
+    targetId,
+    fields,
+    reason: text(body.reason, 300),
+    byId: req.user.id,
+    byName: req.user.name || 'Staff',
+    at: new Date().toISOString(),
+    state: 'pending',
+  });
+  writeJSON(CHANGES_FILE, store);
+  res.json({ ok: true });
+});
+
+app.get('/admin/api/changes', requireAuth, (req, res) => {
+  const store = readChanges();
+  // Staff see their own; the owner sees everybody's.
+  const mine = req.user.role === 'owner'
+    ? store.changes
+    : store.changes.filter((c) => c.byId === req.user.id);
+  res.json({
+    changes: mine.slice(0, 100),
+    pending: store.changes.filter((c) => c.state === 'pending').length,
+  });
+});
+
+app.post('/admin/api/changes/:id/:decision', requireOwner, (req, res) => {
+  const decision = req.params.decision === 'approve' ? 'approved' : 'rejected';
+  const store = readChanges();
+  const change = store.changes.find((c) => c.id === req.params.id);
+  if (!change) return res.status(404).json({ error: 'Not found.' });
+  if (change.state !== 'pending') return res.status(400).json({ error: 'Already decided.' });
+
+  if (decision === 'approved') {
+    if (change.kind === 'booking') {
+      const bookings = readBookings();
+      const index = bookings.bookings.findIndex((b) => b.id === change.targetId);
+      if (index < 0) return res.status(404).json({ error: 'That booking is gone.' });
+      const previous = bookings.bookings[index];
+      const updated = normaliseBooking(change.fields, previous);
+      updated.id = previous.id;
+      bookings.bookings[index] = updated;
+      writeJSON(BOOKINGS_FILE, bookings);
+      mailBookingUpdated(updated, previous).catch(() => {});
+    } else {
+      const expenses = readExpenses();
+      const expense = expenses.expenses.find((e) => e.id === change.targetId);
+      if (!expense) return res.status(404).json({ error: 'That cost is gone.' });
+      if (change.fields.amount !== undefined) expense.amount = money(change.fields.amount);
+      if (change.fields.date !== undefined) expense.date = text(change.fields.date, 20);
+      if (change.fields.category !== undefined) expense.category = text(change.fields.category, 60);
+      if (change.fields.note !== undefined) expense.note = text(change.fields.note, 200);
+      writeJSON(EXPENSES_FILE, expenses);
+    }
+  }
+
+  change.state = decision;
+  change.decidedAt = new Date().toISOString();
+  writeJSON(CHANGES_FILE, store);
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- team chat
+//
+// One room for everyone who works here. Separate from the customer
+// conversations on purpose: this is where the beach team says "running
+// late" and nobody outside ever sees it.
+
+const TEAM_FILE = path.join(CONTENT_DIR, 'team-chat.json');
+const TEAM_KEEP = 500;
+
+function readTeamChat() {
+  const data = readJSON(TEAM_FILE, null);
+  if (data && Array.isArray(data.messages)) return data;
+  return { messages: [] };
+}
+
+app.get('/admin/api/team-chat', requireAuth, allow('team_chat'), (req, res) => {
+  const store = readTeamChat();
+  const since = text(req.query.since, 40);
+  const messages = since
+    ? store.messages.filter((m) => m.at > since)
+    : store.messages.slice(-120);
+  res.json({ messages, total: store.messages.length });
+});
+
+app.post('/admin/api/team-chat', requireAuth, allow('team_chat'), (req, res) => {
+  const body = req.body || {};
+  const message = String(body.text || '').trim().slice(0, 2000);
+  const photo = path.basename(text(body.photo, 120));
+  const hasPhoto = photo && fs.existsSync(path.join(RECEIPTS_DIR, photo));
+
+  if (!message && !hasPhoto) return res.status(400).json({ error: 'Write something first.' });
+
+  const store = readTeamChat();
+  store.messages.push({
+    id: 'tm' + Date.now() + crypto.randomBytes(3).toString('hex'),
+    byId: req.user.id,
+    byName: req.user.name || (req.user.role === 'owner' ? 'Owner' : 'Staff'),
+    role: req.user.role,
+    text: message,
+    photo: hasPhoto ? photo : '',
+    at: new Date().toISOString(),
+  });
+  // A room that never forgets grows without bound and nobody scrolls back
+  // that far anyway.
+  if (store.messages.length > TEAM_KEEP) store.messages = store.messages.slice(-TEAM_KEEP);
+  writeJSON(TEAM_FILE, store);
+
+  res.json({ ok: true, messages: store.messages.slice(-120) });
+});
+
 // ---------------------------------------------------------------- chat
 //
 // One conversation per customer, kept in a single file. Not a chat product:
@@ -2141,7 +2456,10 @@ app.get('/admin/api/staff-summary', requireAuth, (req, res) => {
 // unless the other side has spoken since.
 
 const CHAT_FILE = path.join(CONTENT_DIR, 'chats.json');
-const MAIL_GAP_MS = 10 * 60 * 1000;
+// Three minutes. Long enough that a burst of four lines is one email,
+// short enough that a reply half an hour later still reaches somebody who
+// has closed the tab.
+const MAIL_GAP_MS = 3 * 60 * 1000;
 const MAX_MESSAGE = 2000;
 
 function readChats() {
@@ -2194,6 +2512,7 @@ const publicMessage = (m) => ({
   from: m.from,
   byName: m.byName,
   text: m.text,
+  photo: m.photo || '',
   at: m.at,
 });
 
@@ -2247,8 +2566,11 @@ app.get('/api/chat', requireCustomer, (req, res) => {
 });
 
 app.post('/api/chat', requireCustomer, async (req, res) => {
-  const text = String((req.body || {}).text || '').trim().slice(0, MAX_MESSAGE);
-  if (!text) return res.status(400).json({ error: 'Write something first.' });
+  const body = req.body || {};
+  const text = String(body.text || '').trim().slice(0, MAX_MESSAGE);
+  const photo = path.basename(String(body.photo || '').slice(0, 120));
+  const hasPhoto = photo && fs.existsSync(path.join(RECEIPTS_DIR, photo));
+  if (!text && !hasPhoto) return res.status(400).json({ error: 'Write something first.' });
 
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   if (tooManyFrom('chat:' + ip)) {
@@ -2262,6 +2584,7 @@ app.post('/api/chat', requireCustomer, async (req, res) => {
     from: 'customer',
     byName: req.user.name || 'Customer',
     text,
+    photo: hasPhoto ? photo : '',
     at: new Date().toISOString(),
     readBy: { customer: true, team: false },
   });
@@ -2282,7 +2605,8 @@ app.post('/api/chat', requireCustomer, async (req, res) => {
       'A customer has written to you',
       `${rowsHtml([['From', who], ['Mobile', phone], ['Email', req.user.email || '']])}
        <div style="margin-top:16px;padding:14px 16px;background:#FBF7F1;border-radius:10px;
-                   font-size:14px;line-height:1.65;white-space:pre-wrap">${escapeHtml(text)}</div>
+                   font-size:14px;line-height:1.65;white-space:pre-wrap">${escapeHtml(text) ||
+                   '<em style="color:#6B7A93">Sent a photograph</em>'}</div>
        <p style="margin:16px 0 0;font-size:13px;color:#6B7A93;line-height:1.6">
          Reply in the Control Room and it reaches them on the website and by email.</p>`,
       'Open the Control Room', `${SITE_URL}/admin/`)).catch(() => {});
@@ -2294,7 +2618,7 @@ app.post('/api/chat', requireCustomer, async (req, res) => {
 // Staff can read and answer. They still cannot see a booking, a price or
 // what anyone owes — answering a question is the job; the money is not.
 
-app.get('/admin/api/chats', requireAuth, (req, res) => {
+app.get('/admin/api/chats', requireAuth, allow('chat'), (req, res) => {
   const store = readChats();
   const users = readUsers().users;
 
@@ -2310,7 +2634,7 @@ app.get('/admin/api/chats', requireAuth, (req, res) => {
       total: t.messages.length,
       lastAt: last ? last.at : '',
       lastFrom: last ? last.from : '',
-      preview: last ? last.text.slice(0, 90) : '',
+      preview: last ? (last.text ? last.text.slice(0, 90) : '\ud83d\udcf7 Photo') : '',
     };
   });
 
@@ -2321,7 +2645,7 @@ app.get('/admin/api/chats', requireAuth, (req, res) => {
   res.json({ threads, unread: threads.reduce((n, t) => n + t.unread, 0) });
 });
 
-app.get('/admin/api/chats/:customerId', requireAuth, (req, res) => {
+app.get('/admin/api/chats/:customerId', requireAuth, allow('chat'), (req, res) => {
   const store = readChats();
   const thread = threadFor(store, req.params.customerId, false);
   if (!thread) return res.json({ messages: [] });
@@ -2338,9 +2662,12 @@ app.get('/admin/api/chats/:customerId', requireAuth, (req, res) => {
   });
 });
 
-app.post('/admin/api/chats/:customerId', requireAuth, async (req, res) => {
-  const text = String((req.body || {}).text || '').trim().slice(0, MAX_MESSAGE);
-  if (!text) return res.status(400).json({ error: 'Write something first.' });
+app.post('/admin/api/chats/:customerId', requireAuth, allow('chat'), async (req, res) => {
+  const body = req.body || {};
+  const text = String(body.text || '').trim().slice(0, MAX_MESSAGE);
+  const photo = path.basename(String(body.photo || '').slice(0, 120));
+  const hasPhoto = photo && fs.existsSync(path.join(RECEIPTS_DIR, photo));
+  if (!text && !hasPhoto) return res.status(400).json({ error: 'Write something first.' });
 
   const user = readUsers().users.find((u) => u.id === req.params.customerId && u.role === 'customer');
   if (!user) return res.status(404).json({ error: 'Customer not found.' });
@@ -2354,6 +2681,7 @@ app.post('/admin/api/chats/:customerId', requireAuth, async (req, res) => {
     // who answered.
     byName: req.user.name || 'Cox’s Dream Moment',
     text,
+    photo: hasPhoto ? photo : '',
     at: new Date().toISOString(),
     readBy: { customer: false, team: true },
   });

@@ -57,10 +57,20 @@
         <svg viewBox="0 0 24 24"><path d="M3 7h18v12H3zM3 11h18M7 15h4"/></svg>
         Accounts
       </button>
-      <button class="nav-item" data-view="messages">
+      <button class="nav-item" data-view="messages" data-perm="chat">
         <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.4 8.4 0 01-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.4 8.4 0 013.8-.9h.5a8.5 8.5 0 018 8v.5z"/></svg>
         Messages
         <span class="nav-badge" id="nav-chat" hidden></span>
+      </button>
+      <button class="nav-item" data-view="team-chat" data-perm="team_chat">
+        <svg viewBox="0 0 24 24"><path d="M17 8h2a2 2 0 012 2v9l-3-3h-7a2 2 0 01-2-2v-1"/><path d="M14 3H5a2 2 0 00-2 2v7l3-3h8a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg>
+        Team chat
+        <span class="nav-badge" id="nav-team" hidden></span>
+      </button>
+      <button class="nav-item" data-view="approvals" data-owner>
+        <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Approvals
+        <span class="nav-badge" id="nav-approve" hidden></span>
       </button>
       <button class="nav-item" data-view="customers" data-owner>
         <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 3a4 4 0 100 8 4 4 0 000-8z"/></svg>
@@ -97,6 +107,8 @@
       <section class="view" id="view-bookings"></section>
       <section class="view" id="view-accounts"></section>
       <section class="view" id="view-messages"></section>
+      <section class="view" id="view-team-chat"></section>
+      <section class="view" id="view-approvals"></section>
       <section class="view" id="view-customers"></section>
       <section class="view" id="view-team"></section>
       <section class="view" id="view-content"></section>

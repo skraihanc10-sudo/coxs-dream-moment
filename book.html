@@ -605,6 +605,9 @@
             email: email.toLowerCase(),
             packageSlug: main ? main.slug : (extras[0] ? extras[0].slug : ''),
             packageName: chosen.map((p) => p.name).join(' + '),
+            // The server prices the order from these; the figures on this
+            // page are only what the customer was shown.
+            extraSlugs: extras.map((p) => p.slug).join(','),
             eventDate: value('bk-date'),
             eventTime: value('bk-time'),
             people: value('bk-people'),

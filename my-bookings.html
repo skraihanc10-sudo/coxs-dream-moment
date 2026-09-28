@@ -118,6 +118,8 @@
   .msg.them .msg-body{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
   .msg.me .msg-body{background:var(--night);color:#fff;border-bottom-right-radius:4px}
   .msg-meta{font-size:10.5px;color:var(--muted);padding:0 4px}
+  .msg-photo{display:block}
+  .msg-photo img{max-width:200px;max-height:240px;border-radius:12px;border:1px solid var(--line);display:block}
   .chat-empty{text-align:center;color:var(--muted);font-size:13.5px;line-height:1.6;padding:26px 10px}
   #chat-form{display:flex;gap:8px;padding:14px 20px 18px;border-top:1px solid var(--line)}
   #chat-form textarea{
@@ -451,7 +453,11 @@
     log.innerHTML = messages.map((m) => {
       const mine = m.from === 'customer';
       return '<div class="msg ' + (mine ? 'me' : 'them') + '">' +
-        '<div class="msg-body">' + esc(m.text) + '</div>' +
+        (m.photo
+          ? '<a href="/receipts/' + encodeURIComponent(m.photo) + '" target="_blank" rel="noopener" class="msg-photo">' +
+            '<img src="/receipts/' + encodeURIComponent(m.photo) + '" alt="Photo"></a>'
+          : '') +
+        (m.text ? '<div class="msg-body">' + esc(m.text) + '</div>' : '') +
         '<div class="msg-meta">' + (mine ? '' : esc(m.byName) + ' \u00b7 ') + esc(relativeTime(m.at)) + '</div>' +
       '</div>';
     }).join('');
@@ -513,7 +519,7 @@
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => { if (d) drawChat(d.messages || []); })
         .catch(() => {});
-    }, 20000);
+    }, 6000);
   }
 
   async function load() {

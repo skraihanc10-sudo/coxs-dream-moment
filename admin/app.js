@@ -20,10 +20,20 @@ const state = {
   threads: [],
   chatUnread: 0,
   openThread: null,
+  perms: {},
+  permList: [],
+  changes: [],
+  pendingChanges: 0,
+  teamChat: [],
   filter: { status: 'all', q: '' },
 };
 
 const isOwner = () => state.role === 'owner';
+
+/** What this account may do. The owner may do everything; a staff member
+ *  only what the owner ticked for them. Checked on the server too \u2014 this
+ *  is for what to draw, not for what to allow. */
+const may = (id) => isOwner() || state.perms[id] === true;
 
 const STATUSES = [
   { id: 'new', label: 'New' },
@@ -145,12 +155,28 @@ async function enter(session) {
   state.role = who.role;
   state.name = who.name || '';
 
+  // Before anything is drawn: a screen built and then removed is a screen
+  // somebody saw.
+  try {
+    const p = await api('/admin/api/permissions');
+    state.perms = p.mine || {};
+    state.permList = p.list || [];
+  } catch (e) {
+    state.perms = {};
+  }
+
   $('#login').hidden = true;
   $('#app').hidden = false;
 
   // Owner-only entries are removed from the sidebar for staff rather than
   // greyed out: a disabled button still tells them what they are missing.
   $('#app').classList.toggle('is-staff', !isOwner());
+
+  // Entries the account cannot use are removed, not greyed out: a disabled
+  // button still tells somebody what they are missing.
+  $$('.nav-item[data-perm]').forEach((btn) => {
+    btn.hidden = !may(btn.dataset.perm);
+  });
   $('#who').textContent = isOwner() ? "Cox's Dream Moment" : (state.name || 'Team member');
 
   await refresh();
@@ -160,17 +186,34 @@ async function enter(session) {
 /** Pulls everything the dashboard and lists read. One call site, so a
  *  screen can never render against half-stale data. */
 async function refresh() {
-  const [expenses, chats] = await Promise.all([
-    api('/admin/api/expenses'),
-    api('/admin/api/chats'),
-  ]);
+  const expenses = await api('/admin/api/expenses');
   state.expenses = expenses.expenses || [];
-  state.threads = chats.threads || [];
-  state.chatUnread = chats.unread || 0;
+
+  if (may('chat')) {
+    const chats = await api('/admin/api/chats');
+    state.threads = chats.threads || [];
+    state.chatUnread = chats.unread || 0;
+  } else {
+    state.threads = [];
+    state.chatUnread = 0;
+  }
+  $('#nav-chat').hidden = !may('chat');
 
   const chatBadge = $('#nav-chat');
   chatBadge.textContent = state.chatUnread;
-  chatBadge.hidden = state.chatUnread === 0;
+  if (may('chat')) chatBadge.hidden = state.chatUnread === 0;
+
+  try {
+    const ch = await api('/admin/api/changes');
+    state.changes = ch.changes || [];
+    state.pendingChanges = ch.pending || 0;
+  } catch (e) { /* staff without the permission simply have none */ }
+
+  const approveBadge = $('#nav-approve');
+  if (approveBadge) {
+    approveBadge.textContent = state.pendingChanges;
+    approveBadge.hidden = state.pendingChanges === 0;
+  }
 
   if (!isOwner()) {
     // A staff session would be refused by these, and asking anyway would
@@ -206,10 +249,12 @@ async function refresh() {
 // ---------------------------------------------------------------- routing
 
 const VIEWS = {
+  'team-chat': { title: 'Team chat', perm: 'team_chat', render: renderTeamChat },
+  approvals: { title: 'Approvals', owner: true, render: renderApprovals },
   dashboard: { title: 'Dashboard', render: () => (isOwner() ? renderDashboard() : renderStaffHome()) },
   bookings: { title: 'Bookings', owner: true, render: renderBookings },
   accounts: { title: 'Accounts', render: () => (isOwner() ? renderAccounts() : renderStaffCosts()) },
-  messages: { title: 'Messages', render: renderMessages },
+  messages: { title: 'Messages', perm: 'chat', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
   team: { title: 'Team', owner: true, render: renderTeam },
   content: { title: 'Website content', render: () => window.ContentEditor.mount($('#view-content')) },
@@ -220,6 +265,7 @@ function go(name) {
   // Belt and braces: the sidebar already hides these, but a stale hash or a
   // stray call must not land a staff member on an empty owner screen.
   if (view.owner && !isOwner()) { name = 'dashboard'; view = VIEWS.dashboard; }
+  if (view.perm && !may(view.perm)) { name = 'dashboard'; view = VIEWS.dashboard; }
   if (name === 'accounts' && !isOwner()) $('#view-title').textContent = 'My costs';
   $$('.nav-item').forEach((b) => b.classList.toggle('is-active', b.dataset.view === name));
   $$('.view').forEach((v) => v.classList.toggle('is-active', v.id === 'view-' + name));
@@ -405,29 +451,10 @@ function wireBookingRows(root) {
     });
   });
 
-  $$('[data-approve]', root).forEach((btn) => btn.addEventListener('click', async (e) => {
+  $$('[data-approve]', root).forEach((btn) => btn.addEventListener('click', (e) => {
     e.stopPropagation();
     const booking = state.bookings.find((b) => b.id === btn.dataset.approve);
-    if (!booking) return;
-    if (!booking.price) {
-      // Confirming without a price emails the customer a booking with no
-      // figure in it, and then the number has to be walked back.
-      toast('Set the agreed price first, then approve.', 'bad');
-      editBooking(booking);
-      return;
-    }
-    btn.disabled = true;
-    try {
-      await api('/admin/api/bookings/' + encodeURIComponent(booking.id), {
-        method: 'PUT', body: JSON.stringify({ status: 'confirmed' }),
-      });
-      await refresh();
-      go(currentView());
-      toast(booking.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 tell them on WhatsApp', 'good');
-    } catch (err) {
-      btn.disabled = false;
-      toast(err.message, 'bad');
-    }
+    if (booking) approveBooking(booking);
   }));
 }
 
@@ -680,22 +707,12 @@ function editBooking(booking) {
 
     const approveNow = $('[data-approve-now]');
     if (approveNow) {
-      approveNow.addEventListener('click', async () => {
-        const price = Number($('#f-price', body).value || 0);
-        if (!price) { toast('Set the agreed price first.', 'bad'); $('#f-price', body).focus(); return; }
-        approveNow.disabled = true;
-        try {
-          await api('/admin/api/bookings/' + encodeURIComponent(b.id), {
-            method: 'PUT', body: JSON.stringify({ price, status: 'confirmed' }),
-          });
-          await refresh();
-          sheet.dialog.close();
-          go(currentView());
-          toast(b.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 tell them on WhatsApp', 'good');
-        } catch (e) {
-          approveNow.disabled = false;
-          toast(e.message, 'bad');
-        }
+      approveNow.addEventListener('click', () => {
+        // Carry whatever price is on screen into the approval, so a figure
+        // just typed is not lost when the dialog changes.
+        const typed = Number($('#f-price', body).value || 0);
+        sheet.dialog.close();
+        approveBooking(Object.assign({}, b, { price: typed || b.price }));
       });
     }
 
@@ -915,9 +932,13 @@ async function openThread(customerId) {
         '<div class="empty" style="padding:28px 16px">Nothing said yet.</div>'}
     </div>
     <form class="chat-form" id="chat-form">
+      <label class="btn btn-sm" style="align-self:flex-end;margin:0" title="Send a photo">
+        \ud83d\udcf7<input type="file" id="chat-photo" accept="image/jpeg,image/png,image/webp" hidden>
+      </label>
       <textarea id="chat-text" rows="2" placeholder="Write a reply…"></textarea>
       <button class="btn btn-primary" type="submit" id="chat-send">Send</button>
     </form>
+    <p class="hint" id="chat-photo-note" style="padding:0 16px;margin:0"></p>
     <p class="hint" style="padding:0 16px 14px;margin:0">
       ${data.email ? 'They get this on the website and by email.' : 'They gave no email address, so this shows on the website only.'}
     </p>`;
@@ -929,19 +950,43 @@ async function openThread(customerId) {
   await refresh();
   $$('[data-thread]').forEach((b) => b.classList.toggle('is-open', b.dataset.thread === customerId));
 
+  let chatPhoto = '';
+  $('#chat-photo').addEventListener('change', async (e) => {
+    const chosen = e.target.files && e.target.files[0];
+    chatPhoto = '';
+    const note = $('#chat-photo-note');
+    if (!chosen) { note.textContent = ''; return; }
+    note.textContent = 'Uploading…';
+    try {
+      const body = new FormData();
+      body.append('receipt', chosen);
+      const res = await fetch('/api/chat-photo', { method: 'POST', body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      chatPhoto = data.file;
+      note.textContent = 'Photo attached — press Send.';
+    } catch (err) {
+      note.textContent = err.message;
+    } finally {
+      e.target.value = '';
+    }
+  });
+
   $('#chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const box = $('#chat-text');
     const text = box.value.trim();
-    if (!text) return;
+    if (!text && !chatPhoto) return;
 
     const send = $('#chat-send');
     send.disabled = true;
     try {
       const r = await api('/admin/api/chats/' + encodeURIComponent(customerId), {
-        method: 'POST', body: JSON.stringify({ text }),
+        method: 'POST', body: JSON.stringify({ text, photo: chatPhoto }),
       });
       box.value = '';
+      chatPhoto = '';
+      $('#chat-photo-note').textContent = '';
       $('#chat-log').innerHTML = r.messages.map(bubble).join('');
       $('#chat-log').scrollTop = $('#chat-log').scrollHeight;
       await refresh();
@@ -966,7 +1011,9 @@ async function openThread(customerId) {
 function bubble(m) {
   const mine = m.from === 'team';
   return `<div class="msg ${mine ? 'mine' : 'theirs'}">
-    <div class="msg-body">${esc(m.text)}</div>
+    ${m.photo ? `<a href="/receipts/${encodeURIComponent(m.photo)}" target="_blank" rel="noopener" class="msg-photo">
+      <img src="/receipts/${encodeURIComponent(m.photo)}" alt="Photo"></a>` : ''}
+    ${m.text ? `<div class="msg-body">${esc(m.text)}</div>` : ''}
     <div class="msg-meta">${mine ? esc(m.byName) + ' · ' : ''}${esc(relativeTime(m.at))}</div>
   </div>`;
 }
@@ -1075,6 +1122,210 @@ async function markSent(customerId, bookingId, kind, tell) {
   }
 }
 
+// ================================================================ TEAM CHAT
+//
+// One room for everyone who works here. Separate from the customer threads
+// on purpose: this is where somebody says "running twenty minutes late" and
+// nobody outside ever sees it.
+
+let teamTimer = null;
+
+function renderTeamChat() {
+  const el = $('#view-team-chat');
+
+  el.innerHTML = `
+    <div class="card chat-panel" style="max-height:calc(100vh - 150px)">
+      <div class="chat-head">
+        <div>
+          <strong>Team chat</strong>
+          <span>Everyone who works here. Customers never see this.</span>
+        </div>
+      </div>
+      <div class="chat-log" id="team-log"><div class="empty">Loading\u2026</div></div>
+      <form class="chat-form" id="team-form">
+        <label class="btn btn-sm" style="align-self:flex-end;margin:0" title="Send a photo">
+          \ud83d\udcf7<input type="file" id="team-photo" accept="image/jpeg,image/png,image/webp" hidden>
+        </label>
+        <textarea id="team-text" rows="2" placeholder="Write to the team\u2026"></textarea>
+        <button class="btn btn-primary" type="submit" id="team-send">Send</button>
+      </form>
+      <p class="hint" id="team-note" style="padding:0 16px 14px;margin:0"></p>
+    </div>`;
+
+  let photo = '';
+  const note = $('#team-note', el);
+
+  const draw = (messages) => {
+    state.teamChat = messages;
+    const log = $('#team-log', el);
+    log.innerHTML = messages.length
+      ? messages.map(teamBubble).join('')
+      : '<div class="empty" style="padding:30px 16px">Nothing said yet. Say hello.</div>';
+    log.scrollTop = log.scrollHeight;
+  };
+
+  const load = () => api('/admin/api/team-chat').then((d) => draw(d.messages || [])).catch(() => {});
+  load();
+
+  // The room is only worth having if a message shows up while you are
+  // looking at it.
+  clearInterval(teamTimer);
+  teamTimer = setInterval(() => {
+    if (document.hidden || !$('#team-log')) { clearInterval(teamTimer); return; }
+    load();
+  }, 5000);
+
+  $('#team-photo', el).addEventListener('change', async (e) => {
+    const chosen = e.target.files && e.target.files[0];
+    photo = '';
+    if (!chosen) { note.textContent = ''; return; }
+    note.textContent = 'Uploading\u2026';
+    try {
+      const body = new FormData();
+      body.append('receipt', chosen);
+      const res = await fetch('/api/chat-photo', { method: 'POST', body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      photo = data.file;
+      note.textContent = 'Photo attached \u2014 press Send.';
+    } catch (err) {
+      note.textContent = err.message;
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  $('#team-form', el).addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const box = $('#team-text', el);
+    const text = box.value.trim();
+    if (!text && !photo) return;
+
+    const send = $('#team-send', el);
+    send.disabled = true;
+    try {
+      const r = await api('/admin/api/team-chat', {
+        method: 'POST', body: JSON.stringify({ text, photo }),
+      });
+      box.value = '';
+      photo = '';
+      note.textContent = '';
+      draw(r.messages || []);
+    } catch (err) {
+      toast(err.message, 'bad');
+    } finally {
+      send.disabled = false;
+      box.focus();
+    }
+  });
+
+  $('#team-text', el).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#team-form').requestSubmit(); }
+  });
+
+  $('#topbar-actions').innerHTML = '';
+}
+
+function teamBubble(m) {
+  const mine = m.byName === state.name || (isOwner() && m.role === 'owner');
+  return `<div class="msg ${mine ? 'mine' : 'theirs'}">
+    ${m.photo ? `<a href="/receipts/${encodeURIComponent(m.photo)}" target="_blank" rel="noopener" class="msg-photo">
+      <img src="/receipts/${encodeURIComponent(m.photo)}" alt="Photo"></a>` : ''}
+    ${m.text ? `<div class="msg-body">${esc(m.text)}</div>` : ''}
+    <div class="msg-meta">${esc(m.byName)}${m.role === 'owner' ? ' \u00b7 owner' : ''} \u00b7 ${esc(relativeTime(m.at))}</div>
+  </div>`;
+}
+
+// ================================================================ APPROVALS
+//
+// Staff can propose a change to a booking or a cost; nothing moves until
+// the owner says yes. The work gets done without anyone being able to
+// quietly rewrite a price.
+
+function renderApprovals() {
+  const el = $('#view-approvals');
+  const pending = state.changes.filter((c) => c.state === 'pending');
+  const decided = state.changes.filter((c) => c.state !== 'pending').slice(0, 20);
+
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-pad" style="border-bottom:1px solid var(--line)">
+        <h2 class="section-title" style="margin:0">Waiting for you (${pending.length})</h2>
+        <p class="hint" style="margin:6px 0 0">
+          Changes your team has asked for. Nothing has happened to the booking yet.</p>
+      </div>
+      ${pending.length ? pending.map(changeRow).join('')
+        : '<div class="empty"><strong>Nothing waiting</strong>When someone proposes a change it appears here.</div>'}
+    </div>
+
+    ${decided.length ? `
+      <div class="card">
+        <div class="card-pad" style="border-bottom:1px solid var(--line)">
+          <h2 class="section-title" style="margin:0">Already decided</h2>
+        </div>
+        <div class="tablewrap"><table class="tbl">
+          <thead><tr><th>What</th><th>Who</th><th>When</th><th>Outcome</th></tr></thead>
+          <tbody>${decided.map((c) => `
+            <tr>
+              <td>${esc(c.targetId)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(describeFields(c.fields))}</span></td>
+              <td>${esc(c.byName)}</td>
+              <td>${esc(relativeTime(c.decidedAt || c.at))}</td>
+              <td><span class="pill ${c.state === 'approved' ? 'pill-completed' : 'pill-cancelled'}">${esc(c.state)}</span></td>
+            </tr>`).join('')}
+          </tbody></table></div>
+      </div>` : ''}`;
+
+  $$('[data-decide]', el).forEach((btn) => btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      await api(`/admin/api/changes/${encodeURIComponent(btn.dataset.id)}/${btn.dataset.decide}`, { method: 'POST' });
+      await refresh();
+      renderApprovals();
+      toast(btn.dataset.decide === 'approve' ? 'Applied' : 'Rejected', 'good');
+    } catch (e) {
+      btn.disabled = false;
+      toast(e.message, 'bad');
+    }
+  }));
+
+  $('#topbar-actions').innerHTML = '';
+}
+
+function changeRow(c) {
+  return `<div class="card-pad" style="border-bottom:1px solid var(--line)">
+    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <strong>${esc(c.byName)}</strong>
+        <span style="color:var(--muted)"> wants to change </span>
+        <strong>${esc(c.targetId)}</strong>
+        <div style="margin-top:8px;font-size:13.5px;line-height:1.7">${fieldsHTML(c.fields)}</div>
+        ${c.reason ? `<p class="hint" style="margin:8px 0 0">\u201c${esc(c.reason)}\u201d</p>` : ''}
+        <p class="hint" style="margin:6px 0 0">${esc(relativeTime(c.at))}</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-primary" data-decide="approve" data-id="${esc(c.id)}">Approve</button>
+        <button class="btn btn-sm btn-danger" data-decide="reject" data-id="${esc(c.id)}">Reject</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+const FIELD_LABEL = {
+  price: 'Price', eventDate: 'Date', eventTime: 'Time', people: 'People',
+  occasion: 'Occasion', note: 'Customer note', adminNote: 'Private note',
+  status: 'Status', amount: 'Amount', date: 'Date', category: 'What for',
+};
+
+function fieldsHTML(fields) {
+  return Object.keys(fields).map((k) => {
+    const value = fields[k];
+    const shown = (k === 'price' || k === 'amount') ? tk(value) : String(value || '\u2014');
+    return `<div><span style="color:var(--muted)">${esc(FIELD_LABEL[k] || k)}:</span> <strong>${esc(shown)}</strong></div>`;
+  }).join('');
+}
+
+const describeFields = (fields) => Object.keys(fields).map((k) => FIELD_LABEL[k] || k).join(', ');
+
 // ================================================================ TEAM
 
 function renderTeam() {
@@ -1092,7 +1343,10 @@ function renderTeam() {
           <tr>
             <td><strong>${esc(u.name)}</strong>${u.phone ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(u.phone)}</span>` : ''}</td>
             <td>${esc(u.email)}</td>
-            <td><span class="pill ${u.active ? 'pill-completed' : 'pill-cancelled'}">${u.active ? 'Active' : 'Blocked'}</span></td>
+            <td>
+              <span class="pill ${u.active ? 'pill-completed' : 'pill-cancelled'}">${u.active ? 'Active' : 'Blocked'}</span>
+              <div style="margin-top:5px;font-size:11px;color:var(--muted);line-height:1.5">${esc(summarisePerms(u))}</div>
+            </td>
             <td class="num">
               <button class="btn btn-sm" data-edit="${esc(u.id)}">Edit</button>
               <button class="btn btn-sm btn-ghost" data-toggle="${esc(u.id)}">${u.active ? 'Block' : 'Unblock'}</button>
@@ -1146,6 +1400,17 @@ function renderTeam() {
   $('#topbar-actions').innerHTML = '';
 }
 
+/** A short sentence about what somebody can reach, for the Team list. The
+ *  full set is behind Edit; this is only so the owner can glance down the
+ *  column and spot the one with too much. */
+function summarisePerms(user) {
+  const perms = user.permissions || {};
+  const on = state.permList.filter((p) => (user.permissions ? perms[p.id] === true : p.fallback));
+  if (!on.length) return 'nothing yet';
+  if (on.length === state.permList.length) return 'everything a staff account can';
+  return on.map((p) => p.label.toLowerCase()).join(', ');
+}
+
 function staffForm(user) {
   const isNew = !user;
   openSheet({
@@ -1164,13 +1429,34 @@ function staffForm(user) {
         <input id="s-pass" type="text" placeholder="${isNew ? 'At least 8 characters' : 'Leave blank to keep the current one'}">
         <p class="hint" style="margin:6px 0 0">
           Shown as plain text on purpose — you have to read it out to them. Tell them in person or on WhatsApp, not by email.</p>
-      </div>`,
+      </div>
+
+      <h3 class="section-title" style="margin-top:22px">What they can do</h3>
+      <p class="hint" style="margin:-6px 0 12px">
+        Tick only what this person needs. “Staff” is not one job, and giving everybody
+        everything is how nobody knows who changed what.</p>
+      <div class="perm-list">
+        ${state.permList.map((perm) => {
+          const on = isNew ? perm.fallback : (user.permissions ? user.permissions[perm.id] === true : perm.fallback);
+          return `<label class="perm-row">
+            <input type="checkbox" data-perm-id="${esc(perm.id)}" ${on ? 'checked' : ''}>
+            <span>${esc(perm.label)}</span>
+          </label>`;
+        }).join('')}
+      </div>
+      <p class="hint" style="margin:10px 0 0">
+        A change to a booking or a cost is only ever a <strong>request</strong>. It waits for you
+        under Approvals; nothing reaches the customer until you say yes.</p>`,
     saveLabel: isNew ? 'Create account' : 'Save',
     onSave: async (root) => {
+      const permissions = {};
+      $$('[data-perm-id]', root).forEach((box) => { permissions[box.dataset.permId] = box.checked; });
+
       const payload = {
         name: $('#s-name', root).value.trim(),
         phone: $('#s-phone', root).value.trim(),
         password: $('#s-pass', root).value,
+        permissions,
       };
       if (isNew) {
         payload.email = $('#s-email', root).value.trim();
@@ -1217,6 +1503,45 @@ function addCost(after) {
       await refresh();
       after();
       toast('Cost added', 'good');
+    },
+  });
+}
+
+/** Approving is one decision — is this price right? — so it asks that and
+ *  nothing else. The figure comes from the packages the customer chose, so
+ *  most of the time it is already correct and this is one press. */
+function approveBooking(booking) {
+  openSheet({
+    title: `Approve ${booking.id}`,
+    body: `
+      <p style="margin:0 0 16px;line-height:1.6">
+        <strong>${esc(booking.name)}</strong> \u2014 ${esc(booking.packageName || 'no package chosen')}
+        ${booking.eventDate ? '<br>' + esc(humanDate(booking.eventDate)) : ''}
+      </p>
+      <div class="field">
+        <label>Agreed price (\u09f3)</label>
+        <input id="ap-price" type="number" min="0" step="100" value="${esc(booking.price || '')}" autofocus>
+        <p class="hint" style="margin:6px 0 0">
+          ${booking.price
+            ? 'Taken from the packages they chose. Change it if you agreed something else.'
+            : 'Those packages have no published price, so put in what you agreed.'}
+        </p>
+      </div>
+      <p class="hint" style="margin:0">
+        ${booking.email
+          ? 'Confirming emails <strong>' + esc(booking.email) + '</strong> straight away.'
+          : 'They gave no email address, so tell them on WhatsApp \u2014 it will be waiting for you under Customers.'}
+      </p>`,
+    saveLabel: 'Approve & notify',
+    onSave: async (root) => {
+      const price = Number($('#ap-price', root).value || 0);
+      if (!price) { toast('Put in the agreed price.', 'bad'); return false; }
+      await api('/admin/api/bookings/' + encodeURIComponent(booking.id), {
+        method: 'PUT', body: JSON.stringify({ price, status: 'confirmed' }),
+      });
+      await refresh();
+      go(currentView());
+      toast(booking.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 now tell them on WhatsApp', 'good');
     },
   });
 }

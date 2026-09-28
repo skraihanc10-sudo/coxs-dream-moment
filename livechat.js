@@ -94,6 +94,12 @@
     padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.55;
     white-space:pre-wrap; overflow-wrap:anywhere;
   }
+  .lc-photo{display:block}
+  .lc-photo img{max-width:190px;max-height:220px;border-radius:12px;border:1px solid #EFE7DC;display:block}
+  .lc-clip{
+    align-self:flex-end;border:1px solid #EFE7DC;background:#fff;border-radius:10px;
+    padding:10px 12px;font-size:16px;line-height:1;cursor:pointer;
+  }
   .lc-msg.them .lc-bubble{background:#fff;border:1px solid #EFE7DC;border-bottom-left-radius:4px}
   .lc-msg.me .lc-bubble{background:#0D1B2A;color:#fff;border-bottom-right-radius:4px}
   .lc-meta{font-size:10.5px;color:#6B7A93;padding:0 3px}
@@ -167,6 +173,7 @@
   // ---------------------------------------------------------------- state
 
   let signedIn = false;
+  let pendingPhoto = '';
   let messages = [];
   let timer = null;
   let lastSeen = 0;
@@ -179,14 +186,14 @@
       if (box) box.focus();
     });
     clearInterval(timer);
-    timer = setInterval(poll, 15000);
+    timer = setInterval(poll, 5000);
   }
 
   function close() {
     panel.hidden = true;
     button.hidden = false;
     clearInterval(timer);
-    timer = setInterval(poll, 60000);
+    timer = setInterval(poll, 30000);
   }
 
   button.addEventListener('click', open);
@@ -207,7 +214,11 @@
     body.innerHTML = messages.map((m) => {
       const mine = m.from === 'customer';
       return '<div class="lc-msg ' + (mine ? 'me' : 'them') + '">' +
-        '<div class="lc-bubble">' + esc(m.text) + '</div>' +
+        (m.photo
+          ? '<a class="lc-photo" href="/receipts/' + encodeURIComponent(m.photo) + '" target="_blank" rel="noopener">' +
+            '<img src="/receipts/' + encodeURIComponent(m.photo) + '" alt="Photo"></a>'
+          : '') +
+        (m.text ? '<div class="lc-bubble">' + esc(m.text) + '</div>' : '') +
         '<div class="lc-meta">' + (mine ? '' : esc(m.byName) + ' · ') + esc(relativeTime(m.at)) + '</div>' +
       '</div>';
     }).join('');
@@ -217,6 +228,8 @@
   function drawFoot() {
     foot.innerHTML = signedIn
       ? '<div class="lc-send-row">' +
+          '<label class="lc-clip" title="Send a photo">\ud83d\udcf7' +
+            '<input type="file" id="lc-photo" accept="image/jpeg,image/png,image/webp" hidden></label>' +
           '<textarea id="lc-text" rows="2" placeholder="Write a message…"></textarea>' +
           '<button class="lc-send" type="button" id="lc-send">Send</button>' +
         '</div><p class="lc-note" id="lc-note"></p>'
@@ -239,6 +252,36 @@
     const send = panel.querySelector('#lc-send');
     const text = panel.querySelector('#lc-text');
     send.addEventListener('click', submit);
+
+    // A photograph goes up as soon as it is picked, so pressing Send is
+    // instant rather than a wait on a slow connection.
+    const photoInput = panel.querySelector('#lc-photo');
+    if (photoInput) {
+      photoInput.addEventListener('change', async (e) => {
+        const chosen = e.target.files && e.target.files[0];
+        pendingPhoto = '';
+        if (!chosen) return;
+        if (chosen.size > 6 * 1024 * 1024) {
+          say('That image is over 6MB. Please send a smaller one.', true);
+          e.target.value = '';
+          return;
+        }
+        say('Uploading…');
+        try {
+          const form = new FormData();
+          form.append('receipt', chosen);
+          const res = await fetch('/api/chat-photo', { method: 'POST', body: form });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Upload failed');
+          pendingPhoto = data.file;
+          say('Photo attached — press Send.');
+        } catch (err) {
+          say(err.message, true);
+        } finally {
+          e.target.value = '';
+        }
+      });
+    }
     text.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
     });
@@ -299,7 +342,7 @@
 
   async function submit() {
     const text = (panel.querySelector('#lc-text').value || '').trim();
-    if (!text) return;
+    if (!text && !pendingPhoto) return;
 
     const send = panel.querySelector('#lc-send');
     send.disabled = true;
@@ -329,11 +372,12 @@
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, photo: pendingPhoto }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not send.');
 
+      pendingPhoto = '';
       messages = data.messages || [];
       lastSeen = messages.length;
       drawBody();

@@ -761,3 +761,31 @@ table.tbl tbody tr:hover { background: #FAFBFD; }
   line-height: 1;
   font-size: 13px;
 }
+
+
+/* Per-person access. One row per thing they might do. */
+.perm-list { display: flex; flex-direction: column; gap: 2px; }
+.perm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.perm-row:hover { background: var(--paper); }
+.perm-row input { width: auto; margin: 0; }
+.perm-row:has(input:checked) { background: var(--good-soft); }
+
+/* A photograph in a message. Capped so a tall screenshot does not push the
+   whole conversation off the screen. */
+.msg-photo { display: block; }
+.msg-photo img {
+  max-width: 220px;
+  max-height: 260px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  display: block;
+}
+.msg.mine .msg-photo { align-self: flex-end; }
