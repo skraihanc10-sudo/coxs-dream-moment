@@ -325,7 +325,7 @@ $('#scrim').addEventListener('click', () => $('#app').classList.remove('nav-open
 
 /** Opens the shared dialog. [build] fills the body; [onSave] runs when the
  *  primary button is pressed and may return false to keep it open. */
-function openSheet({ title, body, saveLabel, onSave, extraFoot }) {
+function openSheet({ title, body, saveLabel, onSave, extraFoot, onDismiss }) {
   const dlg = $('#sheet');
   const form = $('#sheet-inner');
   form.innerHTML = `
@@ -343,14 +343,34 @@ function openSheet({ title, body, saveLabel, onSave, extraFoot }) {
   const bodyEl = $('#sheet-body', form);
   if (typeof body === 'string') bodyEl.innerHTML = body; else bodyEl.appendChild(body);
 
-  $$('[data-close]', form).forEach((b) => b.addEventListener('click', () => dlg.close()));
+  // A dismissal is reported by the buttons that cause one, not by the
+  // dialog's own close event. Every sheet shares one <dialog>, so a close
+  // event from the sheet before this one can arrive after this one has
+  // opened \u2014 and a listener here would take it as the answer.
+  let settled = false;
+  const dismiss = () => {
+    if (settled) return;
+    settled = true;
+    if (onDismiss) onDismiss();
+  };
+
+  $$('[data-close]', form).forEach((b) => b.addEventListener('click', () => {
+    dismiss();
+    dlg.close();
+  }));
+
+  // Escape closes a dialog without touching any button.
+  dlg.oncancel = () => dismiss();
   const saveBtn = $('[data-save]', form);
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       saveBtn.disabled = true;
       try {
         const result = await onSave(bodyEl);
-        if (result !== false) dlg.close();
+        if (result !== false) {
+          settled = true;
+          dlg.close();
+        }
       } catch (e) {
         toast(e.message, 'bad');
       } finally {
@@ -364,15 +384,19 @@ function openSheet({ title, body, saveLabel, onSave, extraFoot }) {
   return { dialog: dlg, body: bodyEl };
 }
 
+/** Asks yes or no. Answered only by a button press or Escape \u2014 never by
+ *  a stray close event from the sheet that was open before it, which is
+ *  what made Delete on a booking do nothing: the editor's own close arrived
+ *  after this opened and was read as "Cancel". */
 function confirmDialog(message, confirmLabel) {
   return new Promise((resolve) => {
-    const { dialog } = openSheet({
+    openSheet({
       title: 'Are you sure?',
       body: `<p style="margin:0;line-height:1.55">${esc(message)}</p>`,
       saveLabel: confirmLabel || 'Delete',
       onSave: () => { resolve(true); return true; },
+      onDismiss: () => resolve(false),
     });
-    dialog.addEventListener('close', () => resolve(false), { once: true });
   });
 }
 
@@ -943,7 +967,9 @@ async function editBooking(booking) {
   if (del) {
     del.addEventListener('click', async () => {
       sheet.dialog.close();
-      const ok = await confirmDialog(`Delete booking ${b.id} for ${b.name}? This cannot be undone.`);
+      const ok = await confirmDialog(
+        `Remove booking ${b.id} for ${b.name}? It goes to the recycle bin, and can be put back from there.`,
+        'Remove');
       if (!ok) return;
       try {
         await api('/admin/api/bookings/' + encodeURIComponent(b.id), { method: 'DELETE' });
