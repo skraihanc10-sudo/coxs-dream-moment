@@ -889,14 +889,26 @@ app.post('/admin/api/login', (req, res) => {
     return res.json({ ok: true, role: 'owner' });
   }
 
-  const user = readUsers().users.find(
-    (u) => (u.role === 'staff' || u.role === 'super')
-      && String(u.email || '').toLowerCase() === String(email).trim().toLowerCase());
+  // The team signs in with whichever they remember: the email the account
+  // was made with, or their mobile number. A number is matched on its last
+  // ten digits, so 01712..., +88017... and 88017... are the same person.
+  const typed = String(email).trim();
+  const typedMail = typed.toLowerCase();
+  const typedDigits = typed.replace(/\D/g, '').slice(-10);
+  const looksLikePhone = !typed.includes('@') && typedDigits.length === 10;
+
+  const user = readUsers().users.find((u) => {
+    if (u.role !== 'staff' && u.role !== 'super') return false;
+    if (looksLikePhone) {
+      return String(u.phone || '').replace(/\D/g, '').slice(-10) === typedDigits;
+    }
+    return String(u.email || '').toLowerCase() === typedMail;
+  });
 
   // The same message whether the address is unknown or the password is
   // wrong, so this cannot be used to find out who works here.
   if (!user || user.active === false || !passwordMatches(password, user)) {
-    return res.status(401).json({ error: 'Wrong email or password' });
+    return res.status(401).json({ error: 'Wrong email, number or password' });
   }
   setSession(res, req, { role: user.role, uid: user.id, exp: Date.now() + SESSION_MAX_AGE_MS }, SESSION_MAX_AGE_MS);
   res.json({ ok: true, role: user.role });
@@ -953,6 +965,15 @@ app.post('/admin/api/staff', requireOwner, (req, res) => {
   const store = readUsers();
   if (store.users.some((u) => String(u.email || '').toLowerCase() === email)) {
     return res.status(400).json({ error: 'Someone already uses that email.' });
+  }
+
+  // A mobile number is a way in too, so two team members cannot share one.
+  // Customers are not checked: a staff member may well have booked with us.
+  const phoneDigits = String(body.phone || '').replace(/\D/g, '').slice(-10);
+  if (phoneDigits.length === 10 && store.users.some((u) =>
+    (u.role === 'staff' || u.role === 'super')
+    && String(u.phone || '').replace(/\D/g, '').slice(-10) === phoneDigits)) {
+    return res.status(400).json({ error: 'Someone on the team already uses that number.' });
   }
 
   // Only the owner can appoint a second manager; a super admin can add

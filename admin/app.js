@@ -1747,7 +1747,8 @@ function renderTeam() {
         and removing a cost once it is saved.
       </p>
       <p class="hint" style="margin:10px 0 0">
-        Everyone on the team signs in at <strong>coxsdreammoment.shop/team</strong>.
+        Everyone on the team signs in at <strong>coxsdreammoment.shop/team</strong> with
+        their email <em>or</em> their mobile number, and the password you gave them.
         This page, at /admin, takes only your own key.</p>
     </div>`;
 
@@ -1813,7 +1814,9 @@ function staffForm(user) {
           <input id="s-email" type="email" value="${esc(isNew ? '' : user.email)}" ${isNew ? '' : 'disabled'}>
           ${isNew ? '' : '<p class="hint" style="margin:6px 0 0">The email cannot be changed — it is how they sign in.</p>'}
         </div>
-        <div class="field"><label>Mobile</label><input id="s-phone" value="${esc(isNew ? '' : (user.phone || ''))}"></div>
+        <div class="field"><label>Mobile</label><input id="s-phone" value="${esc(isNew ? '' : (user.phone || ''))}"
+          placeholder="01XXXXXXXXX">
+          <p class="hint" style="margin:6px 0 0">They can sign in with this or with the email.</p></div>
       </div>
       <div class="field">
         <label>${isNew ? 'Password' : 'New password'}</label>
