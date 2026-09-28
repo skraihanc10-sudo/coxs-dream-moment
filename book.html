@@ -411,13 +411,9 @@
         '<div class="bk-row">' +
           field('bk-date', 'Preferred date', 'date', '', false) +
           '<div class="bk-field"><label for="bk-time">Time <span class="opt">optional</span></label>' +
-            '<select id="bk-time">' +
-              '<option value="">We will decide together</option>' +
-              '<option>3:00 PM – 4:00 PM</option>' +
-              '<option>5:00 PM – 6:00 PM (sunset)</option>' +
-              '<option>8:00 PM – 9:00 PM</option>' +
-              '<option>12:00 AM – 1:00 AM</option>' +
-            '</select></div>' +
+            // Any time of day: people book at dawn and at two in the morning,
+            // and four fixed slots turned both away.
+            '<input id="bk-time" type="time" step="900"></div>' +
         '</div>' +
         '<div class="bk-row">' +
           field('bk-people', 'How many people', 'number', '2', false) +

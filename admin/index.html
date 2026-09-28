@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Cox's Dream Moment — Control Room</title>
-<link rel="icon" href="../images/logo.png">
+<link rel="icon" href="/images/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="/admin/admin.css">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,7 +22,7 @@
 <!-- ============================ login ============================ -->
 <div id="login" class="login" hidden>
   <form class="login-card" id="login-form">
-    <img src="../images/logo.png" alt="" class="login-logo">
+    <img src="/images/logo.png" alt="" class="login-logo">
     <h1>Control Room</h1>
     <p class="login-sub">Cox's Dream Moment</p>
     <div id="email-row" hidden>
@@ -42,7 +42,7 @@
 
   <aside class="side">
     <div class="side-brand">
-      <img src="../images/logo.png" alt="">
+      <img src="/images/logo.png" alt="">
       <div>
         <strong>Control Room</strong>
         <span id="who">Cox's Dream Moment</span>
@@ -83,15 +83,11 @@
         Customers
         <span class="nav-badge" id="nav-waiting" hidden></span>
       </button>
-      <button class="nav-item" data-view="salaries" data-owner>
-        <svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-        Salaries
-      </button>
       <button class="nav-item" data-view="team" data-owner>
         <svg viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 7a3 3 0 100 6 3 3 0 000-6zM22 20v-2a4 4 0 00-3-3.87M16 4.13a4 4 0 010 7.75"/></svg>
         Team
       </button>
-      <button class="nav-item" data-view="bin" data-owner>
+      <button class="nav-item" data-view="bin" data-main-admin>
         <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
         Recycle bin
         <span class="nav-badge" id="nav-bin" hidden></span>
@@ -126,7 +122,6 @@
       <section class="view" id="view-team-chat"></section>
       <section class="view" id="view-approvals"></section>
       <section class="view" id="view-customers"></section>
-      <section class="view" id="view-salaries"></section>
       <section class="view" id="view-team"></section>
       <section class="view" id="view-bin"></section>
       <section class="view" id="view-content"></section>
@@ -143,8 +138,8 @@
   <form method="dialog" class="sheet-inner" id="sheet-inner"></form>
 </dialog>
 
-<script src="content.js"></script>
-<script src="app.js"></script>
-<script src="../pwa.js" defer></script>
+<script src="/admin/content.js"></script>
+<script src="/admin/app.js"></script>
+<script src="/pwa.js" defer></script>
 </body>
 </html>

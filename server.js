@@ -115,10 +115,16 @@ function backfillPackageCodes() {
 //
 // Three kinds of person use this site:
 //
-//   owner     — holds ADMIN_PASSWORD. Sees the money. There is exactly one.
-//   staff     — records what they spend and edits the packages. Deliberately
-//               cannot see bookings, income, profit or what anyone owes:
-//               payroll peace is worth more than the convenience.
+//   owner     — holds ADMIN_PASSWORD and signs in at /admin. There is
+//               exactly one, and only this account can empty the recycle
+//               bin: the last copy of a deleted payment should need the
+//               person whose business it is.
+//   super     — a second manager. Signs in at /team with an email and a
+//               password, and can do everything the owner can except see
+//               or empty the bin.
+//   staff     — signs in at /team. Records what they spend and what they
+//               take, edits the packages, answers customers. What they see
+//               of the money is ticked per person.
 //   customer  — created automatically the first time somebody books, so they
 //               can come back and see their own bookings without ever having
 //               chosen a password.
@@ -221,8 +227,18 @@ function requireRole(...allow) {
 
 // The name the rest of the file already uses. Owner and staff both reach the
 // Control Room; each route below narrows it further where it matters.
-const requireAuth = requireRole('owner', 'staff');
-const requireOwner = requireRole('owner');
+// Anybody who works here.
+const requireAuth = requireRole('owner', 'super', 'staff');
+
+// Management: the money, the customers, the team. A super admin manages the
+// business alongside the owner, so these are the same to both.
+const requireOwner = requireRole('owner', 'super');
+
+// The one account that cannot be delegated. The bin holds the last copy of
+// a deleted payment, and putting one back — or destroying it — should need
+// the person whose business it is.
+const requireMainAdmin = requireRole('owner');
+
 const requireCustomer = requireRole('customer');
 
 // ---------------------------------------------------------------- email
@@ -874,15 +890,16 @@ app.post('/admin/api/login', (req, res) => {
   }
 
   const user = readUsers().users.find(
-    (u) => u.role === 'staff' && String(u.email || '').toLowerCase() === String(email).trim().toLowerCase());
+    (u) => (u.role === 'staff' || u.role === 'super')
+      && String(u.email || '').toLowerCase() === String(email).trim().toLowerCase());
 
   // The same message whether the address is unknown or the password is
   // wrong, so this cannot be used to find out who works here.
   if (!user || user.active === false || !passwordMatches(password, user)) {
     return res.status(401).json({ error: 'Wrong email or password' });
   }
-  setSession(res, req, { role: 'staff', uid: user.id, exp: Date.now() + SESSION_MAX_AGE_MS }, SESSION_MAX_AGE_MS);
-  res.json({ ok: true, role: 'staff' });
+  setSession(res, req, { role: user.role, uid: user.id, exp: Date.now() + SESSION_MAX_AGE_MS }, SESSION_MAX_AGE_MS);
+  res.json({ ok: true, role: user.role });
 });
 
 app.post('/admin/api/logout', (req, res) => {
@@ -917,7 +934,11 @@ function cleanPermissions(input) {
 }
 
 app.get('/admin/api/staff', requireOwner, (req, res) => {
-  res.json({ staff: readUsers().users.filter((u) => u.role === 'staff').map(publicUser) });
+  res.json({
+    staff: readUsers().users
+      .filter((u) => u.role === 'staff' || u.role === 'super')
+      .map(publicUser),
+  });
 });
 
 app.post('/admin/api/staff', requireOwner, (req, res) => {
@@ -934,10 +955,17 @@ app.post('/admin/api/staff', requireOwner, (req, res) => {
     return res.status(400).json({ error: 'Someone already uses that email.' });
   }
 
+  // Only the owner can appoint a second manager; a super admin can add
+  // staff but not another of themselves.
+  const wantsSuper = body.role === 'super';
+  if (wantsSuper && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the main admin can add a super admin.' });
+  }
+
   const { salt, hash } = hashPassword(password);
   const user = {
     id: 'u' + crypto.randomBytes(8).toString('hex'),
-    role: 'staff',
+    role: wantsSuper ? 'super' : 'staff',
     name,
     email,
     phone: tidyPhone(body.phone),
@@ -966,8 +994,13 @@ app.post('/admin/api/staff', requireOwner, (req, res) => {
 app.put('/admin/api/staff/:id', requireOwner, (req, res) => {
   const body = req.body || {};
   const store = readUsers();
-  const user = store.users.find((u) => u.id === req.params.id && u.role === 'staff');
+  const user = store.users.find((u) => u.id === req.params.id && (u.role === 'staff' || u.role === 'super'));
   if (!user) return res.status(404).json({ error: 'Not found.' });
+
+  // A super admin cannot promote themselves, nor demote the other one.
+  if (body.role !== undefined && req.user.role === 'owner') {
+    user.role = body.role === 'super' ? 'super' : 'staff';
+  }
 
   if (body.name !== undefined) user.name = text(body.name, 80);
   if (body.phone !== undefined) user.phone = tidyPhone(body.phone);
@@ -990,8 +1023,14 @@ app.put('/admin/api/staff/:id', requireOwner, (req, res) => {
 
 app.delete('/admin/api/staff/:id', requireOwner, (req, res) => {
   const store = readUsers();
+  const target = store.users.find((u) => u.id === req.params.id);
+  if (target && target.role === 'super' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the main admin can remove a super admin.' });
+  }
+
   const before = store.users.length;
-  store.users = store.users.filter((u) => !(u.id === req.params.id && u.role === 'staff'));
+  store.users = store.users.filter(
+    (u) => !(u.id === req.params.id && (u.role === 'staff' || u.role === 'super')));
   if (store.users.length === before) return res.status(404).json({ error: 'Not found.' });
   writeJSON(USERS_FILE, store);
   res.json({ ok: true });
@@ -1613,13 +1652,29 @@ function normaliseBooking(input, existing) {
   const base = existing || {};
   const paymentsIn = Array.isArray(input.payments) ? input.payments : base.payments || [];
 
-  const payments = paymentsIn.slice(0, 50).map((p, i) => ({
-    id: text(p.id, 40) || `p${Date.now()}${i}`,
-    date: text(p.date, 20) || new Date().toISOString().slice(0, 10),
-    amount: money(p.amount),
-    method: PAYMENT_METHODS.includes(p.method) ? p.method : 'Cash',
-    note: text(p.note, 200),
-  }));
+  // Who took a payment and whether it has reached the office are facts
+  // about the money, not fields the editor sends. They are carried across
+  // from the stored copy by id and never taken from the request. Rebuilding
+  // the list without them meant that correcting a booking's price quietly
+  // erased who was holding its cash.
+  const stored = new Map((base.payments || []).map((p) => [p.id, p]));
+  const CUSTODY = ['heldById', 'heldByName', 'takenAt', 'transferredAt', 'transferredBy', 'editedAt', 'editedBy'];
+
+  const payments = paymentsIn.slice(0, 50).map((p, i) => {
+    const id = text(p.id, 40) || `p${Date.now()}${i}`;
+    const row = {
+      id,
+      date: text(p.date, 20) || new Date().toISOString().slice(0, 10),
+      amount: money(p.amount),
+      method: PAYMENT_METHODS.includes(p.method) ? p.method : 'Cash',
+      note: text(p.note, 200),
+    };
+    const before = stored.get(id);
+    if (before) {
+      for (const key of CUSTODY) if (before[key] !== undefined) row[key] = before[key];
+    }
+    return row;
+  });
 
   // A field the caller did not send keeps what the booking already had.
   // Anything else turns a partial update — "just set the price" — into a
@@ -1678,7 +1733,9 @@ function normaliseBooking(input, existing) {
 
     // Which packages were chosen, so the price can be recomputed and a
     // later edit knows what was actually ordered.
-    slugs: Array.isArray(base.slugs) ? base.slugs : [],
+    slugs: Array.isArray(input.slugs)
+      ? input.slugs.map((x) => text(x, 80)).filter(Boolean).slice(0, 6)
+      : (Array.isArray(base.slugs) ? base.slugs : []),
   };
 }
 
@@ -2121,6 +2178,44 @@ app.delete('/admin/api/bookings/:id', requireOwner, (req, res) => {
   res.json({ ok: true });
 });
 
+/** Corrects a payment that was recorded wrong — the wrong figure, the
+ *  wrong day, the wrong app. Whoever took it can fix their own until they
+ *  have handed it over; after that it is management's. */
+app.put('/admin/api/bookings/:id/payments/:paymentId', requireAuth, (req, res) => {
+  const body = req.body || {};
+  const store = readBookings();
+  const booking = store.bookings.find((b) => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+
+  const payment = (booking.payments || []).find((p) => p.id === req.params.paymentId);
+  if (!payment) return res.status(404).json({ error: 'Payment not found.' });
+
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  if (!management) {
+    if (payment.heldById !== req.user.id) {
+      return res.status(403).json({ error: 'You can only change a payment you took.' });
+    }
+    if (payment.transferredAt) {
+      return res.status(403).json({ error: 'You have already handed that over — ask the office to change it.' });
+    }
+  }
+
+  if (body.amount !== undefined) {
+    const amount = money(body.amount);
+    if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
+    payment.amount = amount;
+  }
+  if (body.date !== undefined) payment.date = text(body.date, 20);
+  if (body.method !== undefined && PAYMENT_METHODS.includes(body.method)) payment.method = body.method;
+  if (body.note !== undefined) payment.note = text(body.note, 200);
+
+  payment.editedAt = new Date().toISOString();
+  payment.editedBy = req.user.name || 'Owner';
+
+  writeJSON(BOOKINGS_FILE, store);
+  res.json({ ok: true, booking: withTotals(booking) });
+});
+
 /** Removes one payment from a booking. Owner only, and it keeps a copy:
  *  a payment that vanishes is an argument with a customer waiting to
  *  happen. */
@@ -2165,6 +2260,41 @@ app.post('/admin/api/expenses', requireAuth, allow('costs_add'), (req, res) => {
   };
   if (!expense.amount) return res.status(400).json({ error: 'Enter an amount.' });
   store.expenses.unshift(expense);
+  writeJSON(EXPENSES_FILE, store);
+  res.json({ ok: true, expense });
+});
+
+/** Corrects a cost that was typed wrong.
+ *
+ *  Whoever recorded it can fix their own; management can fix anybody's.
+ *  A wrong figure that cannot be corrected is a wrong figure that stays in
+ *  the accounts for ever. */
+app.put('/admin/api/expenses/:id', requireAuth, (req, res) => {
+  const body = req.body || {};
+  const store = readExpenses();
+  const expense = store.expenses.find((e) => e.id === req.params.id);
+  if (!expense) return res.status(404).json({ error: 'Not found.' });
+
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  if (!management && expense.byId !== req.user.id) {
+    return res.status(403).json({ error: 'You can only change a cost you recorded.' });
+  }
+
+  if (body.amount !== undefined) {
+    const amount = money(body.amount);
+    if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
+    expense.amount = amount;
+  }
+  if (body.date !== undefined) expense.date = text(body.date, 20);
+  if (body.category !== undefined) expense.category = text(body.category, 60);
+  if (body.note !== undefined) expense.note = text(body.note, 200);
+  if (body.bookingId !== undefined && management) expense.bookingId = text(body.bookingId, 40);
+
+  // What it was, and who changed it. A corrected number with no trail is
+  // indistinguishable from a number somebody quietly moved.
+  expense.editedAt = new Date().toISOString();
+  expense.editedBy = req.user.name || 'Owner';
+
   writeJSON(EXPENSES_FILE, store);
   res.json({ ok: true, expense });
 });
@@ -2269,6 +2399,48 @@ app.get('/admin/api/summary', requireOwner, (req, res) => {
 //
 // Deliberately thin. A staff member sees what they have spent and how many
 // packages are live, and nothing about bookings or income.
+
+/** One person's own record: what they have spent and what they have taken.
+ *
+ *  Their own only. A staff member needs to be able to check their own work
+ *  without being shown the business's takings to do it. */
+app.get('/admin/api/my-ledger', requireAuth, (req, res) => {
+  const mineCosts = readExpenses().expenses.filter((e) => e.byId === req.user.id);
+
+  const taken = [];
+  for (const b of readBookings().bookings) {
+    for (const p of b.payments || []) {
+      if (p.heldById !== req.user.id) continue;
+      taken.push({
+        paymentId: p.id,
+        bookingId: b.id,
+        customer: b.name,
+        amount: money(p.amount),
+        date: p.date,
+        method: p.method,
+        note: p.note || '',
+        transferredAt: p.transferredAt || '',
+      });
+    }
+  }
+  taken.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const inMonth = (d) => String(d || '').slice(0, 7) === thisMonth;
+
+  res.json({
+    costs: mineCosts,
+    taken,
+    totals: {
+      spent: mineCosts.reduce((sum, e) => sum + money(e.amount), 0),
+      spentThisMonth: mineCosts.filter((e) => inMonth(e.date)).reduce((sum, e) => sum + money(e.amount), 0),
+      collected: taken.reduce((sum, t) => sum + t.amount, 0),
+      collectedThisMonth: taken.filter((t) => inMonth(t.date)).reduce((sum, t) => sum + t.amount, 0),
+      holding: taken.filter((t) => !t.transferredAt).reduce((sum, t) => sum + t.amount, 0),
+    },
+  });
+});
 
 app.get('/admin/api/staff-summary', requireAuth, (req, res) => {
   const expenses = readExpenses().expenses;
@@ -2404,7 +2576,7 @@ async function pushTo(match, payload) {
 
 /** Everyone who works here. */
 const pushTeam = (payload) =>
-  pushTo((s) => s.role === 'owner' || s.role === 'staff', payload).catch(() => {});
+  pushTo((s) => s.role === 'owner' || s.role === 'super' || s.role === 'staff', payload).catch(() => {});
 
 /** One customer's own devices. */
 const pushCustomer = (userId, payload) =>
@@ -2452,7 +2624,7 @@ const PERMISSION_IDS = PERMISSIONS.map((p) => p.id);
  *  falls back to what staff could always do. */
 function permissionsOf(user) {
   if (!user) return {};
-  if (user.role === 'owner') {
+  if (user.role === 'owner' || user.role === 'super') {
     const all = {};
     for (const id of PERMISSION_IDS) all[id] = true;
     return all;
@@ -2467,7 +2639,7 @@ function permissionsOf(user) {
 
 function can(req, id) {
   if (!req.user) return false;
-  if (req.user.role === 'owner') return true;
+  if (req.user.role === 'owner' || req.user.role === 'super') return true;
   const user = readUsers().users.find((u) => u.id === req.user.id);
   return permissionsOf(user)[id] === true;
 }
@@ -2484,14 +2656,13 @@ function allow(id) {
 }
 
 app.get('/admin/api/permissions', requireAuth, (req, res) => {
-  const user = req.user.role === 'owner'
-    ? null
-    : readUsers().users.find((u) => u.id === req.user.id);
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  const user = management ? null : readUsers().users.find((u) => u.id === req.user.id);
   res.json({
     role: req.user.role,
     name: req.user.name,
     list: PERMISSIONS,
-    mine: req.user.role === 'owner' ? permissionsOf({ role: 'owner' }) : permissionsOf(user),
+    mine: management ? permissionsOf({ role: req.user.role }) : permissionsOf(user),
   });
 });
 
@@ -2648,7 +2819,7 @@ app.post('/admin/api/team-chat', requireAuth, allow('team_chat'), (req, res) => 
   res.json({ ok: true, messages: store.messages.slice(-120) });
 
   // Everyone on the team except whoever just typed it.
-  pushTo((sub) => (sub.role === 'owner' || sub.role === 'staff') && sub.userId !== req.user.id, {
+  pushTo((sub) => (sub.role === 'owner' || sub.role === 'super' || sub.role === 'staff') && sub.userId !== req.user.id, {
     title: `${req.user.name || 'Team'} in team chat`,
     body: message ? message.slice(0, 120) : 'Sent a photo',
     url: '/admin/',
@@ -2704,7 +2875,7 @@ function teamAddresses() {
   if (GMAIL_USER) list.push(GMAIL_USER);
   if (settings.email && settings.email !== GMAIL_USER) list.push(settings.email);
   for (const u of readUsers().users) {
-    if (u.role === 'staff' && u.active !== false && u.email) list.push(u.email);
+    if ((u.role === 'staff' || u.role === 'super') && u.active !== false && u.email) list.push(u.email);
   }
   return Array.from(new Set(list));
 }
@@ -3019,13 +3190,13 @@ function binPut(kind, payload, req, extra) {
   writeJSON(BIN_FILE, store);
 }
 
-app.get('/admin/api/bin', requireOwner, (req, res) => {
+app.get('/admin/api/bin', requireMainAdmin, (req, res) => {
   const store = readBin();
   res.json({ items: store.items, count: store.items.length });
 });
 
 /** Puts something back where it came from. */
-app.post('/admin/api/bin/:id/restore', requireOwner, (req, res) => {
+app.post('/admin/api/bin/:id/restore', requireMainAdmin, (req, res) => {
   const store = readBin();
   const item = store.items.find((i) => i.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Not found.' });
@@ -3066,7 +3237,7 @@ app.post('/admin/api/bin/:id/restore', requireOwner, (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/admin/api/bin/:id', requireOwner, (req, res) => {
+app.delete('/admin/api/bin/:id', requireMainAdmin, (req, res) => {
   const store = readBin();
   const before = store.items.length;
   store.items = store.items.filter((i) => i.id !== req.params.id);
@@ -3075,7 +3246,7 @@ app.delete('/admin/api/bin/:id', requireOwner, (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/admin/api/bin', requireOwner, (req, res) => {
+app.delete('/admin/api/bin', requireMainAdmin, (req, res) => {
   writeJSON(BIN_FILE, { items: [] });
   res.json({ ok: true });
 });
@@ -3151,116 +3322,6 @@ app.get('/admin/api/cash', requireAuth, (req, res) => {
     withTeam: req.user.role === 'owner' ? withTeam : (holders[req.user.id] || { amount: 0 }).amount,
     settled: req.user.role === 'owner' ? settled : 0,
   });
-});
-
-// ---------------------------------------------------------------- salaries
-//
-// What the team is owed and what has been paid. Owner only — not behind a
-// permission that could be ticked on by mistake, but behind the role
-// itself. What one person earns is not the business of the next.
-//
-// Kept apart from expenses so the profit figure still works: a salary is a
-// cost, and it is counted as one, but it is recorded here where it can be
-// read per person and per month.
-
-const SALARY_FILE = path.join(CONTENT_DIR, 'salaries.json');
-
-function readSalaries() {
-  const data = readJSON(SALARY_FILE, null);
-  if (data && Array.isArray(data.records)) return data;
-  return { records: [] };
-}
-
-/** A month as 2026-09. Everything here is grouped by it, because a salary
- *  is a monthly thing even when it is paid in pieces. */
-const monthKey = (iso) => String(iso || '').slice(0, 7);
-
-app.get('/admin/api/salaries', requireOwner, (req, res) => {
-  const store = readSalaries();
-  const staff = readUsers().users.filter((u) => u.role === 'staff');
-
-  // One row per person per month, with what was agreed and what has gone out.
-  const byPerson = staff.map((u) => {
-    const mine = store.records.filter((r) => r.userId === u.id);
-    const agreed = mine.filter((r) => r.kind === 'agreed');
-    const paid = mine.filter((r) => r.kind === 'paid');
-
-    const months = {};
-    for (const r of mine) {
-      const key = monthKey(r.month || r.date);
-      months[key] = months[key] || { month: key, agreed: 0, paid: 0 };
-      months[key][r.kind === 'agreed' ? 'agreed' : 'paid'] += money(r.amount);
-    }
-
-    const totalAgreed = agreed.reduce((sum, r) => sum + money(r.amount), 0);
-    const totalPaid = paid.reduce((sum, r) => sum + money(r.amount), 0);
-
-    return {
-      userId: u.id,
-      name: u.name,
-      email: u.email,
-      active: u.active !== false,
-      monthly: money(u.monthlySalary),
-      totalAgreed,
-      totalPaid,
-      owed: Math.max(totalAgreed - totalPaid, 0),
-      months: Object.values(months).sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12),
-    };
-  });
-
-  res.json({
-    staff: byPerson,
-    records: store.records.slice(0, 200),
-    totalPaid: store.records.filter((r) => r.kind === 'paid')
-      .reduce((sum, r) => sum + money(r.amount), 0),
-  });
-});
-
-app.post('/admin/api/salaries', requireOwner, (req, res) => {
-  const body = req.body || {};
-  const user = readUsers().users.find((u) => u.id === text(body.userId, 60) && u.role === 'staff');
-  if (!user) return res.status(404).json({ error: 'That team member was not found.' });
-
-  const amount = money(body.amount);
-  if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
-
-  const kind = body.kind === 'agreed' ? 'agreed' : 'paid';
-  const date = text(body.date, 20) || new Date().toISOString().slice(0, 10);
-
-  const store = readSalaries();
-  store.records.unshift({
-    id: 's' + Date.now() + crypto.randomBytes(3).toString('hex'),
-    userId: user.id,
-    name: user.name,
-    kind,
-    amount,
-    date,
-    month: monthKey(body.month || date),
-    note: text(body.note, 200),
-    at: new Date().toISOString(),
-  });
-  writeJSON(SALARY_FILE, store);
-  res.json({ ok: true });
-});
-
-app.delete('/admin/api/salaries/:id', requireOwner, (req, res) => {
-  const store = readSalaries();
-  const before = store.records.length;
-  store.records = store.records.filter((r) => r.id !== req.params.id);
-  if (store.records.length === before) return res.status(404).json({ error: 'Not found.' });
-  writeJSON(SALARY_FILE, store);
-  res.json({ ok: true });
-});
-
-/** The monthly figure agreed with somebody, kept on their account so it is
- *  there when a month is generated rather than typed again each time. */
-app.put('/admin/api/staff/:id/salary', requireOwner, (req, res) => {
-  const store = readUsers();
-  const user = store.users.find((u) => u.id === req.params.id && u.role === 'staff');
-  if (!user) return res.status(404).json({ error: 'Not found.' });
-  user.monthlySalary = money((req.body || {}).monthlySalary);
-  writeJSON(USERS_FILE, store);
-  res.json({ ok: true, monthlySalary: user.monthlySalary });
 });
 
 // ---------------------------------------------------------------- one customer
@@ -3423,6 +3484,11 @@ app.get('/manifest.webmanifest', (req, res) => {
   res.set('Cache-Control', 'public, max-age=3600');
   res.sendFile(path.join(APP_DIR, 'manifest.webmanifest'));
 });
+
+// /team is the same panel as /admin, served at an address the team is
+// given. What anyone sees inside it comes from their account, not from
+// which address they arrived at — two doors, one building.
+app.use('/team', express.static(path.join(APP_DIR, 'admin')));
 
 app.use('/admin', express.static(path.join(APP_DIR, 'admin')));
 

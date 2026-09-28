@@ -27,7 +27,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const location = document.querySelector('#bb-location') ? document.querySelector('#bb-location').value : "Cox's Bazar";
     const date = document.querySelector('#bb-date') ? document.querySelector('#bb-date').value : '';
     const guests = document.querySelector('#bb-guests') ? document.querySelector('#bb-guests').value : '2';
-    const slot = document.querySelector('#bb-slot') ? document.querySelector('#bb-slot').value : '';
+    const slotRaw = document.querySelector('#bb-slot') ? document.querySelector('#bb-slot').value : '';
+    // 17:30 reads as 5:30 PM in a message to a person.
+    const slot = (() => {
+      const m = /^(\d{2}):(\d{2})$/.exec(slotRaw);
+      if (!m) return slotRaw;
+      const h = Number(m[1]);
+      return `${h % 12 === 0 ? 12 : h % 12}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+    })();
     const occasion = document.querySelector('#bb-occasion') ? document.querySelector('#bb-occasion').value : '';
     const total = document.querySelector('.bb-total-value') ? document.querySelector('.bb-total-value').textContent.trim() : '';
 

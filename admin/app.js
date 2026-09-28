@@ -31,7 +31,14 @@ const state = {
   filter: { status: 'all', q: '' },
 };
 
-const isOwner = () => state.role === 'owner';
+// Management: the owner and a super admin. They see and do the same
+// things, with one exception below.
+const isOwner = () => state.role === 'owner' || state.role === 'super';
+
+// The main admin alone: the one who signs in with the key at /admin. Only
+// they see the recycle bin, because it holds the last copy of anything
+// deleted and putting that back should need the person whose business it is.
+const isMainAdmin = () => state.role === 'owner';
 
 /** What this account may do. The owner may do everything; a staff member
  *  only what the owner ticked for them. Checked on the server too \u2014 this
@@ -112,7 +119,19 @@ async function boot() {
 // email their account was made with. One form, switched rather than two
 // pages, because most of the time it is the owner and the extra field would
 // only be something else to skip past.
-let staffMode = false;
+const atTeamDoor = location.pathname.indexOf('/team') === 0;
+let staffMode = atTeamDoor;
+
+(function setDoor() {
+  $('#login-switch').hidden = true;
+  if (atTeamDoor) {
+    $('#email-row').hidden = false;
+    $('#password-label').textContent = 'Your password';
+    $('.login-card h1').textContent = 'Team sign in';
+    document.title = "Team \u2014 Cox's Dream Moment";
+  }
+})();
+
 $('#login-switch').addEventListener('click', () => {
   staffMode = !staffMode;
   $('#email-row').hidden = !staffMode;
@@ -174,13 +193,16 @@ async function enter(session) {
   // Owner-only entries are removed from the sidebar for staff rather than
   // greyed out: a disabled button still tells them what they are missing.
   $('#app').classList.toggle('is-staff', !isOwner());
+  $('#app').classList.toggle('is-main-admin', isMainAdmin());
 
   // Entries the account cannot use are removed, not greyed out: a disabled
   // button still tells somebody what they are missing.
   $$('.nav-item[data-perm]').forEach((btn) => {
     btn.hidden = !may(btn.dataset.perm);
   });
-  $('#who').textContent = isOwner() ? "Cox's Dream Moment" : (state.name || 'Team member');
+  $('#who').textContent = isMainAdmin()
+    ? "Cox's Dream Moment"
+    : `${state.name || 'Team member'}${state.role === 'super' ? ' \u00b7 super admin' : ''}`;
 
   await refresh();
   go('dashboard');
@@ -237,7 +259,7 @@ async function refresh() {
     api('/admin/api/summary'),
     api('/admin/api/staff'),
     api('/admin/api/customers'),
-    api('/admin/api/bin'),
+    isMainAdmin() ? api('/admin/api/bin') : Promise.resolve({ items: [] }),
   ]);
   state.bin = bin.items || [];
 
@@ -274,8 +296,7 @@ const VIEWS = {
   accounts: { title: 'Accounts', render: () => (isOwner() ? renderAccounts() : renderStaffCosts()) },
   messages: { title: 'Messages', perm: 'chat', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
-  salaries: { title: 'Salaries', owner: true, render: renderSalaries },
-  bin: { title: 'Recycle bin', owner: true, render: renderBin },
+  bin: { title: 'Recycle bin', mainAdmin: true, render: renderBin },
   team: { title: 'Team', owner: true, render: renderTeam },
   content: { title: 'Website content', render: () => window.ContentEditor.mount($('#view-content')) },
 };
@@ -285,6 +306,7 @@ let go = function (name) {
   // Belt and braces: the sidebar already hides these, but a stale hash or a
   // stray call must not land a staff member on an empty owner screen.
   if (view.owner && !isOwner()) { name = 'dashboard'; view = VIEWS.dashboard; }
+  if (view.mainAdmin && !isMainAdmin()) { name = 'dashboard'; view = VIEWS.dashboard; }
   if (view.perm && !may(view.perm)) { name = 'dashboard'; view = VIEWS.dashboard; }
   if (name === 'accounts' && !isOwner()) $('#view-title').textContent = 'My costs';
   $$('.nav-item').forEach((b) => b.classList.toggle('is-active', b.dataset.view === name));
@@ -450,7 +472,7 @@ function bookingTable(list) {
         <td><strong>${esc(b.id)}</strong><br><span style="font-size:11.5px;color:var(--muted)">${esc(b.source === 'manual' ? 'Entered by you' : 'From website')}</span></td>
         <td>${esc(b.name)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(b.phone)}</span></td>
         <td>${esc(b.packageName || '—')}</td>
-        <td>${esc(humanDate(b.eventDate) || '—')}<br><span style="font-size:11.5px;color:var(--muted)">${esc(b.eventTime || '')}</span></td>
+        <td>${esc(humanDate(b.eventDate) || '—')}<br><span style="font-size:11.5px;color:var(--muted)">${esc(prettyTime(b.eventTime))}</span></td>
         <td class="num">${b.price ? tk(b.price) : '—'}</td>
         <td class="num">${b.paid ? tk(b.paid) : '—'}</td>
         <td class="num" style="${b.due ? 'color:var(--warn);font-weight:700' : ''}">${b.due ? tk(b.due) : '—'}</td>
@@ -524,11 +546,16 @@ function renderBookings() {
 
 /** The booking editor. One dialog for both a new booking and an existing
  *  one — the fields are identical, and two near-copies would drift. */
-function editBooking(booking) {
+async function editBooking(booking) {
   // Staff can look at a booking; changing a price is the owner's. Somebody
   // with `bookings_edit` proposes a change instead, which waits under
   // Approvals.
   if (booking && !isOwner()) return viewBooking(booking);
+
+  // Prices come from the catalogue, which may not be loaded yet.
+  try {
+    if (window.ContentEditor && window.ContentEditor.ensureLoaded) await window.ContentEditor.ensureLoaded();
+  } catch (e) { /* the dialog still works; it just cannot fill prices in */ }
 
   const isNew = !booking;
   const b = booking || {
@@ -538,6 +565,10 @@ function editBooking(booking) {
   };
 
   const packages = (window.ContentEditor && window.ContentEditor.packageList()) || [];
+  const setups = packages.filter((p) => p.kind !== 'media');
+  const media = packages.filter((p) => p.kind === 'media');
+  // Whichever photography package this booking already carries.
+  const chosenMedia = ((b.slugs || []).find((slug) => media.some((m) => m.slug === slug))) || '';
   const wa = waNumber(b.phone);
 
   // Someone with no email hears nothing automatically, so say so here rather
@@ -552,21 +583,31 @@ function editBooking(booking) {
       <div class="field"><label>Customer name</label><input id="f-name" value="${esc(b.name)}"></div>
       <div class="field"><label>Mobile number</label><input id="f-phone" value="${esc(b.phone)}"></div>
     </div>
-    <div class="field"><label>Package</label>
+    <div class="field"><label>Decoration package</label>
       <select id="f-package">
         <option value="">Not decided</option>
-        ${packages.map((p) => `<option value="${esc(p.slug)}" ${b.packageSlug === p.slug ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+        ${setups.map((p) => `<option value="${esc(p.slug)}" ${b.packageSlug === p.slug ? 'selected' : ''}>
+          ${esc(p.name)}${p.price ? ' — ' + tk(p.price) : ''}</option>`).join('')}
         ${b.packageName && !packages.some((p) => p.slug === b.packageSlug)
           ? `<option value="__keep" selected>${esc(b.packageName)}</option>` : ''}
       </select>
     </div>
+
+    ${media.length ? `
+      <div class="field"><label>Drone &amp; video <span style="text-transform:none;font-weight:600">(optional)</span></label>
+        <select id="f-media">
+          <option value="">None</option>
+          ${media.map((p) => `<option value="${esc(p.slug)}" ${chosenMedia === p.slug ? 'selected' : ''}>
+            ${esc(p.name)}${p.price ? ' — +' + tk(p.price) : ''}</option>`).join('')}
+        </select>
+      </div>` : ''}
+
     <div class="field-row">
       <div class="field"><label>Event date</label><input id="f-date" type="date" value="${esc(b.eventDate)}"></div>
       <div class="field"><label>Time</label>
-        <select id="f-time">
-          ${['', 'Sunset (5:00 PM – 6:00 PM)', 'Evening (6:00 PM – 8:00 PM)', 'Night (after 8:00 PM)']
-            .map((t) => `<option ${b.eventTime === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}
-        </select>
+        <input id="f-time" type="time" step="900" value="${esc(timeValue(b.eventTime))}">
+        ${b.eventTime && !timeValue(b.eventTime)
+          ? `<p class="hint" style="margin:6px 0 0">Was: ${esc(b.eventTime)}</p>` : ''}
       </div>
     </div>
     <div class="field-row">
@@ -660,12 +701,20 @@ function editBooking(booking) {
       const sel = $('#f-package', root);
       const slug = sel.value === '__keep' ? b.packageSlug : sel.value;
       const pkg = packages.find((p) => p.slug === slug);
+      const mediaSel = $('#f-media', root);
+      const extra = mediaSel ? media.find((p) => p.slug === mediaSel.value) : null;
+
+      const names = [
+        sel.value === '__keep' ? b.packageName : (pkg ? pkg.name : ''),
+        extra ? extra.name : '',
+      ].filter(Boolean);
 
       const payload = {
         name: $('#f-name', root).value,
         phone: $('#f-phone', root).value,
         packageSlug: slug === '__keep' ? b.packageSlug : slug,
-        packageName: sel.value === '__keep' ? b.packageName : (pkg ? pkg.name : ''),
+        packageName: names.join(' + '),
+        slugs: [slug, extra ? extra.slug : ''].filter((x) => x && x !== '__keep'),
         eventDate: $('#f-date', root).value,
         eventTime: $('#f-time', root).value,
         people: $('#f-people', root).value,
@@ -746,6 +795,31 @@ function editBooking(booking) {
       }
     }));
   }
+
+  // Picking a package fills the price in. The owner only has to set the
+  // date and the time, and change the figure only if a different one was
+  // agreed.
+  function fillPrice() {
+    const setup = setups.find((p) => p.slug === $('#f-package', body).value);
+    const mediaSel = $('#f-media', body);
+    const extra = mediaSel ? media.find((p) => p.slug === mediaSel.value) : null;
+    const total = (setup ? setup.price : 0) + (extra ? extra.price : 0);
+    if (!total) return;
+
+    const list = $('#f-list', body);
+    const agreed = $('#f-price', body);
+    // The agreed figure follows too, unless somebody has already typed a
+    // different one — that is a deal, and a deal is not overwritten.
+    const agreedWasList = Number(agreed.value || 0) === Number(list.value || 0) || !Number(agreed.value || 0);
+    list.value = total;
+    if (agreedWasList) agreed.value = total;
+    drawDeal();
+  }
+  $('#f-package', body).addEventListener('change', fillPrice);
+  const mediaPick = $('#f-media', body);
+  if (mediaPick) mediaPick.addEventListener('change', fillPrice);
+  // A brand-new booking starts with the figure already in.
+  if (isNew) fillPrice();
 
   // The discount, worked out as you type. Two boxes are easy to get wrong,
   // and the gap between them is the number that actually matters.
@@ -883,41 +957,110 @@ function editBooking(booking) {
 
 // ================================================================ STAFF
 
-/** What a team member sees instead of the dashboard. No bookings, no income,
- *  no profit — only their own work and the live catalogue. */
-function renderStaffHome() {
-  const s = state.staffSummary || {};
+/** What a team member sees instead of the dashboard: their own money and
+ *  nothing else. What they spent, what they took, and what they are still
+ *  holding \u2014 enough to check their own work without being shown the
+ *  business's takings to do it. */
+async function renderStaffHome() {
   const el = $('#view-dashboard');
+  el.innerHTML = '<div class="empty">Loading\u2026</div>';
+
+  let data;
+  try {
+    data = await api('/admin/api/my-ledger');
+  } catch (e) {
+    el.innerHTML = `<div class="empty"><strong>Could not load</strong>${esc(e.message)}</div>`;
+    return;
+  }
+  const t = data.totals;
 
   el.innerHTML = `
-    <div class="card card-pad" style="margin-bottom:18px">
-      <h2 class="section-title" style="margin-bottom:6px">Hello${state.name ? ', ' + esc(state.name) : ''}</h2>
-      <p class="hint" style="margin:0">Record what you spend, and keep the packages up to date.</p>
+    <div class="card card-pad" style="margin-bottom:16px">
+      <h2 class="section-title" style="margin-bottom:4px">Hello${state.name ? ', ' + esc(state.name) : ''}</h2>
+      <p class="hint" style="margin:0">Your own record. Nobody else's figures are shown here.</p>
     </div>
 
-    <div class="grid grid-stats" style="margin-bottom:18px">
-      <div class="stat"><div class="stat-label">My costs this month</div>
-        <div class="stat-value">${tk(s.myCostsThisMonth || 0)}</div>
-        <div class="stat-note">${tk(s.myCostsTotal || 0)} in total</div></div>
-      <div class="stat"><div class="stat-label">Costs I recorded</div>
-        <div class="stat-value">${s.myCostCount || 0}</div></div>
-      <div class="stat"><div class="stat-label">Packages live</div>
-        <div class="stat-value">${s.packages || 0}</div>
-        <div class="stat-note">${s.featured || 0} featured</div></div>
+    <div class="grid grid-stats" style="margin-bottom:16px">
+      <div class="stat ${t.holding ? 'is-warn' : ''}"><div class="stat-label">You are holding</div>
+        <div class="stat-value">${tk(t.holding)}</div>
+        <div class="stat-note">not handed over yet</div></div>
+      <div class="stat is-good"><div class="stat-label">Taken this month</div>
+        <div class="stat-value">${tk(t.collectedThisMonth)}</div>
+        <div class="stat-note">${tk(t.collected)} in total</div></div>
+      <div class="stat"><div class="stat-label">Spent this month</div>
+        <div class="stat-value">${tk(t.spentThisMonth)}</div>
+        <div class="stat-note">${tk(t.spent)} in total</div></div>
     </div>
 
-    <div class="card card-pad">
-      <h2 class="section-title">What you can do</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-primary" data-go="accounts">+ Add a cost</button>
-        <button class="btn" data-go="content">Edit the packages</button>
-        <button class="btn" data-go="messages">Answer messages${state.chatUnread ? ' (' + state.chatUnread + ')' : ''}</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      ${may('costs_add') ? '<button class="btn btn-primary" id="sh-pay">+ Payment received</button>' : ''}
+      ${may('costs_add') ? '<button class="btn" id="sh-cost">+ Cost</button>' : ''}
+      ${may('chat') ? `<button class="btn" data-go="messages">Messages${state.chatUnread ? ' (' + state.chatUnread + ')' : ''}</button>` : ''}
+      ${may('packages') ? '<button class="btn" data-go="content">Packages</button>' : ''}
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-pad" style="border-bottom:1px solid var(--line)">
+        <h2 class="section-title" style="margin:0">Money you took</h2>
       </div>
+      ${data.taken.length ? `<div class="tablewrap"><table class="tbl">
+        <thead><tr><th>Date</th><th>From</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody>${data.taken.map((p) => `
+          <tr>
+            <td>${esc(humanDate(p.date))}</td>
+            <td>${esc(p.customer)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(p.bookingId)} \u00b7 ${esc(p.method)}</span></td>
+            <td class="num"><strong>${tk(p.amount)}</strong></td>
+            <td>${p.transferredAt
+                  ? '<span class="pill pill-completed">Handed over</span>'
+                  : '<span class="pill pill-confirmed">With you</span>'}</td>
+            <td class="num" style="white-space:nowrap">
+              ${p.transferredAt ? '' : `
+                <button class="btn btn-sm" data-edit-pay="${esc(p.paymentId)}" data-bk="${esc(p.bookingId)}">Edit</button>
+                <button class="btn btn-sm btn-primary" data-cash="${esc(p.bookingId)}" data-pid="${esc(p.paymentId)}">Handed over</button>`}
+            </td>
+          </tr>`).join('')}
+        </tbody></table></div>`
+        : '<div class="empty"><strong>Nothing yet</strong>Money you take from a customer shows here.</div>'}
+    </div>
+
+    <div class="card">
+      <div class="card-pad" style="border-bottom:1px solid var(--line)">
+        <h2 class="section-title" style="margin:0">What you spent</h2>
+      </div>
+      ${data.costs.length ? `<div class="tablewrap"><table class="tbl">
+        <thead><tr><th>Date</th><th>What for</th><th>Amount</th><th></th></tr></thead>
+        <tbody>${data.costs.map((e) => `
+          <tr>
+            <td>${esc(humanDate(e.date))}</td>
+            <td>${esc(e.category)}${e.note ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(e.note)}</span>` : ''}
+              ${e.editedAt ? `<br><span style="font-size:11px;color:var(--muted)">edited ${esc(relativeTime(e.editedAt))}</span>` : ''}</td>
+            <td class="num"><strong>${tk(e.amount)}</strong></td>
+            <td class="num"><button class="btn btn-sm" data-edit-cost="${esc(e.id)}">Edit</button></td>
+          </tr>`).join('')}
+        </tbody></table></div>`
+        : '<div class="empty"><strong>Nothing yet</strong>What you spend on the job shows here.</div>'}
     </div>`;
 
   $$('[data-go]', el).forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
-  $('#topbar-actions').innerHTML = '<button class="btn btn-primary" id="tb-cost">+ Add a cost</button>';
-  $('#tb-cost').addEventListener('click', () => addCost(renderStaffHome));
+  const again = () => { refresh().then(renderStaffHome); };
+
+  const pay = $('#sh-pay', el);
+  if (pay) pay.addEventListener('click', () => addPayment(again));
+  const cost = $('#sh-cost', el);
+  if (cost) cost.addEventListener('click', () => addCost(again));
+
+  $$('[data-edit-cost]', el).forEach((b) => b.addEventListener('click', () => {
+    const e = data.costs.find((c) => c.id === b.dataset.editCost);
+    if (e) editCost(e, again);
+  }));
+  $$('[data-edit-pay]', el).forEach((b) => b.addEventListener('click', () => {
+    const p = data.taken.find((x) => x.paymentId === b.dataset.editPay);
+    if (p) editPayment(p.bookingId, { id: p.paymentId, amount: p.amount, date: p.date, method: p.method, note: p.note }, again);
+  }));
+
+  wireCash(again);
+  labelTableCells(el);
+  $('#topbar-actions').innerHTML = '';
 }
 
 /** The costs a team member has entered. Only their own: another person's
@@ -1578,7 +1721,9 @@ function renderTeam() {
         <thead><tr><th>Name</th><th>Signs in with</th><th>Status</th><th></th></tr></thead>
         <tbody>${state.staff.map((u) => `
           <tr>
-            <td><strong>${esc(u.name)}</strong>${u.phone ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(u.phone)}</span>` : ''}</td>
+            <td><strong>${esc(u.name)}</strong>
+              ${u.role === 'super' ? '<span class="role-tag">super admin</span>' : ''}
+              ${u.phone ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(u.phone)}</span>` : ''}</td>
             <td>${esc(u.email)}</td>
             <td>
               <span class="pill ${u.active ? 'pill-completed' : 'pill-cancelled'}">${u.active ? 'Active' : 'Blocked'}</span>
@@ -1602,7 +1747,8 @@ function renderTeam() {
         and removing a cost once it is saved.
       </p>
       <p class="hint" style="margin:10px 0 0">
-        They sign in at the same address, pressing “I am a team member”.</p>
+        Everyone on the team signs in at <strong>coxsdreammoment.shop/team</strong>.
+        This page, at /admin, takes only your own key.</p>
     </div>`;
 
   $('#st-add', el).addEventListener('click', () => staffForm(null));
@@ -1654,6 +1800,14 @@ function staffForm(user) {
     title: isNew ? 'Add a team member' : `Edit ${user.name}`,
     body: `
       <div class="field"><label>Name</label><input id="s-name" value="${esc(isNew ? '' : user.name)}"></div>
+      ${isMainAdmin() ? `
+        <div class="field"><label>Role</label>
+          <select id="s-role">
+            <option value="staff" ${!isNew && user.role === 'super' ? '' : 'selected'}>Team member \u2014 only what you tick below</option>
+            <option value="super" ${!isNew && user.role === 'super' ? 'selected' : ''}>Super admin \u2014 everything except the recycle bin</option>
+          </select>
+          <p class="hint" style="margin:6px 0 0">Both sign in at <strong>coxsdreammoment.shop/team</strong>.</p>
+        </div>` : ''}
       <div class="field-row">
         <div class="field"><label>Work email</label>
           <input id="s-email" type="email" value="${esc(isNew ? '' : user.email)}" ${isNew ? '' : 'disabled'}>
@@ -1695,6 +1849,8 @@ function staffForm(user) {
         password: $('#s-pass', root).value,
         permissions,
       };
+      const role = $('#s-role', root);
+      if (role) payload.role = role.value;
       if (isNew) {
         payload.email = $('#s-email', root).value.trim();
         await api('/admin/api/staff', { method: 'POST', body: JSON.stringify(payload) });
@@ -1764,6 +1920,71 @@ function wireCash(after) {
       toast(e.message, 'bad');
     }
   }));
+}
+
+/** Fixes a cost that was typed wrong. A wrong figure that cannot be
+ *  corrected is a wrong figure that stays in the accounts for ever. */
+function editCost(e, after) {
+  openSheet({
+    title: 'Change this cost',
+    body: `
+      <div class="field-row">
+        <div class="field"><label>Amount (\u09f3)</label><input id="ec-amt" type="number" min="1" value="${esc(e.amount)}"></div>
+        <div class="field"><label>Date</label><input id="ec-date" type="date" value="${esc(e.date)}"></div>
+      </div>
+      <div class="field"><label>What for</label>
+        <select id="ec-cat">${EXPENSE_CATEGORIES.map((c) =>
+          `<option ${e.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>Note</label><input id="ec-note" value="${esc(e.note || '')}"></div>
+      <p class="hint" style="margin:0">The change is recorded with your name, so nobody wonders later who moved it.</p>`,
+    saveLabel: 'Save',
+    onSave: async (root) => {
+      const amount = Number($('#ec-amt', root).value || 0);
+      if (!amount) { toast('Enter an amount.', 'bad'); return false; }
+      await api('/admin/api/expenses/' + encodeURIComponent(e.id), {
+        method: 'PUT',
+        body: JSON.stringify({
+          amount,
+          date: $('#ec-date', root).value,
+          category: $('#ec-cat', root).value,
+          note: $('#ec-note', root).value,
+        }),
+      });
+      after();
+      toast('Cost updated', 'good');
+    },
+  });
+}
+
+/** Fixes a payment recorded wrong \u2014 the figure, the day, the app. */
+function editPayment(bookingId, p, after) {
+  openSheet({
+    title: 'Change this payment',
+    body: `
+      <div class="field-row">
+        <div class="field"><label>Amount (\u09f3)</label><input id="ep-amt" type="number" min="1" value="${esc(p.amount)}"></div>
+        <div class="field"><label>Date</label><input id="ep-date" type="date" value="${esc(p.date)}"></div>
+      </div>
+      <div class="field"><label>How</label>
+        <select id="ep-method">${METHODS.map((m) => `<option ${p.method === m ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div class="field"><label>Note</label><input id="ep-note" value="${esc(p.note || '')}"></div>`,
+    saveLabel: 'Save',
+    onSave: async (root) => {
+      const amount = Number($('#ep-amt', root).value || 0);
+      if (!amount) { toast('Enter an amount.', 'bad'); return false; }
+      await api(`/admin/api/bookings/${encodeURIComponent(bookingId)}/payments/${encodeURIComponent(p.id)}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          amount,
+          date: $('#ep-date', root).value,
+          method: $('#ep-method', root).value,
+          note: $('#ep-note', root).value,
+        }),
+      });
+      after();
+      toast('Payment updated', 'good');
+    },
+  });
 }
 
 /** Records money received. It goes onto the booking's own payment list
@@ -1898,6 +2119,34 @@ function approveBooking(booking) {
       toast(booking.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 now tell them on WhatsApp', 'good');
     },
   });
+}
+
+/** A booking's time as HH:MM for a time field.
+ *
+ *  Old bookings carry words ("Sunset (5:00 PM – 6:00 PM)") from when the
+ *  time was a choice of three. Those are read as the first clock time in
+ *  them, so an old booking opens with something sensible in the field. */
+function timeValue(stored) {
+  if (!stored) return '';
+  if (/^\d{2}:\d{2}$/.test(stored)) return stored;
+  const m = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(stored);
+  if (!m) return '';
+  let h = Number(m[1]);
+  const ampm = (m[3] || '').toUpperCase();
+  if (ampm === 'PM' && h < 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return String(h).padStart(2, '0') + ':' + m[2];
+}
+
+/** 17:30 reads as 5:30 PM. The field stores the 24-hour form; people read
+ *  the other one. */
+function prettyTime(stored) {
+  const t = timeValue(stored);
+  if (!t) return stored || '';
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`;
 }
 
 /** A booking as staff see it: everything they need to do the job, nothing
@@ -2074,154 +2323,6 @@ function binDetail(item) {
     : '';
 }
 
-// ================================================================ SALARIES
-//
-// What the team is owed and what has gone out. Owner only, and behind the
-// role rather than a permission that could be ticked on by mistake: what
-// one person earns is not the business of the next.
-
-function renderSalaries() {
-  const el = $('#view-salaries');
-  const data = state.salaries;
-
-  if (!data) {
-    el.innerHTML = '<div class="empty">Loading\u2026</div>';
-    api('/admin/api/salaries').then((d) => { state.salaries = d; renderSalaries(); }).catch(() => {});
-    return;
-  }
-
-  const owed = data.staff.reduce((sum, p) => sum + p.owed, 0);
-
-  el.innerHTML = `
-    <div class="grid grid-stats" style="margin-bottom:18px">
-      <div class="stat"><div class="stat-label">Paid out, all time</div>
-        <div class="stat-value">${tk(data.totalPaid)}</div></div>
-      <div class="stat ${owed ? 'is-warn' : 'is-good'}"><div class="stat-label">Still owed</div>
-        <div class="stat-value">${tk(owed)}</div></div>
-      <div class="stat"><div class="stat-label">On the team</div>
-        <div class="stat-value">${data.staff.filter((p) => p.active).length}</div></div>
-    </div>
-
-    <div class="card" style="margin-bottom:18px">
-      <div class="card-pad" style="border-bottom:1px solid var(--line)">
-        <h2 class="section-title" style="margin:0">Each person</h2>
-        <p class="hint" style="margin:6px 0 0">
-          Set what you agreed each month, then record each payment as it goes out.</p>
-      </div>
-      ${data.staff.length ? `<div class="tablewrap"><table class="tbl">
-        <thead><tr><th>Name</th><th class="num">Monthly</th><th class="num">Agreed</th>
-          <th class="num">Paid</th><th class="num">Owed</th><th></th></tr></thead>
-        <tbody>${data.staff.map((p) => `
-          <tr>
-            <td><strong>${esc(p.name)}</strong>${p.active ? '' : '<br><span class="pill pill-cancelled">Blocked</span>'}</td>
-            <td class="num">${p.monthly ? tk(p.monthly) : '\u2014'}</td>
-            <td class="num">${tk(p.totalAgreed)}</td>
-            <td class="num">${tk(p.totalPaid)}</td>
-            <td class="num" style="${p.owed ? 'color:var(--warn);font-weight:700' : ''}">${p.owed ? tk(p.owed) : '\u2014'}</td>
-            <td class="num" style="white-space:nowrap">
-              <button class="btn btn-sm" data-monthly="${esc(p.userId)}">Set monthly</button>
-              <button class="btn btn-sm" data-agree="${esc(p.userId)}">Add month</button>
-              <button class="btn btn-sm btn-primary" data-pay="${esc(p.userId)}">Pay</button>
-            </td>
-          </tr>`).join('')}
-        </tbody></table></div>`
-        : '<div class="empty"><strong>Nobody on the team yet</strong>Add someone under Team and they appear here.</div>'}
-    </div>
-
-    ${data.records.length ? `
-      <div class="card">
-        <div class="card-pad" style="border-bottom:1px solid var(--line)">
-          <h2 class="section-title" style="margin:0">Everything recorded</h2>
-        </div>
-        <div class="tablewrap"><table class="tbl">
-          <thead><tr><th>Date</th><th>Who</th><th>What</th><th class="num">Amount</th><th></th></tr></thead>
-          <tbody>${data.records.map((r) => `
-            <tr>
-              <td>${esc(humanDate(r.date))}<br><span style="font-size:11.5px;color:var(--muted)">${esc(r.month)}</span></td>
-              <td>${esc(r.name)}</td>
-              <td><span class="pill ${r.kind === 'paid' ? 'pill-completed' : 'pill-confirmed'}">${r.kind === 'paid' ? 'Paid out' : 'Agreed'}</span>
-                ${r.note ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(r.note)}</span>` : ''}</td>
-              <td class="num" style="font-weight:700">${tk(r.amount)}</td>
-              <td class="num"><button class="btn btn-sm btn-ghost" data-del-salary="${esc(r.id)}">Remove</button></td>
-            </tr>`).join('')}
-          </tbody></table></div>
-      </div>` : ''}`;
-
-  const person = (id) => data.staff.find((p) => p.userId === id);
-
-  $$('[data-monthly]', el).forEach((b) => b.addEventListener('click', () => {
-    const p = person(b.dataset.monthly);
-    openSheet({
-      title: `${p.name} \u2014 monthly salary`,
-      body: `<div class="field"><label>Agreed each month (\u09f3)</label>
-        <input id="sal-monthly" type="number" min="0" step="500" value="${p.monthly || ''}" autofocus></div>
-        <p class="hint" style="margin:0">This is only the figure to remember. Nothing is recorded until you add a month.</p>`,
-      saveLabel: 'Save',
-      onSave: async (root) => {
-        await api(`/admin/api/staff/${encodeURIComponent(p.userId)}/salary`, {
-          method: 'PUT', body: JSON.stringify({ monthlySalary: Number($('#sal-monthly', root).value || 0) }),
-        });
-        state.salaries = null;
-        renderSalaries();
-        toast('Saved', 'good');
-      },
-    });
-  }));
-
-  $$('[data-agree]', el).forEach((b) => b.addEventListener('click', () => salaryDialog(person(b.dataset.agree), 'agreed')));
-  $$('[data-pay]', el).forEach((b) => b.addEventListener('click', () => salaryDialog(person(b.dataset.pay), 'paid')));
-
-  $$('[data-del-salary]', el).forEach((b) => b.addEventListener('click', async () => {
-    const ok = await confirmDialog('Remove this salary record?', 'Remove');
-    if (!ok) return;
-    try {
-      await api('/admin/api/salaries/' + encodeURIComponent(b.dataset.delSalary), { method: 'DELETE' });
-      state.salaries = null;
-      renderSalaries();
-      toast('Removed', 'good');
-    } catch (e) { toast(e.message, 'bad'); }
-  }));
-
-  $('#topbar-actions').innerHTML = '';
-}
-
-function salaryDialog(person, kind) {
-  const thisMonth = new Date().toISOString().slice(0, 7);
-  openSheet({
-    title: kind === 'paid' ? `Pay ${person.name}` : `Add a month for ${person.name}`,
-    body: `
-      <div class="field-row">
-        <div class="field"><label>Amount (\u09f3)</label>
-          <input id="sal-amt" type="number" min="1" step="100" value="${kind === 'agreed' ? (person.monthly || '') : (person.owed || person.monthly || '')}" autofocus></div>
-        <div class="field"><label>Month</label><input id="sal-month" type="month" value="${thisMonth}"></div>
-      </div>
-      <div class="field"><label>Date</label><input id="sal-date" type="date" value="${today()}"></div>
-      <div class="field"><label>Note</label><input id="sal-note" placeholder="${kind === 'paid' ? 'e.g. bKash' : 'e.g. full month'}"></div>
-      <p class="hint" style="margin:0">
-        ${kind === 'paid'
-          ? 'Recorded as money going out. It counts against the profit figure.'
-          : 'What you owe them for that month. Nothing has been paid yet.'}
-      </p>`,
-    saveLabel: kind === 'paid' ? 'Record payment' : 'Add month',
-    onSave: async (root) => {
-      const amount = Number($('#sal-amt', root).value || 0);
-      if (!amount) { toast('Enter an amount.', 'bad'); return false; }
-      await api('/admin/api/salaries', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId: person.userId, kind, amount,
-          month: $('#sal-month', root).value,
-          date: $('#sal-date', root).value,
-          note: $('#sal-note', root).value,
-        }),
-      });
-      state.salaries = null;
-      renderSalaries();
-      toast(kind === 'paid' ? 'Payment recorded' : 'Month added', 'good');
-    },
-  });
-}
-
 function currentView() {
   const active = $('.nav-item.is-active');
   return active ? active.dataset.view : 'dashboard';
@@ -2300,7 +2401,9 @@ function renderAccounts() {
             <tr><td>${esc(humanDate(e.date))}</td>
                 <td>${esc(e.category)}${e.note ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(e.note)}</span>` : ''}${e.byName ? `<br><span style="font-size:11px;color:var(--muted)">by ${esc(e.byName)}</span>` : ''}</td>
                 <td class="num" style="color:var(--bad);font-weight:700">−${tk(e.amount)}</td>
-                <td class="num"><button class="btn btn-sm btn-ghost" data-ex="${esc(e.id)}">Remove</button></td></tr>`).join('')}
+                <td class="num" style="white-space:nowrap">
+                  <button class="btn btn-sm" data-edit-cost="${esc(e.id)}">Edit</button>
+                  <button class="btn btn-sm btn-ghost" data-ex="${esc(e.id)}">Remove</button></td></tr>`).join('')}
           </tbody></table></div>`
           : `<div class="empty"><strong>No costs recorded</strong>Add what you spend so the profit figure is real.</div>`}
       </div>
@@ -2311,6 +2414,11 @@ function renderAccounts() {
 
   $('#ex-add', el).addEventListener('click', () => addCost(renderAccounts));
   $('#pay-add', el).addEventListener('click', () => addPayment(renderAccounts));
+
+  $$('[data-edit-cost]', el).forEach((b) => b.addEventListener('click', () => {
+    const e = state.expenses.find((x) => x.id === b.dataset.editCost);
+    if (e) editCost(e, () => refresh().then(renderAccounts));
+  }));
 
   $$('[data-ex]', el).forEach((btn) => btn.addEventListener('click', async () => {
     const ok = await confirmDialog('Remove this cost from your accounts?', 'Remove');

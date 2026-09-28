@@ -63,6 +63,7 @@ self.addEventListener('activate', (event) => {
 function isLive(url) {
   return url.pathname.startsWith('/api/')
     || url.pathname.startsWith('/admin')
+    || url.pathname.startsWith('/team')
     || url.pathname.startsWith('/receipts/');
 }
 

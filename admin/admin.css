@@ -903,3 +903,7 @@ table.tbl tbody tr:hover { background: #FAFBFD; }
 
   .field-row { grid-template-columns: 1fr; gap: 0; }
 }
+
+
+/* Only the main admin sees the recycle bin. */
+.app:not(.is-main-admin) [data-main-admin] { display: none; }

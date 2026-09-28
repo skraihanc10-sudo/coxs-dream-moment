@@ -54,7 +54,12 @@ window.ContentEditor = (function () {
    *  here shows up there without a page reload. */
   function packageList() {
     const list = (state.packages && state.packages.packages) || [];
-    return list.map((p) => ({ slug: p.slug, name: p.name }));
+    return list.map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      kind: p.kind || '',
+      price: finalPrice(p),
+    }));
   }
 
   // ------------------------------------------------------------- mount
@@ -456,9 +461,25 @@ window.ContentEditor = (function () {
 
     $('[data-del]', bodyEl).addEventListener('click', async () => {
       const ok = await window.Admin.confirmDialog(
-        `Delete the "${pkg.name}" package? It disappears from the site as soon as you press Save.`);
+        `Delete the "${pkg.name}" package? It comes off the website straight away.`);
       if (!ok) return;
-      state.packages.packages.splice(index, 1);
+
+      // Found by slug rather than by position: the list may have been
+      // reordered since this card was drawn.
+      const list = state.packages.packages;
+      const at = list.findIndex((x) => x === pkg || (pkg.slug && x.slug === pkg.slug));
+      if (at < 0) return;
+      const removed = list.splice(at, 1)[0];
+
+      // Saved now. A delete that only takes effect after a second button
+      // is a delete that comes back.
+      try {
+        await api('/admin/api/packages', { method: 'PUT', body: JSON.stringify(state.packages) });
+        toast(`${removed.name} deleted`, 'good');
+      } catch (e) {
+        list.splice(at, 0, removed);
+        toast(e.message, 'bad');
+      }
       drawPackages($('#cnt-panel', host));
     });
   }
@@ -743,5 +764,11 @@ window.ContentEditor = (function () {
     });
   }
 
-  return { mount, packageList };
+  /** Loads the catalogue if nothing has yet, so the booking dialog has
+   *  prices to offer without the Content tab having been opened first. */
+  async function ensureLoaded() {
+    if (!state.loaded) await load();
+  }
+
+  return { mount, packageList, ensureLoaded };
 })();
