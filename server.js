@@ -18,6 +18,7 @@ const express = require('express');
 const multer = require('multer');
 const cookieParser = require('cookie-parser');
 const nodemailer = require('nodemailer');
+const webpush = require('web-push');
 
 const APP_DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : APP_DIR;
@@ -1816,6 +1817,16 @@ app.post('/api/bookings', (req, res) => {
   // After the reply, so a slow mail provider never keeps the customer
   // waiting on a spinner.
   mailBookingReceived(booking).catch(() => {});
+
+  // The whole point of installing this as an app: a booking arrives on the
+  // owner's phone without anybody watching a screen.
+  pushTeam({
+    title: 'New booking',
+    body: `${booking.name}${booking.packageName ? ' — ' + booking.packageName : ''}`
+      + `${booking.eventDate ? ' on ' + booking.eventDate : ''}`,
+    url: '/admin/',
+    tag: 'booking-' + booking.id,
+  });
 });
 
 // ---------------------------------------------------------------- booking emails
@@ -2068,6 +2079,24 @@ app.put('/admin/api/bookings/:id', requireOwner, (req, res) => {
   res.json({ ok: true, booking: withTotals(updated) });
 
   mailBookingUpdated(updated, previous).catch(() => {});
+
+  // Only when something the customer would care about actually moved — the
+  // same rule the email follows.
+  if (updated.customerId && previous.status !== updated.status) {
+    const said = {
+      confirmed: 'Your booking is confirmed',
+      completed: 'Thank you for choosing us',
+      cancelled: 'Your booking has been cancelled',
+    };
+    if (said[updated.status]) {
+      pushCustomer(updated.customerId, {
+        title: said[updated.status],
+        body: `${updated.id}${updated.eventDate ? ' — ' + updated.eventDate : ''}`,
+        url: '/my-bookings',
+        tag: 'booking-' + updated.id,
+      });
+    }
+  }
 });
 
 app.delete('/admin/api/bookings/:id', requireOwner, (req, res) => {
@@ -2218,6 +2247,142 @@ app.get('/admin/api/staff-summary', requireAuth, (req, res) => {
     myCostsTotal: mine.reduce((sum, e) => sum + money(e.amount), 0),
     myCostCount: mine.length,
   });
+});
+
+// ---------------------------------------------------------------- push notifications
+//
+// The point of installing this site as an app: the owner hears about a
+// booking without watching a screen.
+//
+// The VAPID keys are generated here on first boot and kept in the volume.
+// Nobody has to make them, paste them anywhere, or remember not to commit
+// them — which is exactly how such keys end up in a public repository.
+//
+// A subscription is a device, not a person: the same owner on a phone and a
+// laptop is two subscriptions, and both should ring.
+
+const PUSH_KEYS_FILE = path.join(CONTENT_DIR, 'push-keys.json');
+const SUBS_FILE = path.join(CONTENT_DIR, 'push-subscriptions.json');
+
+function pushKeys() {
+  let keys = readJSON(PUSH_KEYS_FILE, null);
+  if (!keys || !keys.publicKey || !keys.privateKey) {
+    keys = webpush.generateVAPIDKeys();
+    writeJSON(PUSH_KEYS_FILE, keys);
+    console.log('Push: generated a new VAPID key pair');
+  }
+  return keys;
+}
+
+const VAPID = pushKeys();
+
+/** Where a push service should complain if our sending misbehaves. It will
+ *  only accept an https: or a mailto:, so a local http:// SITE_URL cannot
+ *  be used and a mailto is always built instead. */
+function pushContact() {
+  if (GMAIL_USER) return `mailto:${GMAIL_USER}`;
+  const fromSettings = readJSON(SETTINGS_FILE, {}).email;
+  if (fromSettings && /@/.test(fromSettings)) return `mailto:${fromSettings}`;
+  if (SITE_URL.startsWith('https://')) return SITE_URL;
+  return 'mailto:hello@coxsdreammoment.shop';
+}
+
+webpush.setVapidDetails(pushContact(), VAPID.publicKey, VAPID.privateKey);
+
+function readSubs() {
+  const data = readJSON(SUBS_FILE, null);
+  if (data && Array.isArray(data.subs)) return data;
+  return { subs: [] };
+}
+
+app.get('/api/push-key', (req, res) => {
+  res.json({ publicKey: VAPID.publicKey });
+});
+
+/** Saves a device. Who it belongs to comes from the session, never the
+ *  request: otherwise anyone could subscribe to the owner's notifications. */
+app.post('/api/push-subscribe', (req, res) => {
+  const user = currentUser(req);
+  if (!user) return res.status(401).json({ error: 'Sign in first.' });
+
+  const sub = (req.body || {}).subscription;
+  if (!sub || !sub.endpoint || !sub.keys) {
+    return res.status(400).json({ error: 'That subscription is not valid.' });
+  }
+
+  const store = readSubs();
+  // The endpoint is the device's address, so it is the identity here.
+  store.subs = store.subs.filter((s) => s.endpoint !== sub.endpoint);
+  store.subs.push({
+    endpoint: sub.endpoint,
+    keys: sub.keys,
+    userId: user.id,
+    role: user.role,
+    name: user.name || '',
+    at: new Date().toISOString(),
+  });
+  writeJSON(SUBS_FILE, store);
+  res.json({ ok: true });
+});
+
+app.post('/api/push-unsubscribe', (req, res) => {
+  const endpoint = String((req.body || {}).endpoint || '');
+  const store = readSubs();
+  const before = store.subs.length;
+  store.subs = store.subs.filter((s) => s.endpoint !== endpoint);
+  if (store.subs.length !== before) writeJSON(SUBS_FILE, store);
+  res.json({ ok: true });
+});
+
+/** Sends to every device matching [match], and forgets the ones the push
+ *  service says are gone. A dead subscription kept for ever is a send that
+ *  fails on every future notification. */
+async function pushTo(match, payload) {
+  const store = readSubs();
+  const targets = store.subs.filter(match);
+  if (!targets.length) return;
+
+  const body = JSON.stringify(payload);
+  const dead = [];
+
+  await Promise.all(targets.map(async (sub) => {
+    try {
+      await webpush.sendNotification(
+        { endpoint: sub.endpoint, keys: sub.keys }, body);
+    } catch (e) {
+      // 404 and 410 mean the browser threw the subscription away.
+      if (e.statusCode === 404 || e.statusCode === 410) dead.push(sub.endpoint);
+      else console.warn('[push]', e.statusCode || '', e.message);
+    }
+  }));
+
+  if (dead.length) {
+    const fresh = readSubs();
+    fresh.subs = fresh.subs.filter((s) => !dead.includes(s.endpoint));
+    writeJSON(SUBS_FILE, fresh);
+  }
+}
+
+/** Everyone who works here. */
+const pushTeam = (payload) =>
+  pushTo((s) => s.role === 'owner' || s.role === 'staff', payload).catch(() => {});
+
+/** One customer's own devices. */
+const pushCustomer = (userId, payload) =>
+  pushTo((s) => s.role === 'customer' && s.userId === userId, payload).catch(() => {});
+
+/** A test the owner can fire from the admin panel, so "is this working?" has
+ *  an answer that does not involve waiting for a real booking. */
+app.post('/admin/api/push-test', requireAuth, async (req, res) => {
+  const user = req.user;
+  await pushTo((s) => s.userId === user.id, {
+    title: 'Notifications are working',
+    body: 'This is what a new booking will look like.',
+    url: '/admin/',
+    tag: 'cdm-test',
+  });
+  const store = readSubs();
+  res.json({ ok: true, devices: store.subs.filter((s) => s.userId === user.id).length });
 });
 
 // ---------------------------------------------------------------- what staff may do
@@ -2442,6 +2607,14 @@ app.post('/admin/api/team-chat', requireAuth, allow('team_chat'), (req, res) => 
   writeJSON(TEAM_FILE, store);
 
   res.json({ ok: true, messages: store.messages.slice(-120) });
+
+  // Everyone on the team except whoever just typed it.
+  pushTo((sub) => (sub.role === 'owner' || sub.role === 'staff') && sub.userId !== req.user.id, {
+    title: `${req.user.name || 'Team'} in team chat`,
+    body: message ? message.slice(0, 120) : 'Sent a photo',
+    url: '/admin/',
+    tag: 'team-chat',
+  }).catch(() => {});
 });
 
 // ---------------------------------------------------------------- chat
@@ -2595,6 +2768,16 @@ app.post('/api/chat', requireCustomer, async (req, res) => {
 
   res.json({ ok: true, messages: thread.messages.map(publicMessage) });
 
+  // A notification every time, even when the email is held back: a phone
+  // alert is cheap and silent, an inbox full of near-identical emails is
+  // what makes people stop reading them.
+  pushTeam({
+    title: `Message from ${req.user.name || 'a customer'}`,
+    body: text ? text.slice(0, 120) : 'Sent a photo',
+    url: '/admin/',
+    tag: 'chat-' + req.user.id,
+  });
+
   if (!shouldMail) return;
 
   // After the reply: the customer should never wait on our mail provider.
@@ -2692,6 +2875,13 @@ app.post('/admin/api/chats/:customerId', requireAuth, allow('chat'), async (req,
 
   res.json({ ok: true, messages: thread.messages.map(publicMessage) });
 
+  pushCustomer(user.id, {
+    title: "Cox's Dream Moment replied",
+    body: text ? text.slice(0, 120) : 'Sent you a photo',
+    url: '/my-bookings',
+    tag: 'reply',
+  });
+
   if (!shouldMail || !user.email) return;
 
   sendMail(user.email, 'We have replied to your message', mailShell(
@@ -2752,6 +2942,21 @@ app.get(/^\/(.+)\.html$/, (req, res) => {
 app.get('/shop', (req, res) => res.redirect(301, '/' + req.originalUrl.slice(req.path.length)));
 
 app.get('/', (req, res) => res.sendFile(path.join(APP_DIR, 'shop.html')));
+
+// The service worker must never be served from a cache, or a browser keeps
+// running last week's copy and the site can never be updated again. Its
+// scope is the whole site, which a worker served from / gets by default.
+app.get('/sw.js', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.set('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(APP_DIR, 'sw.js'));
+});
+
+app.get('/manifest.webmanifest', (req, res) => {
+  res.type('application/manifest+json');
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.sendFile(path.join(APP_DIR, 'manifest.webmanifest'));
+});
 
 app.use('/admin', express.static(path.join(APP_DIR, 'admin')));
 

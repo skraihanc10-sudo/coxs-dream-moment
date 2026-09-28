@@ -131,6 +131,12 @@
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dream Moment">
+<meta name="mobile-web-app-capable" content="yes">
 </head>
 <body>
 
@@ -405,7 +411,9 @@
           '<button class="btn" type="submit" id="chat-send">Send</button>' +
         '</form>' +
       '</section>' +
-      '<p class="note"><button class="btn ghost" id="out">Sign out</button></p>';
+      '<p class="note">' +
+        '<button class="btn ghost" id="push-btn" hidden></button> ' +
+        '<button class="btn ghost" id="out">Sign out</button></p>';
 
     mountChat();
 
@@ -419,6 +427,8 @@
         document.getElementById('list-past').hidden = btn.dataset.tab !== 'past';
       });
     });
+
+    drawPush();
 
     document.getElementById('out').addEventListener('click', async () => {
       await fetch('/api/logout', { method: 'POST' });
@@ -522,6 +532,30 @@
     }, 6000);
   }
 
+  /** Tell me when my booking changes. Asked for, never assumed. */
+  async function drawPush() {
+    const button = document.getElementById('push-btn');
+    if (!button || !window.CDMPush) return;
+
+    const state = await window.CDMPush.state();
+    const labels = {
+      on: 'Notifications on',
+      off: 'Notify me about this booking',
+      blocked: '',
+      unsupported: '',
+    };
+    button.textContent = labels[state] || '';
+    button.hidden = !labels[state];
+
+    button.onclick = async () => {
+      button.disabled = true;
+      const result = state === 'on' ? await window.CDMPush.disable() : await window.CDMPush.enable();
+      button.disabled = false;
+      flash(result.message, result.ok ? 'good' : 'bad');
+      drawPush();
+    };
+  }
+
   async function load() {
     const res = await fetch('/api/my-bookings');
     if (!res.ok) throw new Error('Not signed in');
@@ -548,5 +582,6 @@
     'bad'));
 })();
 </script>
+<script src="/pwa.js" defer></script>
 </body>
 </html>

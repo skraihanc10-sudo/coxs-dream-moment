@@ -181,6 +181,7 @@ async function enter(session) {
 
   await refresh();
   go('dashboard');
+  drawPushToggle();
 }
 
 /** Pulls everything the dashboard and lists read. One call site, so a
@@ -1639,6 +1640,49 @@ function renderAccounts() {
       toast('Removed', 'good');
     } catch (e) { toast(e.message, 'bad'); }
   }));
+}
+
+// ---------------------------------------------------------------- notifications
+//
+// The reason to put this on a home screen: a booking reaches the owner's
+// phone without anybody watching a screen.
+//
+// Permission is asked only when the button is pressed. A browser asked on
+// page load remembers the refusal, and there is no second chance.
+
+async function drawPushToggle() {
+  const button = $('#push-toggle');
+  if (!button || !window.CDMPush) return;
+
+  const state = await window.CDMPush.state();
+
+  const labels = {
+    on: 'Notifications: on',
+    off: 'Turn notifications on',
+    blocked: 'Notifications blocked',
+    unsupported: '',
+  };
+  button.textContent = labels[state] || '';
+  button.hidden = !labels[state];
+  button.style.color = state === 'on' ? '#7BD7A8' : '';
+
+  button.onclick = async () => {
+    if (state === 'blocked') {
+      toast('Your browser is blocking them. Turn them back on in its site settings.', 'bad');
+      return;
+    }
+    button.disabled = true;
+    const result = state === 'on' ? await window.CDMPush.disable() : await window.CDMPush.enable();
+    button.disabled = false;
+    toast(result.message, result.ok ? 'good' : 'bad');
+    drawPushToggle();
+
+    // A switch that says "on" and then never rings is worse than no switch,
+    // so it proves itself straight away.
+    if (result.ok && state !== 'on') {
+      try { await api('/admin/api/push-test', { method: 'POST' }); } catch (e) { /* the toast already said it worked */ }
+    }
+  };
 }
 
 // Exposed so content.js can raise a toast and reuse the dialog.

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No connection | Cox's Dream Moment</title>
+<link rel="icon" href="images/favicon.png" type="image/png">
+<meta name="theme-color" content="#0D1B2A">
+<style>
+  :root { --night:#0D1B2A; --sand:#FBF7F1; --coral:#E2613C; --ink:#16233A; --muted:#6B7A93; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 32px 24px; text-align: center;
+    background: var(--sand); color: var(--ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  img { width: min(200px, 60vw); height: auto; opacity: .6; margin-bottom: 14px; }
+  h1 { font-size: 24px; margin: 0 0 10px; font-weight: 700; }
+  p { margin: 0 0 8px; color: var(--muted); line-height: 1.65; max-width: 380px; font-size: 15px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 22px; }
+  button, a.wa {
+    border: 0; border-radius: 12px; padding: 13px 24px;
+    font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none;
+  }
+  button { background: var(--coral); color: #fff; }
+  a.wa { background: #fff; color: #128C4A; border: 1px solid #25D366; }
+  small { display: block; margin-top: 26px; color: var(--muted); font-size: 12.5px; }
+</style>
+</head>
+<body>
+  <img src="images/logo.png" alt="Cox's Dream Moment"
+       onerror="this.onerror=null;this.src='images/logo-mark.png';">
+  <h1>No connection</h1>
+  <p>
+    Your phone cannot reach us just now. Anything you have already opened is still
+    here &mdash; but bookings, prices and messages need a signal.
+  </p>
+  <div class="row">
+    <button type="button" onclick="location.reload()">Try again</button>
+    <a class="wa" href="https://wa.me/8801347059522">Message on WhatsApp</a>
+  </div>
+  <small>Cox&rsquo;s Dream Moment &middot; Cox&rsquo;s Bazar sea beach</small>
+
+<script>
+  // Come back on its own the moment the signal returns, rather than leaving
+  // somebody tapping a button.
+  window.addEventListener('online', () => location.reload());
+</script>
+</body>
+</html>
