@@ -1822,3 +1822,121 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
 .bb-addon:has(input[type="radio"]:checked) .bb-addon-tick::after {
   transform: translate(-50%, -50%) scale(1);
 }
+
+
+/* ==========================================================================
+   The hero on a phone.
+
+   It filled the whole screen: eyebrow, headline, paragraph, two stacked
+   buttons and a three-item list, before a single package came into view.
+   Somebody arriving on a phone should see what we sell without scrolling
+   past a poster of ourselves first.
+
+   Everything here is a size, not a removal — the same words, tighter.
+   ========================================================================== */
+@media (max-width: 620px) {
+  .home-hero { padding: 26px 0 24px; }
+
+  .home-hero .eyebrow {
+    font-size: 10.5px;
+    letter-spacing: .14em;
+    margin-bottom: 10px;
+  }
+  .home-hero .eyebrow::before { width: 18px; }
+
+  .home-hero h1 {
+    font-size: clamp(26px, 8vw, 34px);
+    line-height: 1.12;
+  }
+
+  .home-hero .sub, .home-hero p:not(.eyebrow) {
+    font-size: 14px;
+    line-height: 1.55;
+    margin-top: 10px;
+  }
+
+  .hero-actions { margin-top: 18px; gap: 9px; }
+  .home-hero .btn-cta,
+  .btn-hero-ghost {
+    padding: 11px 20px;
+    font-size: 14px;
+  }
+
+  /* One line rather than three, and the smallest thing on the screen: it
+     is reassurance, not a reason to be here. */
+  .hero-points {
+    margin-top: 16px;
+    gap: 6px 14px;
+    font-size: 12px;
+  }
+  .hero-points li { font-size: 12px; }
+
+  /* The glow was sized for a laptop; at this height it swallowed the type. */
+  .hero-glow { opacity: .5; }
+}
+
+/* Very small phones: the paragraph is the one thing the headline and the
+   buttons already say, so it goes. */
+@media (max-width: 400px) {
+  .home-hero { padding: 22px 0 20px; }
+  .home-hero .sub { display: none; }
+  .hero-points li:nth-child(n+3) { display: none; }
+}
+
+/* ==========================================================================
+   Start here — the two cards above everything else.
+
+   One setup and one photography package, side by side, so the first thing
+   on the page is the two things we sell rather than a list of twenty
+   variations on one of them.
+   ========================================================================== */
+.start-here {
+  padding: 26px 0 8px;
+}
+.start-here .section-head { margin-bottom: 16px; }
+
+.start-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+/* The cards themselves are ordinary product cards; only the row is new. */
+.start-grid .product-card { margin: 0; }
+
+@media (max-width: 620px) {
+  .start-here { padding: 20px 0 4px; }
+  .start-grid { gap: 12px; }
+}
+
+
+/* ==========================================================================
+   The header on a phone.
+
+   The bar, the logo row and the announcement strip together took a third of
+   the screen before any content began.
+   ========================================================================== */
+@media (max-width: 620px) {
+  .topbar { padding: 6px 0; font-size: 11.5px; }
+  .topbar .container { gap: 6px; }
+
+  .header-main { padding: 8px 0; }
+  .brand-logo { width: 130px; height: auto; }
+  .brand .name { font-size: 15px; }
+  .brand .tag { font-size: 9.5px; letter-spacing: .1em; }
+
+  .page-banner { padding: 22px 0 20px; }
+  .page-banner h1 { font-size: clamp(22px, 6.5vw, 28px); }
+
+  .section-head { margin-bottom: 14px; }
+  .section-head h2 { font-size: clamp(21px, 5.6vw, 26px); }
+  .section-head p { font-size: 13.5px; line-height: 1.55; }
+}
+
+/* The floating WhatsApp and Live chat buttons sat on top of the text at the
+   bottom of the page. The page now ends with room for them. */
+body { padding-bottom: 0; }
+.site-footer { padding-bottom: 150px; }
+@media (max-width: 620px) {
+  .site-footer { padding-bottom: 160px; }
+}

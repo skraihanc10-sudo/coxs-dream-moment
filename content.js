@@ -154,6 +154,33 @@ function mediaCardHTML(pkg) {
   );
 }
 
+/** The two cards above everything else: the setup most people start with,
+ *  and the photography package that goes with it.
+ *
+ *  Picked rather than configured: whichever setup is marked featured (or
+ *  the first one), and whichever media package is (or the first one). The
+ *  owner already decides the order in the admin, so there is nothing new
+ *  to keep in step. */
+function applyStartHere(packages, setups) {
+  const section = document.getElementById('start-here');
+  if (!section) return;
+
+  const grid = section.querySelector('.product-grid');
+  const media = packages.filter(isMedia);
+
+  const setup = setups.find(p => p.featured) || setups[0];
+  const shoot = media.find(p => p.featured) || media[0];
+
+  const pair = [setup, shoot].filter(Boolean);
+  if (!pair.length) {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  grid.innerHTML = pair.map(p => productCardHTML(p, true)).join('');
+}
+
 /** Fills any .media-grid on the page, and hides its section when there is
  *  nothing to put in it — an empty dark band would look like a bug. */
 function applyMediaSection(packages) {
@@ -374,10 +401,15 @@ function applyShopGrid(packages) {
   // drone package sitting among the beach setups reads as a sixth setup.
   const setups = packages.filter(p => !isMedia(p));
 
+  applyStartHere(packages, setups);
+
   // The ones marked `featured` go in their own row above everything else:
   // the owner decides what people should see first, and a customer looking
   // for a place to start should not have to open every page to find one.
-  const featured = setups.filter(p => p.featured);
+  // Whatever is already in the Start here row is not repeated immediately
+  // below it.
+  const shown = setups.find(p => p.featured) || setups[0];
+  const featured = setups.filter(p => p.featured && p !== shown);
   const rest = setups.filter(p => !p.featured);
 
   const section = document.getElementById('featured-grid');
