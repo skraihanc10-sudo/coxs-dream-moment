@@ -297,6 +297,17 @@
         return;
       }
 
+      if (!methods.length) {
+        // A Bangla QR already takes bKash, Nagad, Rocket and a bank
+        // transfer, so there is nothing further to list.
+        box.innerHTML =
+          '<p class="pay-empty" style="text-align:left;padding:4px 0 0">' +
+          'Scan the code above with <strong>bKash</strong>, <strong>Nagad</strong>, ' +
+          '<strong>Rocket</strong> or your <strong>bank app</strong> — all four work. ' +
+          'Then send us the screenshot with your booking.</p>';
+        return;
+      }
+
       box.innerHTML = methods.map((m) => '' +
         '<div class="pay-account">' +
           '<div class="pa-text">' +

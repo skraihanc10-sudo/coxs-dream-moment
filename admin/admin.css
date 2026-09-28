@@ -789,3 +789,28 @@ table.tbl tbody tr:hover { background: #FAFBFD; }
   display: block;
 }
 .msg.mine .msg-photo { align-self: flex-end; }
+
+
+/* The delete cross on a message. Only drawn for the owner, and only visible
+   on hover — a row of crosses beside every line turns a conversation into
+   a list of things to delete. */
+.msg { position: relative; }
+.msg-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--bad);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s;
+}
+.msg:hover .msg-del, .msg-del:focus-visible { opacity: 1; }
+.msg.mine .msg-del { right: auto; left: -6px; }

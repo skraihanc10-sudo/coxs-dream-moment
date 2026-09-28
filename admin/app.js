@@ -25,6 +25,7 @@ const state = {
   changes: [],
   pendingChanges: 0,
   teamChat: [],
+  salaries: null,
   filter: { status: 'all', q: '' },
 };
 
@@ -257,6 +258,7 @@ const VIEWS = {
   accounts: { title: 'Accounts', render: () => (isOwner() ? renderAccounts() : renderStaffCosts()) },
   messages: { title: 'Messages', perm: 'chat', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
+  salaries: { title: 'Salaries', owner: true, render: renderSalaries },
   team: { title: 'Team', owner: true, render: renderTeam },
   content: { title: 'Website content', render: () => window.ContentEditor.mount($('#view-content')) },
 };
@@ -504,6 +506,11 @@ function renderBookings() {
 /** The booking editor. One dialog for both a new booking and an existing
  *  one — the fields are identical, and two near-copies would drift. */
 function editBooking(booking) {
+  // Staff can look at a booking; changing a price is the owner's. Somebody
+  // with `bookings_edit` proposes a change instead, which waits under
+  // Approvals.
+  if (booking && !isOwner()) return viewBooking(booking);
+
   const isNew = !booking;
   const b = booking || {
     id: '', name: '', phone: '', email: '', packageSlug: '', packageName: '',
@@ -927,6 +934,7 @@ async function openThread(customerId) {
         <span>${esc(data.phone || data.email || '')}</span>
       </div>
       ${wa ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+      ${isOwner() ? '<button class="btn btn-sm btn-danger" id="chat-wipe">Delete</button>' : ''}
     </div>
     <div class="chat-log" id="chat-log">
       ${data.messages.map(bubble).join('') ||
@@ -946,6 +954,40 @@ async function openThread(customerId) {
 
   const log = $('#chat-log');
   log.scrollTop = log.scrollHeight;
+
+  // Deleting a conversation is the owner's alone. A chat is the record of
+  // what was promised to a customer, and staff should not be able to make
+  // an awkward one disappear.
+  const wipe = $('#chat-wipe');
+  if (wipe) wipe.addEventListener('click', async () => {
+    const ok = await confirmDialog(
+      `Delete the whole conversation with ${data.name}? Every message goes, and it cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api('/admin/api/chats/' + encodeURIComponent(customerId), { method: 'DELETE' });
+      state.openThread = null;
+      await refresh();
+      renderMessages();
+      toast('Conversation deleted', 'good');
+    } catch (e) { toast(e.message, 'bad'); }
+  });
+
+  // One message at a time, for the mistyped one.
+  const wireDeletes = () => {
+    $$('[data-del-msg]').forEach((btn) => btn.addEventListener('click', async () => {
+      const ok = await confirmDialog('Delete this message?', 'Delete');
+      if (!ok) return;
+      try {
+        const r = await api(
+          `/admin/api/chats/${encodeURIComponent(customerId)}/${encodeURIComponent(btn.dataset.delMsg)}`,
+          { method: 'DELETE' });
+        $('#chat-log').innerHTML = (r.messages || []).map(bubble).join('');
+        wireDeletes();
+        await refresh();
+      } catch (e) { toast(e.message, 'bad'); }
+    }));
+  };
+  wireDeletes();
 
   // Reading a thread clears its unread count, so the sidebar has to catch up.
   await refresh();
@@ -1012,6 +1054,7 @@ async function openThread(customerId) {
 function bubble(m) {
   const mine = m.from === 'team';
   return `<div class="msg ${mine ? 'mine' : 'theirs'}">
+    ${isOwner() ? `<button class="msg-del" data-del-msg="${esc(m.id)}" title="Delete this message">\u00d7</button>` : ''}
     ${m.photo ? `<a href="/receipts/${encodeURIComponent(m.photo)}" target="_blank" rel="noopener" class="msg-photo">
       <img src="/receipts/${encodeURIComponent(m.photo)}" alt="Photo"></a>` : ''}
     ${m.text ? `<div class="msg-body">${esc(m.text)}</div>` : ''}
@@ -1078,7 +1121,7 @@ function renderCustomers() {
           <th class="num">Paid</th><th class="num">Due</th><th>Reachable by</th>
         </tr></thead>
         <tbody>${list.map((c) => `
-          <tr>
+          <tr class="row-link" data-customer="${esc(c.id)}">
             <td><strong>${esc(c.name || 'No name')}</strong>${c.lastBooking ? `<br><span style="font-size:11.5px;color:var(--muted)">last: ${esc(c.lastBooking)}</span>` : ''}</td>
             <td>${esc(c.phone || '—')}${c.email ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(c.email)}</span>` : ''}</td>
             <td class="num">${c.bookings}</td>
@@ -1096,6 +1139,11 @@ function renderCustomers() {
         there is something to tell them.</p>
     </div>`;
 
+  $$('[data-customer]', el).forEach((tr) => tr.addEventListener('click', (e) => {
+    if (e.target.closest('a,button')) return;
+    openCustomer(tr.dataset.customer);
+  }));
+
   // Opening WhatsApp and marking it done are the same action, so pressing
   // Send does both. The link still opens normally.
   $$('[data-sent]', el).forEach((a) => a.addEventListener('click', () => {
@@ -1107,6 +1155,88 @@ function renderCustomers() {
   }));
 
   $('#topbar-actions').innerHTML = '';
+}
+
+/** Everything about one customer in one place: their bookings, every taka
+ *  that has come in from them, and what is still owed. The question this
+ *  answers is "what is my history with this person", which is otherwise
+ *  three screens and some arithmetic. */
+async function openCustomer(id) {
+  let data;
+  try {
+    data = await api('/admin/api/customers/' + encodeURIComponent(id));
+  } catch (e) {
+    toast(e.message, 'bad');
+    return;
+  }
+
+  const c = data.customer;
+  const t = data.totals;
+  const wa = waNumber(c.phone);
+
+  openSheet({
+    title: c.name || 'Customer',
+    body: `
+      <p class="hint" style="margin:-4px 0 16px">
+        ${esc(c.phone || 'no number')}${c.email ? ' \u00b7 ' + esc(c.email) : ''}
+        ${c.createdAt ? ' \u00b7 since ' + esc(humanDate(c.createdAt)) : ''}
+      </p>
+
+      <div class="grid grid-stats" style="margin-bottom:18px">
+        <div class="stat"><div class="stat-label">Booked</div><div class="stat-value">${tk(t.booked)}</div></div>
+        <div class="stat is-good"><div class="stat-label">Paid</div><div class="stat-value">${tk(t.paid)}</div></div>
+        <div class="stat ${t.due ? 'is-warn' : ''}"><div class="stat-label">Still owed</div><div class="stat-value">${tk(t.due)}</div></div>
+        <div class="stat"><div class="stat-label">Spent on them</div><div class="stat-value">${tk(t.spent)}</div>
+          <div class="stat-note">profit ${tk(t.profit)}</div></div>
+      </div>
+
+      <h3 class="section-title">Bookings (${data.bookings.length})</h3>
+      ${data.bookings.length ? `<div class="tablewrap"><table class="tbl">
+        <tbody>${data.bookings.map((b) => `
+          <tr><td><strong>${esc(b.id)}</strong><br>
+              <span style="font-size:11.5px;color:var(--muted)">${esc(b.packageName || '\u2014')}</span></td>
+            <td>${esc(humanDate(b.eventDate) || '\u2014')}</td>
+            <td class="num">${tk(b.price)}</td>
+            <td><span class="pill pill-${esc(b.status)}">${esc((STATUSES.find((s) => s.id === b.status) || {}).label || b.status)}</span></td>
+          </tr>`).join('')}
+        </tbody></table></div>` : '<p class="hint" style="margin:0">No bookings yet.</p>'}
+
+      <h3 class="section-title" style="margin-top:22px">Every movement</h3>
+      ${data.ledger.length ? `<div class="tablewrap"><table class="tbl">
+        <thead><tr><th>When</th><th>What</th><th class="num">Amount</th></tr></thead>
+        <tbody>${data.ledger.map((row) => `
+          <tr>
+            <td>${esc(humanDate(row.at))}</td>
+            <td>${row.kind === 'payment' ? 'Paid us' : 'Booked'} \u00b7 ${esc(row.bookingId)}
+              <br><span style="font-size:11.5px;color:var(--muted)">${esc(row.label)}</span></td>
+            <td class="num" style="${row.kind === 'payment' ? 'color:var(--good);font-weight:700' : ''}">
+              ${row.kind === 'payment' ? '+' : ''}${tk(row.amount)}</td>
+          </tr>`).join('')}
+        </tbody></table></div>` : '<p class="hint" style="margin:0">Nothing recorded yet.</p>'}
+
+      ${data.costs.length ? `
+        <h3 class="section-title" style="margin-top:22px">What we spent on them</h3>
+        <div class="tablewrap"><table class="tbl">
+          <tbody>${data.costs.map((e) => `
+            <tr><td>${esc(humanDate(e.date))}</td>
+              <td>${esc(e.category)}${e.note ? ' \u00b7 ' + esc(e.note) : ''}</td>
+              <td class="num" style="color:var(--bad)">\u2212${tk(e.amount)}</td></tr>`).join('')}
+          </tbody></table></div>` : ''}
+
+      <p class="hint" style="margin:18px 0 0">
+        ${data.messages} message${data.messages === 1 ? '' : 's'} in their conversation.
+      </p>`,
+    extraFoot: `
+      ${wa ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+      <button type="button" class="btn btn-sm" data-open-chat="${esc(c.id)}">Open chat</button>`,
+  });
+
+  const chat = $('[data-open-chat]');
+  if (chat) chat.addEventListener('click', () => {
+    $('#sheet').close();
+    go('messages');
+    openThread(c.id);
+  });
 }
 
 async function markSent(customerId, bookingId, kind, tell) {
@@ -1167,6 +1297,19 @@ function renderTeamChat() {
 
   const load = () => api('/admin/api/team-chat').then((d) => draw(d.messages || [])).catch(() => {});
   load();
+
+  // Delegated: the log is redrawn every few seconds, so a handler bound to
+  // each button would be lost on the next poll.
+  $('#team-log', el).addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-del-team]');
+    if (!btn) return;
+    const ok = await confirmDialog('Delete this message?', 'Delete');
+    if (!ok) return;
+    try {
+      const r = await api('/admin/api/team-chat/' + encodeURIComponent(btn.dataset.delTeam), { method: 'DELETE' });
+      draw(r.messages || []);
+    } catch (err) { toast(err.message, 'bad'); }
+  });
 
   // The room is only worth having if a message shows up while you are
   // looking at it.
@@ -1230,6 +1373,7 @@ function renderTeamChat() {
 function teamBubble(m) {
   const mine = m.byName === state.name || (isOwner() && m.role === 'owner');
   return `<div class="msg ${mine ? 'mine' : 'theirs'}">
+    ${isOwner() ? `<button class="msg-del" data-del-team="${esc(m.id)}" title="Delete this message">\u00d7</button>` : ''}
     ${m.photo ? `<a href="/receipts/${encodeURIComponent(m.photo)}" target="_blank" rel="noopener" class="msg-photo">
       <img src="/receipts/${encodeURIComponent(m.photo)}" alt="Photo"></a>` : ''}
     ${m.text ? `<div class="msg-body">${esc(m.text)}</div>` : ''}
@@ -1475,6 +1619,57 @@ function staffForm(user) {
 
 // ---------------------------------------------------------------- shared
 
+/** Records money received. It goes onto the booking's own payment list
+ *  rather than into a separate ledger: there is one record of what a
+ *  customer has paid, and a second place to keep it would be a second place
+ *  for it to be wrong. */
+function addPayment(after) {
+  const open = state.bookings.filter((b) => b.status !== 'cancelled');
+  if (!open.length) { toast('No bookings to record a payment against.', 'bad'); return; }
+
+  const owing = open.filter((b) => b.due > 0);
+  const list = owing.length ? owing : open;
+
+  openSheet({
+    title: 'Record a payment',
+    body: `
+      <div class="field"><label>Which booking</label>
+        <select id="pm-booking">
+          ${list.map((b) => `<option value="${esc(b.id)}">
+            ${esc(b.id)} \u2014 ${esc(b.name)}${b.due ? ' (' + tk(b.due) + ' due)' : ' (paid up)'}
+          </option>`).join('')}
+        </select>
+        ${owing.length ? '' : '<p class="hint" style="margin:6px 0 0">Nothing is outstanding, so every booking is listed.</p>'}
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Amount (\u09f3)</label><input id="pm-amt" type="number" min="1" step="100"></div>
+        <div class="field"><label>Date</label><input id="pm-date" type="date" value="${today()}"></div>
+      </div>
+      <div class="field"><label>How</label>
+        <select id="pm-method">${METHODS.map((m) => `<option>${m}</option>`).join('')}</select></div>
+      <div class="field"><label>Note</label><input id="pm-note" placeholder="e.g. advance, balance on the day"></div>
+      <p class="hint" style="margin:0">The customer is emailed and notified, the same as any other payment.</p>`,
+    saveLabel: 'Record payment',
+    onSave: async (root) => {
+      const amount = Number($('#pm-amt', root).value || 0);
+      if (!amount) { toast('Enter an amount.', 'bad'); return false; }
+      const id = $('#pm-booking', root).value;
+      await api(`/admin/api/bookings/${encodeURIComponent(id)}/payment`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amount,
+          date: $('#pm-date', root).value,
+          method: $('#pm-method', root).value,
+          note: $('#pm-note', root).value,
+        }),
+      });
+      await refresh();
+      after();
+      toast('Payment recorded', 'good');
+    },
+  });
+}
+
 /** The add-a-cost dialog. Used by the owner's Accounts screen and by a
  *  staff member's, so the two can never drift apart. */
 function addCost(after) {
@@ -1487,11 +1682,21 @@ function addCost(after) {
       </div>
       <div class="field"><label>What for</label>
         <select id="e-cat">${EXPENSE_CATEGORIES.map((c) => `<option>${c}</option>`).join('')}</select></div>
-      <div class="field"><label>Note</label><input id="e-note" placeholder="e.g. flowers for CDM-1003"></div>`,
+      <div class="field"><label>Note</label><input id="e-note" placeholder="e.g. flowers, van hire"></div>
+      ${isOwner() && state.bookings.length ? `
+        <div class="field"><label>For which booking <span style="text-transform:none;font-weight:600">(optional)</span></label>
+          <select id="e-booking">
+            <option value="">Not for one in particular</option>
+            ${state.bookings.filter((b) => b.status !== 'cancelled').map((b) =>
+              `<option value="${esc(b.id)}">${esc(b.id)} \u2014 ${esc(b.name)}</option>`).join('')}
+          </select>
+          <p class="hint" style="margin:6px 0 0">Tie it to a booking and it shows in that customer's profit.</p>
+        </div>` : ''}`,
     saveLabel: 'Add cost',
     onSave: async (root) => {
       const amount = Number($('#e-amt', root).value || 0);
       if (!amount) { toast('Enter an amount.', 'bad'); return false; }
+      const booking = $('#e-booking', root);
       await api('/admin/api/expenses', {
         method: 'POST',
         body: JSON.stringify({
@@ -1499,6 +1704,7 @@ function addCost(after) {
           date: $('#e-date', root).value,
           category: $('#e-cat', root).value,
           note: $('#e-note', root).value,
+          bookingId: booking ? booking.value : '',
         }),
       });
       await refresh();
@@ -1543,6 +1749,230 @@ function approveBooking(booking) {
       await refresh();
       go(currentView());
       toast(booking.email ? 'Approved \u2014 confirmation emailed' : 'Approved \u2014 now tell them on WhatsApp', 'good');
+    },
+  });
+}
+
+/** A booking as staff see it: everything they need to do the job, nothing
+ *  they could accidentally rewrite. */
+function viewBooking(b) {
+  const money = may('bookings_money');
+  const canPropose = may('bookings_edit');
+
+  const rows = [
+    ['Customer', b.name],
+    ['Mobile', b.phone],
+    ['Package', b.packageName],
+    ['Date', humanDate(b.eventDate)],
+    ['Time', b.eventTime],
+    ['People', b.people],
+    ['Occasion', b.occasion],
+    ['Status', (STATUSES.find((s) => s.id === b.status) || {}).label || b.status],
+  ].filter(([, v]) => v);
+
+  if (money) {
+    rows.push(['Price', tk(b.price)], ['Paid', tk(b.paid)], ['Still due', tk(b.due)]);
+  }
+
+  const wa = waNumber(b.phone);
+  openSheet({
+    title: `${b.id} \u2014 ${b.name}`,
+    body: `
+      <div class="tablewrap"><table class="tbl"><tbody>
+        ${rows.map(([k, v]) => `<tr><td style="color:var(--muted);width:110px">${esc(k)}</td>
+          <td><strong>${esc(v)}</strong></td></tr>`).join('')}
+      </tbody></table></div>
+      ${b.note ? `<h3 class="section-title" style="margin-top:18px">What the customer wrote</h3>
+        <p style="margin:0;line-height:1.6;white-space:pre-wrap">${esc(b.note)}</p>` : ''}
+      ${money ? '' : '<p class="hint" style="margin:16px 0 0">Prices and payments are not shown on your account.</p>'}
+      ${canPropose ? `
+        <h3 class="section-title" style="margin-top:22px">Ask for a change</h3>
+        <p class="hint" style="margin:-6px 0 12px">
+          The owner sees this under Approvals. Nothing reaches the customer until they agree.</p>
+        <div class="field-row">
+          <div class="field"><label>Date</label><input id="rq-date" type="date" value="${esc(b.eventDate || '')}"></div>
+          <div class="field"><label>Time</label><input id="rq-time" value="${esc(b.eventTime || '')}"></div>
+        </div>
+        <div class="field"><label>Why</label>
+          <input id="rq-reason" placeholder="e.g. the customer rang and asked to move it"></div>
+        <button type="button" class="btn btn-primary btn-sm" id="rq-send">Send the request</button>
+        ` : ''}`,
+    extraFoot: wa
+      ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>`
+      : '',
+  });
+
+  const send = $('#rq-send');
+  if (!send) return;
+  send.addEventListener('click', async () => {
+    const fields = {};
+    const date = $('#rq-date').value;
+    const time = $('#rq-time').value.trim();
+    if (date && date !== b.eventDate) fields.eventDate = date;
+    if (time !== (b.eventTime || '')) fields.eventTime = time;
+    if (!Object.keys(fields).length) { toast('Nothing changed.', 'bad'); return; }
+
+    send.disabled = true;
+    try {
+      await api('/admin/api/changes', {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: 'booking', targetId: b.id, fields, reason: $('#rq-reason').value.trim(),
+        }),
+      });
+      $('#sheet').close();
+      toast('Sent \u2014 the owner will see it under Approvals', 'good');
+    } catch (e) {
+      send.disabled = false;
+      toast(e.message, 'bad');
+    }
+  });
+}
+
+// ================================================================ SALARIES
+//
+// What the team is owed and what has gone out. Owner only, and behind the
+// role rather than a permission that could be ticked on by mistake: what
+// one person earns is not the business of the next.
+
+function renderSalaries() {
+  const el = $('#view-salaries');
+  const data = state.salaries;
+
+  if (!data) {
+    el.innerHTML = '<div class="empty">Loading\u2026</div>';
+    api('/admin/api/salaries').then((d) => { state.salaries = d; renderSalaries(); }).catch(() => {});
+    return;
+  }
+
+  const owed = data.staff.reduce((sum, p) => sum + p.owed, 0);
+
+  el.innerHTML = `
+    <div class="grid grid-stats" style="margin-bottom:18px">
+      <div class="stat"><div class="stat-label">Paid out, all time</div>
+        <div class="stat-value">${tk(data.totalPaid)}</div></div>
+      <div class="stat ${owed ? 'is-warn' : 'is-good'}"><div class="stat-label">Still owed</div>
+        <div class="stat-value">${tk(owed)}</div></div>
+      <div class="stat"><div class="stat-label">On the team</div>
+        <div class="stat-value">${data.staff.filter((p) => p.active).length}</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-pad" style="border-bottom:1px solid var(--line)">
+        <h2 class="section-title" style="margin:0">Each person</h2>
+        <p class="hint" style="margin:6px 0 0">
+          Set what you agreed each month, then record each payment as it goes out.</p>
+      </div>
+      ${data.staff.length ? `<div class="tablewrap"><table class="tbl">
+        <thead><tr><th>Name</th><th class="num">Monthly</th><th class="num">Agreed</th>
+          <th class="num">Paid</th><th class="num">Owed</th><th></th></tr></thead>
+        <tbody>${data.staff.map((p) => `
+          <tr>
+            <td><strong>${esc(p.name)}</strong>${p.active ? '' : '<br><span class="pill pill-cancelled">Blocked</span>'}</td>
+            <td class="num">${p.monthly ? tk(p.monthly) : '\u2014'}</td>
+            <td class="num">${tk(p.totalAgreed)}</td>
+            <td class="num">${tk(p.totalPaid)}</td>
+            <td class="num" style="${p.owed ? 'color:var(--warn);font-weight:700' : ''}">${p.owed ? tk(p.owed) : '\u2014'}</td>
+            <td class="num" style="white-space:nowrap">
+              <button class="btn btn-sm" data-monthly="${esc(p.userId)}">Set monthly</button>
+              <button class="btn btn-sm" data-agree="${esc(p.userId)}">Add month</button>
+              <button class="btn btn-sm btn-primary" data-pay="${esc(p.userId)}">Pay</button>
+            </td>
+          </tr>`).join('')}
+        </tbody></table></div>`
+        : '<div class="empty"><strong>Nobody on the team yet</strong>Add someone under Team and they appear here.</div>'}
+    </div>
+
+    ${data.records.length ? `
+      <div class="card">
+        <div class="card-pad" style="border-bottom:1px solid var(--line)">
+          <h2 class="section-title" style="margin:0">Everything recorded</h2>
+        </div>
+        <div class="tablewrap"><table class="tbl">
+          <thead><tr><th>Date</th><th>Who</th><th>What</th><th class="num">Amount</th><th></th></tr></thead>
+          <tbody>${data.records.map((r) => `
+            <tr>
+              <td>${esc(humanDate(r.date))}<br><span style="font-size:11.5px;color:var(--muted)">${esc(r.month)}</span></td>
+              <td>${esc(r.name)}</td>
+              <td><span class="pill ${r.kind === 'paid' ? 'pill-completed' : 'pill-confirmed'}">${r.kind === 'paid' ? 'Paid out' : 'Agreed'}</span>
+                ${r.note ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(r.note)}</span>` : ''}</td>
+              <td class="num" style="font-weight:700">${tk(r.amount)}</td>
+              <td class="num"><button class="btn btn-sm btn-ghost" data-del-salary="${esc(r.id)}">Remove</button></td>
+            </tr>`).join('')}
+          </tbody></table></div>
+      </div>` : ''}`;
+
+  const person = (id) => data.staff.find((p) => p.userId === id);
+
+  $$('[data-monthly]', el).forEach((b) => b.addEventListener('click', () => {
+    const p = person(b.dataset.monthly);
+    openSheet({
+      title: `${p.name} \u2014 monthly salary`,
+      body: `<div class="field"><label>Agreed each month (\u09f3)</label>
+        <input id="sal-monthly" type="number" min="0" step="500" value="${p.monthly || ''}" autofocus></div>
+        <p class="hint" style="margin:0">This is only the figure to remember. Nothing is recorded until you add a month.</p>`,
+      saveLabel: 'Save',
+      onSave: async (root) => {
+        await api(`/admin/api/staff/${encodeURIComponent(p.userId)}/salary`, {
+          method: 'PUT', body: JSON.stringify({ monthlySalary: Number($('#sal-monthly', root).value || 0) }),
+        });
+        state.salaries = null;
+        renderSalaries();
+        toast('Saved', 'good');
+      },
+    });
+  }));
+
+  $$('[data-agree]', el).forEach((b) => b.addEventListener('click', () => salaryDialog(person(b.dataset.agree), 'agreed')));
+  $$('[data-pay]', el).forEach((b) => b.addEventListener('click', () => salaryDialog(person(b.dataset.pay), 'paid')));
+
+  $$('[data-del-salary]', el).forEach((b) => b.addEventListener('click', async () => {
+    const ok = await confirmDialog('Remove this salary record?', 'Remove');
+    if (!ok) return;
+    try {
+      await api('/admin/api/salaries/' + encodeURIComponent(b.dataset.delSalary), { method: 'DELETE' });
+      state.salaries = null;
+      renderSalaries();
+      toast('Removed', 'good');
+    } catch (e) { toast(e.message, 'bad'); }
+  }));
+
+  $('#topbar-actions').innerHTML = '';
+}
+
+function salaryDialog(person, kind) {
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  openSheet({
+    title: kind === 'paid' ? `Pay ${person.name}` : `Add a month for ${person.name}`,
+    body: `
+      <div class="field-row">
+        <div class="field"><label>Amount (\u09f3)</label>
+          <input id="sal-amt" type="number" min="1" step="100" value="${kind === 'agreed' ? (person.monthly || '') : (person.owed || person.monthly || '')}" autofocus></div>
+        <div class="field"><label>Month</label><input id="sal-month" type="month" value="${thisMonth}"></div>
+      </div>
+      <div class="field"><label>Date</label><input id="sal-date" type="date" value="${today()}"></div>
+      <div class="field"><label>Note</label><input id="sal-note" placeholder="${kind === 'paid' ? 'e.g. bKash' : 'e.g. full month'}"></div>
+      <p class="hint" style="margin:0">
+        ${kind === 'paid'
+          ? 'Recorded as money going out. It counts against the profit figure.'
+          : 'What you owe them for that month. Nothing has been paid yet.'}
+      </p>`,
+    saveLabel: kind === 'paid' ? 'Record payment' : 'Add month',
+    onSave: async (root) => {
+      const amount = Number($('#sal-amt', root).value || 0);
+      if (!amount) { toast('Enter an amount.', 'bad'); return false; }
+      await api('/admin/api/salaries', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: person.userId, kind, amount,
+          month: $('#sal-month', root).value,
+          date: $('#sal-date', root).value,
+          note: $('#sal-note', root).value,
+        }),
+      });
+      state.salaries = null;
+      renderSalaries();
+      toast(kind === 'paid' ? 'Payment recorded' : 'Month added', 'good');
     },
   });
 }
@@ -1598,7 +2028,10 @@ function renderAccounts() {
 
     <div class="grid grid-2">
       <div class="card">
-        <div class="card-pad" style="border-bottom:1px solid var(--line)"><h2 class="section-title" style="margin:0">Money in</h2></div>
+        <div class="card-pad" style="display:flex;align-items:center;border-bottom:1px solid var(--line)">
+          <h2 class="section-title" style="margin:0">Money in</h2>
+          <button class="btn btn-sm btn-primary" style="margin-left:auto" id="pay-add">+ Add payment</button>
+        </div>
         ${income.length ? `<div class="tablewrap"><table class="tbl">
           <thead><tr><th>Date</th><th>From</th><th class="num">Amount</th></tr></thead>
           <tbody>${income.slice(0, 40).map((p) => `
@@ -1629,6 +2062,7 @@ function renderAccounts() {
   wireBookingRows(el);
 
   $('#ex-add', el).addEventListener('click', () => addCost(renderAccounts));
+  $('#pay-add', el).addEventListener('click', () => addPayment(renderAccounts));
 
   $$('[data-ex]', el).forEach((btn) => btn.addEventListener('click', async () => {
     const ok = await confirmDialog('Remove this cost from your accounts?', 'Remove');

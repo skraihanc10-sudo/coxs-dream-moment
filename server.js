@@ -2894,6 +2894,255 @@ app.post('/admin/api/chats/:customerId', requireAuth, allow('chat'), async (req,
     'Open the conversation', `${SITE_URL}/my-bookings`)).catch(() => {});
 });
 
+/** Records money received against a booking, from the Accounts screen
+ *  rather than from inside the booking editor.
+ *
+ *  The same payment list either way — there is one record of what a
+ *  customer has paid, and a second place to keep it would be a second place
+ *  for it to be wrong. */
+app.post('/admin/api/bookings/:id/payment', requireOwner, async (req, res) => {
+  const body = req.body || {};
+  const amount = money(body.amount);
+  if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
+
+  const store = readBookings();
+  const index = store.bookings.findIndex((b) => b.id === req.params.id);
+  if (index < 0) return res.status(404).json({ error: 'Booking not found.' });
+
+  const previous = JSON.parse(JSON.stringify(store.bookings[index]));
+  const booking = store.bookings[index];
+  booking.payments = booking.payments || [];
+  booking.payments.push({
+    id: 'p' + Date.now(),
+    date: text(body.date, 20) || new Date().toISOString().slice(0, 10),
+    amount,
+    method: PAYMENT_METHODS.includes(body.method) ? body.method : 'Cash',
+    note: text(body.note, 200),
+  });
+  booking.updatedAt = new Date().toISOString();
+  writeJSON(BOOKINGS_FILE, store);
+
+  res.json({ ok: true, booking: withTotals(booking) });
+
+  // The customer is told, the same as if it had been entered in the editor.
+  mailBookingUpdated(booking, previous).catch(() => {});
+  if (booking.customerId) {
+    pushCustomer(booking.customerId, {
+      title: 'Payment received',
+      body: `৳${amount.toLocaleString('en-IN')} against ${booking.id}`,
+      url: '/my-bookings',
+      tag: 'booking-' + booking.id,
+    });
+  }
+});
+
+// ---------------------------------------------------------------- salaries
+//
+// What the team is owed and what has been paid. Owner only — not behind a
+// permission that could be ticked on by mistake, but behind the role
+// itself. What one person earns is not the business of the next.
+//
+// Kept apart from expenses so the profit figure still works: a salary is a
+// cost, and it is counted as one, but it is recorded here where it can be
+// read per person and per month.
+
+const SALARY_FILE = path.join(CONTENT_DIR, 'salaries.json');
+
+function readSalaries() {
+  const data = readJSON(SALARY_FILE, null);
+  if (data && Array.isArray(data.records)) return data;
+  return { records: [] };
+}
+
+/** A month as 2026-09. Everything here is grouped by it, because a salary
+ *  is a monthly thing even when it is paid in pieces. */
+const monthKey = (iso) => String(iso || '').slice(0, 7);
+
+app.get('/admin/api/salaries', requireOwner, (req, res) => {
+  const store = readSalaries();
+  const staff = readUsers().users.filter((u) => u.role === 'staff');
+
+  // One row per person per month, with what was agreed and what has gone out.
+  const byPerson = staff.map((u) => {
+    const mine = store.records.filter((r) => r.userId === u.id);
+    const agreed = mine.filter((r) => r.kind === 'agreed');
+    const paid = mine.filter((r) => r.kind === 'paid');
+
+    const months = {};
+    for (const r of mine) {
+      const key = monthKey(r.month || r.date);
+      months[key] = months[key] || { month: key, agreed: 0, paid: 0 };
+      months[key][r.kind === 'agreed' ? 'agreed' : 'paid'] += money(r.amount);
+    }
+
+    const totalAgreed = agreed.reduce((sum, r) => sum + money(r.amount), 0);
+    const totalPaid = paid.reduce((sum, r) => sum + money(r.amount), 0);
+
+    return {
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+      active: u.active !== false,
+      monthly: money(u.monthlySalary),
+      totalAgreed,
+      totalPaid,
+      owed: Math.max(totalAgreed - totalPaid, 0),
+      months: Object.values(months).sort((a, b) => b.month.localeCompare(a.month)).slice(0, 12),
+    };
+  });
+
+  res.json({
+    staff: byPerson,
+    records: store.records.slice(0, 200),
+    totalPaid: store.records.filter((r) => r.kind === 'paid')
+      .reduce((sum, r) => sum + money(r.amount), 0),
+  });
+});
+
+app.post('/admin/api/salaries', requireOwner, (req, res) => {
+  const body = req.body || {};
+  const user = readUsers().users.find((u) => u.id === text(body.userId, 60) && u.role === 'staff');
+  if (!user) return res.status(404).json({ error: 'That team member was not found.' });
+
+  const amount = money(body.amount);
+  if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
+
+  const kind = body.kind === 'agreed' ? 'agreed' : 'paid';
+  const date = text(body.date, 20) || new Date().toISOString().slice(0, 10);
+
+  const store = readSalaries();
+  store.records.unshift({
+    id: 's' + Date.now() + crypto.randomBytes(3).toString('hex'),
+    userId: user.id,
+    name: user.name,
+    kind,
+    amount,
+    date,
+    month: monthKey(body.month || date),
+    note: text(body.note, 200),
+    at: new Date().toISOString(),
+  });
+  writeJSON(SALARY_FILE, store);
+  res.json({ ok: true });
+});
+
+app.delete('/admin/api/salaries/:id', requireOwner, (req, res) => {
+  const store = readSalaries();
+  const before = store.records.length;
+  store.records = store.records.filter((r) => r.id !== req.params.id);
+  if (store.records.length === before) return res.status(404).json({ error: 'Not found.' });
+  writeJSON(SALARY_FILE, store);
+  res.json({ ok: true });
+});
+
+/** The monthly figure agreed with somebody, kept on their account so it is
+ *  there when a month is generated rather than typed again each time. */
+app.put('/admin/api/staff/:id/salary', requireOwner, (req, res) => {
+  const store = readUsers();
+  const user = store.users.find((u) => u.id === req.params.id && u.role === 'staff');
+  if (!user) return res.status(404).json({ error: 'Not found.' });
+  user.monthlySalary = money((req.body || {}).monthlySalary);
+  writeJSON(USERS_FILE, store);
+  res.json({ ok: true, monthlySalary: user.monthlySalary });
+});
+
+// ---------------------------------------------------------------- one customer
+//
+// Everything about one person in one place: their bookings, every taka that
+// has come in from them, what is still owed, and the conversation.
+
+app.get('/admin/api/customers/:id', requireOwner, (req, res) => {
+  const user = readUsers().users.find((u) => u.id === req.params.id && u.role === 'customer');
+  if (!user) return res.status(404).json({ error: 'Customer not found.' });
+
+  const bookings = readBookings().bookings.filter((b) => b.customerId === user.id);
+
+  // One list, in the order things happened, so a disagreement about what
+  // was paid can be settled by reading down it.
+  const ledger = [];
+  for (const b of bookings) {
+    ledger.push({
+      kind: 'booking',
+      at: b.createdAt,
+      bookingId: b.id,
+      label: b.packageName || 'Booking',
+      amount: money(b.price),
+      status: b.status,
+    });
+    for (const p of b.payments || []) {
+      ledger.push({
+        kind: 'payment',
+        at: p.date,
+        bookingId: b.id,
+        label: p.method + (p.note ? ' — ' + p.note : ''),
+        amount: money(p.amount),
+      });
+    }
+  }
+  ledger.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+
+  // Costs somebody tagged to one of their bookings.
+  const ids = new Set(bookings.map((b) => b.id));
+  const costs = readExpenses().expenses.filter((e) => e.bookingId && ids.has(e.bookingId));
+
+  const paid = bookings.reduce((sum, b) => sum + bookingPaid(b), 0);
+  const booked = bookings.filter((b) => b.status !== 'cancelled')
+    .reduce((sum, b) => sum + money(b.price), 0);
+  const due = bookings.filter((b) => b.status !== 'cancelled')
+    .reduce((sum, b) => sum + bookingDue(b), 0);
+  const spent = costs.reduce((sum, e) => sum + money(e.amount), 0);
+
+  const thread = readChats().threads.find((t) => t.customerId === user.id);
+
+  res.json({
+    customer: {
+      id: user.id, name: user.name, phone: user.phone, email: user.email,
+      createdAt: user.createdAt, hasGoogle: !!user.googleId,
+    },
+    bookings: bookings.map(withTotals),
+    ledger,
+    costs,
+    messages: thread ? thread.messages.length : 0,
+    totals: { booked, paid, due, spent, profit: paid - spent },
+  });
+});
+
+// ---------------------------------------------------------------- deleting a chat
+//
+// Owner only. A conversation is the record of what was promised to a
+// customer, and staff should not be able to make an awkward one disappear.
+
+app.delete('/admin/api/chats/:customerId', requireOwner, (req, res) => {
+  const store = readChats();
+  const before = store.threads.length;
+  store.threads = store.threads.filter((t) => t.customerId !== req.params.customerId);
+  if (store.threads.length === before) return res.status(404).json({ error: 'Nothing to delete.' });
+  writeJSON(CHAT_FILE, store);
+  res.json({ ok: true });
+});
+
+app.delete('/admin/api/chats/:customerId/:messageId', requireOwner, (req, res) => {
+  const store = readChats();
+  const thread = store.threads.find((t) => t.customerId === req.params.customerId);
+  if (!thread) return res.status(404).json({ error: 'Not found.' });
+
+  const before = thread.messages.length;
+  thread.messages = thread.messages.filter((m) => m.id !== req.params.messageId);
+  if (thread.messages.length === before) return res.status(404).json({ error: 'Not found.' });
+
+  writeJSON(CHAT_FILE, store);
+  res.json({ ok: true, messages: thread.messages.map(publicMessage) });
+});
+
+app.delete('/admin/api/team-chat/:messageId', requireOwner, (req, res) => {
+  const store = readTeamChat();
+  const before = store.messages.length;
+  store.messages = store.messages.filter((m) => m.id !== req.params.messageId);
+  if (store.messages.length === before) return res.status(404).json({ error: 'Not found.' });
+  writeJSON(TEAM_FILE, store);
+  res.json({ ok: true, messages: store.messages.slice(-120) });
+});
+
 // ---------------------------------------------------------------- image upload
 const upload = multer({
   storage: multer.diskStorage({

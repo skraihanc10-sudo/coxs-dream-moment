@@ -441,23 +441,32 @@
           ? '<figure class="pay-qr"><img src="' + esc(pay.qr_image) + '" alt="Scan to pay">' +
             '<figcaption>Scan with bKash, Nagad or your bank app</figcaption></figure>'
           : '') +
-        '<div class="pay-methods">' +
-          methods.map((m, i) => '' +
-            '<label class="pay-method" for="pm-' + i + '">' +
-              '<input type="radio" name="paymethod" id="pm-' + i + '" value="' + esc(m.type || m.label) + '"' +
-                (i === 0 ? ' checked' : '') + '>' +
-              '<span class="pay-tick"></span>' +
-              '<span class="pay-text">' +
-                '<span class="pay-label">' + esc(m.label || m.type) + '</span>' +
-                (m.number ? '<span class="pay-number">' + esc(m.number) + '</span>' : '') +
-                (m.note ? '<span class="pay-note">' + esc(m.note) + '</span>' : '') +
-              '</span>' +
-              (m.number ? '<button type="button" class="pay-copy" data-copy="' + esc(m.number) + '">Copy</button>' : '') +
-            '</label>').join('') +
-        '</div>' +
+        (methods.length
+          ? '<div class="pay-methods">' +
+              methods.map((m, i) => '' +
+                '<label class="pay-method" for="pm-' + i + '">' +
+                  '<input type="radio" name="paymethod" id="pm-' + i + '" value="' + esc(m.type || m.label) + '"' +
+                    (i === 0 ? ' checked' : '') + '>' +
+                  '<span class="pay-tick"></span>' +
+                  '<span class="pay-text">' +
+                    '<span class="pay-label">' + esc(m.label || m.type) + '</span>' +
+                    (m.number ? '<span class="pay-number">' + esc(m.number) + '</span>' : '') +
+                    (m.note ? '<span class="pay-note">' + esc(m.note) + '</span>' : '') +
+                  '</span>' +
+                  (m.number ? '<button type="button" class="pay-copy" data-copy="' + esc(m.number) + '">Copy</button>' : '') +
+                '</label>').join('') +
+            '</div>'
+          : '') +
         (pay.advance_note ? '<p class="bk-sub" style="margin:0 0 16px">' + esc(pay.advance_note) + '</p>' : '') +
         '<div class="bk-row">' +
           field('bk-paid', 'How much did you send', 'number', advance ? String(advance) : '', false) +
+          '<div class="bk-field"><label for="bk-app">Which app did you use</label>' +
+            '<select id="bk-app">' +
+              ['bKash', 'Nagad', 'Rocket', 'Bank transfer', 'Something else']
+                .map((n) => '<option>' + n + '</option>').join('') +
+            '</select></div>' +
+        '</div>' +
+        '<div class="bk-row">' +
           '<div class="bk-field"><label for="bk-receipt">Payment screenshot <span class="opt">optional</span></label>' +
             '<input id="bk-receipt" type="file" accept="image/jpeg,image/png,image/webp">' +
             '<span class="help" id="bk-receipt-note">Only we can see it. It is not shown anywhere on the site.</span>' +
@@ -620,7 +629,10 @@
             occasion: value('bk-occasion'),
             note: notes,
             receipt: uploadedReceipt,
-            paymentMethod: (document.querySelector('input[name="paymethod"]:checked') || {}).value || '',
+            // Whichever account they picked, or — with only a QR published —
+            // simply which app they paid from.
+            paymentMethod: (document.querySelector('input[name="paymethod"]:checked') || {}).value
+              || value('bk-app') || '',
             paidAmount: value('bk-paid'),
           }),
         });
