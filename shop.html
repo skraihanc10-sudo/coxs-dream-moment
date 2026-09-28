@@ -98,10 +98,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
         Cox's Bazar
       </div>
-      <a href="#" class="header-action">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 000-7.8z"/></svg>
-        <span>Saved</span>
-      </a>
       <a href="contact" class="header-action">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <span>Contact</span>
@@ -113,10 +109,11 @@
 
   <div class="nav-bar">
     <div class="container">
-      <a href="/" class="nav-link active" data-cat="all">All packages</a>
+      <a href="/" class="nav-link active" data-cat="all">Decoration Packages</a>
       <a href="gallery" class="nav-link">Gallery</a>
       <a href="contact" class="nav-link">Contact</a>
       <a href="my-bookings" class="nav-link">My bookings</a>
+      <a href="how-to-pay" class="nav-link">How to pay</a>
     </div>
   </div>
 </header>
@@ -125,11 +122,12 @@
   <button class="close-btn">&times;</button>
   <img class="mobile-menu-logo" src="images/logo.png" alt="Cox's Dream Moment"
        width="200" height="52" onerror="this.hidden=true;">
-  <a href="/">All packages</a>
+  <a href="/">Decoration Packages</a>
   <div id="mm-categories"></div>
   <a href="gallery">Gallery</a>
   <a href="contact">Contact</a>
   <a href="my-bookings">My bookings</a>
+  <a href="how-to-pay">How to pay</a>
   <a href="tel:+8801347059522">Call us</a>
 </div>
 
@@ -144,7 +142,10 @@
     <p class="sub" id="hero-sub">Golden light, flowers on the sand, and everything arranged before you arrive. Book your evening on Cox&rsquo;s Bazar beach.</p>
     <div class="hero-actions">
       <a href="#featured-grid" class="btn-cta" id="hero-cta">See the packages</a>
-      <a href="contact" class="btn-hero-ghost">Check a date</a>
+      <!-- Was "Check a date", which went to the contact form and asked people
+           to do the same thing the packages already do. Photography is the
+           second thing anyone wants, so that is what the second button is. -->
+      <a href="#media" class="btn-hero-ghost">Drone &amp; video</a>
     </div>
     <ul class="hero-points" aria-label="What is included">
       <li>Setup, photography and video</li>
@@ -157,7 +158,7 @@
 <!-- ===================== PRODUCT GRID ===================== -->
 <section class="container featured-section" id="featured-grid" hidden>
   <div class="section-head">
-    <p class="eyebrow">Our most booked</p>
+    <p class="eyebrow">Most popular</p>
     <h2>Where most people start</h2>
     <p>Four setups that cover the range, from the simplest to the full production. Message us for the price on any of them — it depends on your date, your group and what you add.</p>
   </div>
@@ -165,6 +166,12 @@
 </section>
 
 <section class="container" id="shop-grid">
+    <div class="shop-grid-head">
+      <span class="eyebrow">Every setup</span>
+      <h2>Decoration packages</h2>
+      <p>Five setups on Cox&rsquo;s Bazar beach, from the simplest corner on the sand
+         to the full layout. Photography can be added to any of them.</p>
+    </div>
   <div class="section-head" id="all-head">
     <p class="eyebrow">The full range</p>
     <h2>Every package we set up</h2>
@@ -179,7 +186,7 @@
 <!-- ===================== TRUST STRIP ===================== -->
 <!-- Photo and video services. Filled by content.js from the packages
      marked kind:"media", and hidden entirely if there are none. -->
-<section class="media-section">
+<section class="media-section" id="media">
   <div class="container">
     <div class="media-head">
       <span class="eyebrow">New service</span>
@@ -254,7 +261,7 @@
       </div>
       <div class="footer-col">
         <h4>Pages</h4>
-        <a href="/">All packages</a>
+        <a href="/">Decoration Packages</a>
         <a href="gallery">Gallery</a>
         <a href="contact">Contact</a>
       </div>
@@ -281,5 +288,8 @@
 
 <script src="content.js"></script>
 <script src="script.js"></script>
+<!-- Live chat. Opens in place; anyone can start one, and an account is
+     made from whatever they give us. -->
+<script src="livechat.js" defer></script>
 </body>
 </html>

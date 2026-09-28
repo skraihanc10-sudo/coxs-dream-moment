@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Confirm your booking | Cox's Dream Moment</title>
+<link rel="icon" href="images/favicon.png" type="image/png">
+<meta name="theme-color" content="#0D1B2A">
+<link rel="stylesheet" href="style.css">
+<style>
+/* ==========================================================================
+   Confirming a booking.
+
+   Its own page, not the contact form. Someone who has chosen a package and
+   is ready to pay should not land on a page headed "Contact us" that asks
+   the same questions again.
+
+   One column, ordered the way the decision is made: what you are buying,
+   who you are, how to pay, proof that you did.
+   ========================================================================== */
+.bk-page { background: var(--sand, #FBF7F1); padding: 34px 0 70px; }
+.bk-wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+
+.bk-head { margin-bottom: 26px; }
+.bk-head h1 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: clamp(26px, 5vw, 34px);
+  margin: 6px 0 8px;
+  text-wrap: balance;
+}
+.bk-head p { margin: 0; color: var(--ink-2, #6B7A93); line-height: 1.65; font-size: 15px; }
+
+.bk-card {
+  background: #fff;
+  border: 1px solid var(--line, #E7E2D8);
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 16px;
+}
+.bk-card h2 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+.bk-card .bk-sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--ink-2, #6B7A93);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------- summary */
+.bk-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line, #E7E2D8);
+}
+.bk-line:last-of-type { border-bottom: 0; }
+.bk-line img {
+  width: 54px; height: 54px;
+  border-radius: 10px; object-fit: cover;
+  background: var(--sand-2, #F6EFE6); flex: 0 0 54px;
+}
+.bk-line img.is-placeholder { object-fit: contain; padding: 9px; opacity: .5; }
+.bk-line .bl-text { flex: 1; min-width: 0; }
+.bk-line .bl-name { font-size: 14.5px; font-weight: 600; display: block; line-height: 1.35; }
+.bk-line .bl-sub { font-size: 12px; color: var(--ink-2, #6B7A93); }
+.bk-line .bl-price { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bk-line .bl-price .was {
+  display: block; font-size: 12px; font-weight: 500;
+  color: var(--ink-2, #6B7A93); text-decoration: line-through;
+}
+
+.bk-totals { margin-top: 16px; padding-top: 16px; border-top: 2px solid var(--line, #E7E2D8); }
+.bk-total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-size: 15px; }
+.bk-total-row.is-grand { font-size: 17px; font-weight: 700; }
+.bk-total-row span:last-child { font-variant-numeric: tabular-nums; }
+
+.bk-advance {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FDEEE8, #FBF2DE);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bk-advance b {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: 27px;
+  color: var(--coral, #E2613C);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.bk-advance span { font-size: 13.5px; line-height: 1.5; font-weight: 600; }
+.bk-advance small { display: block; font-weight: 400; color: var(--ink-2, #6B7A93); font-size: 12.5px; margin-top: 2px; }
+
+/* ------------------------------------------------------------- form */
+.bk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bk-field { margin-bottom: 14px; }
+.bk-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--ink-2, #6B7A93);
+  margin-bottom: 6px;
+}
+.bk-field label .opt {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 11px;
+  background: rgba(13, 27, 42, .05);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+}
+.bk-field input, .bk-field select, .bk-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line, #E7E2D8);
+  border-radius: 10px;
+  font: inherit;
+  background: #fff;
+}
+.bk-field textarea { resize: vertical; min-height: 76px; }
+.bk-field .help { display: block; margin-top: 5px; font-size: 12.5px; color: var(--ink-2, #6B7A93); line-height: 1.5; }
+.bk-field.has-error input { border-color: #CE3B4E; }
+.bk-error { display: block; margin-top: 5px; font-size: 12.5px; color: #CE3B4E; font-weight: 600; }
+
+/* ------------------------------------------------------------- payment */
+.pay-methods { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.pay-method {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 1px solid var(--line, #E7E2D8);
+  border-radius: 13px;
+  cursor: pointer;
+  background: #fff;
+}
+.pay-method:has(input:checked) { border-color: var(--coral, #E2613C); background: #FDF6F3; }
+.pay-method input { position: absolute; opacity: 0; pointer-events: none; }
+.pay-tick {
+  flex: 0 0 18px; width: 18px; height: 18px;
+  border-radius: 50%; border: 2px solid #C9C0B2; position: relative;
+}
+.pay-method input:checked ~ .pay-tick { border-color: var(--coral, #E2613C); }
+.pay-method input:checked ~ .pay-tick::after {
+  content: ""; position: absolute; inset: 3px;
+  border-radius: 50%; background: var(--coral, #E2613C);
+}
+.pay-text { flex: 1; min-width: 0; }
+.pay-label { font-size: 14px; font-weight: 600; display: block; }
+.pay-number {
+  font-size: 16px; font-weight: 700; letter-spacing: .01em;
+  font-variant-numeric: tabular-nums; word-break: break-all;
+}
+.pay-note { font-size: 12px; color: var(--ink-2, #6B7A93); line-height: 1.45; }
+.pay-copy {
+  flex: 0 0 auto;
+  border: 1px solid rgba(13, 27, 42, .12);
+  background: #fff; border-radius: 8px; padding: 6px 12px;
+  font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.pay-copy:hover { border-color: var(--coral, #E2613C); color: var(--coral, #E2613C); }
+
+.pay-qr { text-align: center; margin: 0 0 18px; }
+.pay-qr img {
+  width: 190px; max-width: 70%; height: auto;
+  border-radius: 14px; border: 1px solid var(--line, #E7E2D8); background: #fff;
+}
+.pay-qr figcaption { font-size: 12.5px; color: var(--ink-2, #6B7A93); margin-top: 8px; }
+
+.bk-submit {
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--coral, #E2613C);
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bk-submit:hover { background: #CE5433; }
+.bk-submit:disabled { opacity: .6; cursor: default; }
+
+.bk-wa {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; margin-top: 10px; padding: 14px;
+  border: 1px solid #25D366; border-radius: 14px;
+  background: #fff; color: #128C4A;
+  font: inherit; font-size: 15px; font-weight: 700; text-decoration: none;
+}
+.bk-wa svg { width: 19px; height: 19px; fill: currentColor; }
+
+.bk-alert {
+  padding: 14px 16px; border-radius: 12px;
+  font-size: 14px; line-height: 1.6; margin-bottom: 16px;
+}
+.bk-alert.bad { background: #FCE9EC; color: #9E2B3C; }
+
+/* ------------------------------------------------------------- done */
+.bk-done { text-align: center; padding: 20px 0 10px; }
+.bk-done .tick {
+  width: 66px; height: 66px; border-radius: 50%;
+  background: #E3F5EE; display: grid; place-items: center; margin: 0 auto 18px;
+}
+.bk-done .tick svg { width: 30px; height: 30px; fill: none; stroke: #14926B; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.bk-done h1 { font-family: var(--display, 'Fraunces', Georgia, serif); font-size: 28px; margin: 0 0 10px; }
+.bk-done p { color: var(--ink-2, #6B7A93); line-height: 1.7; margin: 0 auto 8px; max-width: 460px; }
+.bk-done .bk-id {
+  display: inline-block; margin: 14px 0 20px;
+  font-family: var(--display, 'Fraunces', Georgia, serif); font-size: 22px; font-weight: 700;
+  background: var(--sand-2, #F6EFE6); border-radius: 12px; padding: 10px 22px;
+}
+.bk-done .btn-cta { display: inline-block; }
+
+@media (max-width: 560px) {
+  .bk-row { grid-template-columns: 1fr; gap: 0; }
+  .bk-card { padding: 18px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>Serving all of Cox’s Bazar 🌊</span>
+    <span class="topbar-sep">•</span>
+    <a href="https://wa.me/8801347059522" target="_blank" rel="noopener">+880 1347-059522</a>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="container header-main">
+    <a href="/" class="brand">
+      <span class="brand-text">
+        <span class="name">Cox's Dream Moment</span>
+        <span class="tag">Your Dream Moment</span>
+      </span>
+    </a>
+    <div class="header-actions">
+      <a href="/" class="header-action">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span>Back</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="bk-page">
+  <div class="bk-wrap" id="bk-root">
+    <div class="bk-head">
+      <h1>Loading&hellip;</h1>
+    </div>
+  </div>
+</main>
+
+<script src="content.js"></script>
+<script>
+(function () {
+  const root = document.getElementById('bk-root');
+
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const tk = (n) => '৳' + Math.round(n).toLocaleString('en-IN');
+
+  // A Bangladeshi number can be typed three ways; all three are the same
+  // person, so it is stored in one shape.
+  function tidyPhone(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.startsWith('880')) return '+' + digits;
+    if (digits.startsWith('0')) return '+88' + digits;
+    if (digits.length === 10) return '+880' + digits;
+    return String(value || '').trim();
+  }
+
+  const q = new URLSearchParams(location.search);
+  let uploadedReceipt = '';
+
+  // The same arithmetic content.js does, so nobody is quoted two figures.
+  function priceOf(pkg) {
+    const full = Number(pkg.price_amount) || 0;
+    const pct = Math.min(Math.max(Number(pkg.discount_percent) || 0, 0), 95);
+    if (full > 0) {
+      const now = Math.round(full * (1 - pct / 100));
+      return { has: true, amount: now, now: tk(now), was: pct > 0 ? tk(full) : '', off: pct };
+    }
+    if (pkg.price) return { has: true, amount: 0, now: pkg.price, was: pkg.old_price || '', off: 0 };
+    return { has: false, amount: 0, now: '', was: '', off: 0 };
+  }
+
+  const ADVANCE_PERCENT = 20;
+
+  Promise.all([
+    fetch('content/packages.json', { cache: 'no-cache' }).then((r) => r.json()).catch(() => ({ packages: [] })),
+    fetch('/api/payment-info', { cache: 'no-cache' }).then((r) => r.json()).catch(() => null),
+  ]).then(([catalogue, pay]) => start(catalogue.packages || [], pay || { methods: [] }));
+
+  function start(packages, pay) {
+    const main = packages.find((p) => p.slug === q.get('package'));
+    const extraSlugs = (q.get('extras') || '').split(',').filter(Boolean);
+    const extras = extraSlugs.map((s) => packages.find((p) => p.slug === s)).filter(Boolean);
+
+    if (!main && !extras.length) {
+      root.innerHTML =
+        '<div class="bk-head"><h1>Nothing chosen yet</h1>' +
+        '<p>Pick a package first and the confirmation page will know what you want.</p></div>' +
+        '<a class="btn-cta" href="/">See the packages</a>';
+      return;
+    }
+
+    const chosen = (main ? [main] : []).concat(extras);
+    const total = chosen.reduce((sum, p) => sum + priceOf(p).amount, 0);
+    const anyOnRequest = chosen.some((p) => !priceOf(p).has || !priceOf(p).amount);
+    const advance = Math.round(total * ADVANCE_PERCENT / 100);
+
+    root.innerHTML = summaryHTML(chosen, total, advance, anyOnRequest)
+      + formHTML(pay, advance, anyOnRequest);
+
+    wire(chosen, main, extras, total, advance, pay);
+  }
+
+  // ---------------------------------------------------------------- markup
+
+  function summaryHTML(chosen, total, advance, anyOnRequest) {
+    return '' +
+      '<div class="bk-head">' +
+        '<p class="eyebrow">Almost done</p>' +
+        '<h1>Confirm your booking</h1>' +
+        '<p>Check what you are booking, tell us how to reach you, and send the advance. ' +
+        'We confirm the date as soon as we see it.</p>' +
+      '</div>' +
+
+      '<section class="bk-card">' +
+        '<h2>What you are booking</h2>' +
+        '<p class="bk-sub">Change anything by going back to the package.</p>' +
+        chosen.map(lineHTML).join('') +
+        '<div class="bk-totals">' +
+          '<div class="bk-total-row is-grand"><span>Total</span>' +
+            '<span>' + (total ? tk(total) : 'We will confirm') + '</span></div>' +
+          (anyOnRequest
+            ? '<p class="bk-sub" style="margin:6px 0 0">Some of this is priced when we talk — we will confirm before anything is agreed.</p>'
+            : '') +
+        '</div>' +
+        (advance
+          ? '<div class="bk-advance"><b>' + tk(advance) + '</b>' +
+            '<span>' + ADVANCE_PERCENT + '% advance to hold your date' +
+            '<small>The rest, ' + tk(total - advance) + ', is paid on the day.</small></span></div>'
+          : '') +
+      '</section>';
+  }
+
+  function lineHTML(pkg) {
+    const money = priceOf(pkg);
+    const img = pkg.main_image
+      ? '<img src="' + esc(pkg.main_image) + '" alt="">'
+      : '<img class="is-placeholder" src="images/logo-mark.png" alt="">';
+    return '<div class="bk-line">' + img +
+      '<div class="bl-text">' +
+        '<span class="bl-name">' + esc(pkg.name) + '</span>' +
+        (pkg.code ? '<span class="bl-sub">' + esc(pkg.code) + '</span>' : '') +
+      '</div>' +
+      '<div class="bl-price">' +
+        (money.was ? '<span class="was">' + money.was + '</span>' : '') +
+        (money.has ? money.now : 'On request') +
+      '</div>' +
+    '</div>';
+  }
+
+  function formHTML(pay, advance, anyOnRequest) {
+    const methods = (pay.methods || []).filter((m) => m.number || m.label);
+
+    return '' +
+      '<form id="bk-form" novalidate>' +
+
+      '<section class="bk-card">' +
+        '<h2>Who is this for</h2>' +
+        '<p class="bk-sub">Your number is how we reach you on the day. ' +
+        'An email address gets you the confirmation and lets you check the booking later.</p>' +
+        '<div id="bk-alert"></div>' +
+        '<div class="bk-row">' +
+          field('bk-name', 'Your name', 'text', 'e.g. Rayhan', true) +
+          field('bk-phone', 'Mobile number', 'tel', '01XXXXXXXXX', true) +
+        '</div>' +
+        field('bk-email', 'Email', 'email', 'you@example.com', false,
+              'Your confirmation goes here. Without one we will message you on WhatsApp instead.') +
+      '</section>' +
+
+      '<section class="bk-card">' +
+        '<h2>When</h2>' +
+        '<p class="bk-sub">All optional — leave anything blank and we will settle it with you.</p>' +
+        '<div class="bk-row">' +
+          field('bk-date', 'Preferred date', 'date', '', false) +
+          '<div class="bk-field"><label for="bk-time">Time <span class="opt">optional</span></label>' +
+            '<select id="bk-time">' +
+              '<option value="">We will decide together</option>' +
+              '<option>3:00 PM – 4:00 PM</option>' +
+              '<option>5:00 PM – 6:00 PM (sunset)</option>' +
+              '<option>8:00 PM – 9:00 PM</option>' +
+              '<option>12:00 AM – 1:00 AM</option>' +
+            '</select></div>' +
+        '</div>' +
+        '<div class="bk-row">' +
+          field('bk-people', 'How many people', 'number', '2', false) +
+          '<div class="bk-field"><label for="bk-occasion">Occasion <span class="opt">optional</span></label>' +
+            '<select id="bk-occasion">' +
+              '<option value="">Choose one</option>' +
+              '<option>Proposal</option><option>Birthday</option><option>Anniversary</option>' +
+              '<option>Honeymoon</option><option>Something else</option>' +
+            '</select></div>' +
+        '</div>' +
+        '<div class="bk-field"><label for="bk-note">Anything we should know <span class="opt">optional</span></label>' +
+          '<textarea id="bk-note" rows="3" placeholder="A name on the cake, a song, anything at all"></textarea></div>' +
+      '</section>' +
+
+      (methods.length || pay.qr_image ? '' +
+      '<section class="bk-card">' +
+        '<h2>Send the advance</h2>' +
+        '<p class="bk-sub">' + esc(pay.intro ||
+          'Send the advance to one of these, then attach the screenshot below.') + '</p>' +
+        (pay.qr_image
+          ? '<figure class="pay-qr"><img src="' + esc(pay.qr_image) + '" alt="Scan to pay">' +
+            '<figcaption>Scan with bKash, Nagad or your bank app</figcaption></figure>'
+          : '') +
+        '<div class="pay-methods">' +
+          methods.map((m, i) => '' +
+            '<label class="pay-method" for="pm-' + i + '">' +
+              '<input type="radio" name="paymethod" id="pm-' + i + '" value="' + esc(m.type || m.label) + '"' +
+                (i === 0 ? ' checked' : '') + '>' +
+              '<span class="pay-tick"></span>' +
+              '<span class="pay-text">' +
+                '<span class="pay-label">' + esc(m.label || m.type) + '</span>' +
+                (m.number ? '<span class="pay-number">' + esc(m.number) + '</span>' : '') +
+                (m.note ? '<span class="pay-note">' + esc(m.note) + '</span>' : '') +
+              '</span>' +
+              (m.number ? '<button type="button" class="pay-copy" data-copy="' + esc(m.number) + '">Copy</button>' : '') +
+            '</label>').join('') +
+        '</div>' +
+        (pay.advance_note ? '<p class="bk-sub" style="margin:0 0 16px">' + esc(pay.advance_note) + '</p>' : '') +
+        '<div class="bk-row">' +
+          field('bk-paid', 'How much did you send', 'number', advance ? String(advance) : '', false) +
+          '<div class="bk-field"><label for="bk-receipt">Payment screenshot <span class="opt">optional</span></label>' +
+            '<input id="bk-receipt" type="file" accept="image/jpeg,image/png,image/webp">' +
+            '<span class="help" id="bk-receipt-note">Only we can see it. It is not shown anywhere on the site.</span>' +
+          '</div>' +
+        '</div>' +
+      '</section>' : '') +
+
+      '<section class="bk-card">' +
+        '<button type="submit" class="bk-submit" id="bk-submit">Payment done — confirm my booking</button>' +
+        '<a class="bk-wa" id="bk-wa" href="#" target="_blank" rel="noopener">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.07-1.33A9.94 9.94 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.01.79.8-2.94-.2-.3A7.94 7.94 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/></svg>' +
+          'Rather talk first? Message us on WhatsApp</a>' +
+        '<p class="bk-sub" style="margin:14px 0 0;text-align:center">' +
+          'Nothing is charged here. We check your date and confirm — usually within half an hour.<br>' +
+          '<a href="how-to-pay" style="color:inherit;text-decoration:underline">How paying works</a></p>' +
+      '</section>' +
+
+      '</form>';
+  }
+
+  function field(id, label, type, placeholder, required, help) {
+    return '<div class="bk-field" id="' + id + '-wrap">' +
+      '<label for="' + id + '">' + label +
+        (required ? '' : ' <span class="opt">optional</span>') + '</label>' +
+      '<input id="' + id + '" type="' + type + '"' +
+        (placeholder ? ' placeholder="' + esc(placeholder) + '"' : '') +
+        (type === 'tel' ? ' inputmode="tel" autocomplete="tel"' : '') +
+        (type === 'email' ? ' inputmode="email" autocomplete="email"' : '') +
+        (id === 'bk-name' ? ' autocomplete="name"' : '') +
+        (type === 'number' ? ' min="0" inputmode="numeric"' : '') + '>' +
+      (help ? '<span class="help">' + help + '</span>' : '') +
+    '</div>';
+  }
+
+  // ---------------------------------------------------------------- behaviour
+
+  function wire(chosen, main, extras, total, advance, pay) {
+    const value = (id) => (document.getElementById(id) || {}).value || '';
+
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigator.clipboard && navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+        }).catch(() => {});
+      });
+    });
+
+    // The screenshot goes up as soon as it is chosen, so pressing the button
+    // is instant rather than a long wait on a slow connection.
+    const file = document.getElementById('bk-receipt');
+    if (file) {
+      const note = document.getElementById('bk-receipt-note');
+      const original = note.textContent;
+      file.addEventListener('change', async () => {
+        const chosenFile = file.files && file.files[0];
+        uploadedReceipt = '';
+        if (!chosenFile) { note.textContent = original; return; }
+        if (chosenFile.size > 6 * 1024 * 1024) {
+          note.textContent = 'That image is over 6MB. Please send a smaller screenshot.';
+          file.value = '';
+          return;
+        }
+        note.textContent = 'Uploading…';
+        try {
+          const body = new FormData();
+          body.append('receipt', chosenFile);
+          const res = await fetch('/api/receipt', { method: 'POST', body });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Upload failed');
+          uploadedReceipt = data.file;
+          note.textContent = 'Screenshot attached.';
+        } catch (err) {
+          note.textContent = err.message + ' You can still send it on WhatsApp.';
+          file.value = '';
+        }
+      });
+    }
+
+    // The WhatsApp button carries the same order, so someone who would
+    // rather talk does not start from nothing.
+    const wa = document.getElementById('bk-wa');
+    const waNumber = () => (pay.whatsapp_number || '8801347059522');
+    const rebuildWa = () => {
+      const lines = ["Hello! I would like to book with Cox's Dream Moment.", ''];
+      chosen.forEach((p) => {
+        const m = priceOf(p);
+        lines.push(p.name + (m.has ? ' — ' + m.now : ''));
+      });
+      if (total) lines.push('', 'Total: ' + tk(total), ADVANCE_PERCENT + '% advance: ' + tk(advance));
+      const name = value('bk-name').trim();
+      const phone = value('bk-phone').trim();
+      if (name) lines.push('', 'Name: ' + name);
+      if (phone) lines.push('Mobile: ' + tidyPhone(phone));
+      if (value('bk-date')) lines.push('Date: ' + value('bk-date'));
+      if (value('bk-time')) lines.push('Time: ' + value('bk-time'));
+      wa.href = 'https://wa.me/' + waNumber() + '?text=' + encodeURIComponent(lines.join('\n'));
+    };
+    rebuildWa();
+    ['bk-name', 'bk-phone', 'bk-date', 'bk-time'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', rebuildWa);
+    });
+
+    document.getElementById('bk-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      document.querySelectorAll('.bk-field').forEach((f) => f.classList.remove('has-error'));
+      document.querySelectorAll('.bk-error').forEach((n) => n.remove());
+      const alertBox = document.getElementById('bk-alert');
+      alertBox.innerHTML = '';
+
+      const fail = (id, message) => {
+        const wrap = document.getElementById(id + '-wrap');
+        wrap.classList.add('has-error');
+        const span = document.createElement('span');
+        span.className = 'bk-error';
+        span.textContent = message;
+        wrap.appendChild(span);
+        return false;
+      };
+
+      let ok = true;
+      if (!value('bk-name').trim()) ok = fail('bk-name', 'Please tell us your name');
+      // The number is the one thing we genuinely cannot do without: it is how
+      // the team reaches them on the beach.
+      if (value('bk-phone').replace(/\D/g, '').length < 10) ok = fail('bk-phone', 'Enter a valid mobile number');
+      const email = value('bk-email').trim();
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) ok = fail('bk-email', 'That email address does not look right');
+      if (!ok) {
+        document.querySelector('.has-error input').focus();
+        return;
+      }
+
+      const button = document.getElementById('bk-submit');
+      button.disabled = true;
+      button.textContent = 'Sending…';
+
+      const extraNames = extras.map((p) => p.name).join(', ');
+      const notes = [value('bk-note').trim(), extraNames ? 'Also booked: ' + extraNames : '']
+        .filter(Boolean).join('\n');
+
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: value('bk-name').trim(),
+            phone: tidyPhone(value('bk-phone')),
+            email: email.toLowerCase(),
+            packageSlug: main ? main.slug : (extras[0] ? extras[0].slug : ''),
+            packageName: chosen.map((p) => p.name).join(' + '),
+            eventDate: value('bk-date'),
+            eventTime: value('bk-time'),
+            people: value('bk-people'),
+            occasion: value('bk-occasion'),
+            note: notes,
+            receipt: uploadedReceipt,
+            paymentMethod: (document.querySelector('input[name="paymethod"]:checked') || {}).value || '',
+            paidAmount: value('bk-paid'),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+        done(data.id, email);
+      } catch (err) {
+        button.disabled = false;
+        button.textContent = 'Payment done — confirm my booking';
+        alertBox.innerHTML = '<div class="bk-alert bad">' + esc(err.message) + '</div>';
+        alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
+
+  function done(id, email) {
+    root.innerHTML =
+      '<section class="bk-card bk-done">' +
+        '<div class="tick"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>' +
+        '<h1>We have your booking</h1>' +
+        '<p>Thank you. We are checking the date now and will come back to you shortly — ' +
+          'usually within half an hour.</p>' +
+        '<div class="bk-id">' + esc(id) + '</div>' +
+        '<p>' + (email
+          ? 'A confirmation is on its way to <strong>' + esc(email) + '</strong>. '
+          : '') +
+          'An account has been made for you, so you can check this booking, see what you have ' +
+          'paid and message us any time — no password needed.</p>' +
+        '<p style="margin-top:22px"><a class="btn-cta" href="/my-bookings">See my booking</a></p>' +
+      '</section>';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+})();
+</script>
+<!-- Live chat. Opens in place; anyone can start one, and an account is
+     made from whatever they give us. -->
+<script src="livechat.js" defer></script>
+</body>
+</html>

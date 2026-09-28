@@ -1790,3 +1790,20 @@ a.contact-card:hover{border-color:var(--coral); box-shadow:var(--shadow); transf
   line-height: 1.6;
   color: #7A5B14;
 }
+
+
+/* The heading above the decoration grid. Without it the featured row and
+   the full list run together as one long grid of cards. */
+.shop-grid-head { max-width: 620px; margin: 8px 0 26px; }
+.shop-grid-head h2 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: clamp(24px, 4vw, 31px);
+  margin: 8px 0 10px;
+  text-wrap: balance;
+}
+.shop-grid-head p {
+  margin: 0;
+  color: var(--ink-2, #6B7A93);
+  line-height: 1.7;
+  font-size: 15px;
+}

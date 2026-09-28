@@ -208,17 +208,43 @@ window.ContentEditor = (function () {
 
   function drawPackages(panel) {
     const list = state.packages.packages;
+    const setups = list.filter((p) => p.kind !== 'media');
+    const media = list.filter((p) => p.kind === 'media');
 
     panel.innerHTML = `
       <div class="toolbar">
         <button class="btn btn-primary" id="pk-save">Save packages</button>
         <button class="btn" id="pk-add">+ Add a package</button>
-        <span class="hint" style="margin:0">${list.length} package${list.length === 1 ? '' : 's'} · ${list.filter((p) => p.featured).length} featured</span>
+        <span class="hint" style="margin:0">${setups.length} decoration \u00b7 ${media.length} photo &amp; video</span>
       </div>
-      <div id="pk-list"></div>`;
+
+      <div class="pk-group">
+        <h2 class="section-title" style="margin:0 0 4px">Decoration packages</h2>
+        <p class="hint" style="margin:0 0 12px">
+          The order here is the order on the site. Put what you want people to see first at the top,
+          and tick <strong>Featured</strong> to lift it into the row above the grid.</p>
+        <div id="pk-list"></div>
+      </div>
+
+      <div class="pk-group" style="margin-top:22px">
+        <h2 class="section-title" style="margin:0 0 4px">Photo &amp; video</h2>
+        <p class="hint" style="margin:0 0 12px">
+          Shown in their own dark row and offered as an extra on every decoration package \u2014
+          never mixed in with the setups.</p>
+        <div id="pk-media"></div>
+      </div>`;
 
     const wrap = $('#pk-list', panel);
-    list.forEach((pkg, i) => wrap.appendChild(packageCard(pkg, i)));
+    const mediaWrap = $('#pk-media', panel);
+
+    // Index against the real array, so moving a card moves the right one.
+    list.forEach((pkg, i) => {
+      const card = packageCard(pkg, i);
+      (pkg.kind === 'media' ? mediaWrap : wrap).appendChild(card);
+    });
+
+    if (!setups.length) wrap.innerHTML = '<p class="hint" style="margin:0">No decoration packages yet.</p>';
+    if (!media.length) mediaWrap.innerHTML = '<p class="hint" style="margin:0">No photo or video packages yet.</p>';
 
     $('#pk-add', panel).addEventListener('click', () => {
       list.unshift(blankPackage());
@@ -251,6 +277,8 @@ window.ContentEditor = (function () {
           <strong>${esc(pkg.name)}</strong>
           <span>${esc(pkg.code || 'code assigned on save')}${pkg.featured ? ' · featured' : ''}${pkg.kind === 'media' ? ' · photo/video' : ''}${finalPrice(pkg) ? ' · ' + esc(tk(finalPrice(pkg))) : ''}</span>
         </div>
+        <button type="button" class="btn btn-sm" data-up title="Move up">\u2191</button>
+        <button type="button" class="btn btn-sm" data-down title="Move down">\u2193</button>
         <button type="button" class="btn btn-sm" data-toggle>Edit</button>
       </div>
       <div class="pkg-body" hidden></div>`;
@@ -266,6 +294,23 @@ window.ContentEditor = (function () {
     };
     head.addEventListener('click', (e) => { if (e.target.tagName !== 'BUTTON') toggle(); });
     $('[data-toggle]', card).addEventListener('click', toggle);
+
+    // Moving swaps with the nearest package of the same kind, so a
+    // decoration setup can never be pushed into the photography row.
+    const move = (direction) => {
+      const all = state.packages.packages;
+      const kind = pkg.kind === 'media' ? 'media' : '';
+      for (let i = index + direction; i >= 0 && i < all.length; i += direction) {
+        const other = all[i];
+        if ((other.kind === 'media' ? 'media' : '') !== kind) continue;
+        all[index] = other;
+        all[i] = pkg;
+        drawPackages($('#cnt-panel', host));
+        return;
+      }
+    };
+    $('[data-up]', card).addEventListener('click', () => move(-1));
+    $('[data-down]', card).addEventListener('click', () => move(1));
 
     return card;
   }

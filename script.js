@@ -67,12 +67,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const occasion = document.querySelector('#bb-occasion');
       if (occasion && occasion.value) params.set('occasion', occasion.value);
 
-      // Whatever photography they ticked travels with them, so the form
-      // does not quietly forget it.
-      const extras = document.body.dataset.addons || '';
+      // Whatever photography they ticked travels with them as slugs, so the
+      // confirmation page looks the price up rather than trusting a label.
+      const extras = document.body.dataset.addonSlugs || '';
       if (extras) params.set('extras', extras);
 
-      window.location.href = 'contact?' + params.toString();
+      window.location.href = 'book?' + params.toString();
     });
   }
   if (waBtn) {

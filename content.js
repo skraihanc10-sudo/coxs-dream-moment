@@ -370,11 +370,15 @@ function applyShopGrid(packages) {
   const realGrid = document.querySelector('#shop-grid > .product-grid');
   if (!realGrid) return;
 
-  // The three marked `featured` are the only ones with a published price, so
-  // they go in their own row above everything else. A customer who wants a
-  // number should not have to open twenty pages to find one.
-  const featured = packages.filter(p => p.featured);
-  const rest = packages.filter(p => !p.featured);
+  // Decoration setups only. Photography has its own row further down, and a
+  // drone package sitting among the beach setups reads as a sixth setup.
+  const setups = packages.filter(p => !isMedia(p));
+
+  // The ones marked `featured` go in their own row above everything else:
+  // the owner decides what people should see first, and a customer looking
+  // for a place to start should not have to open every page to find one.
+  const featured = setups.filter(p => p.featured);
+  const rest = setups.filter(p => !p.featured);
 
   const section = document.getElementById('featured-grid');
   if (section) {
@@ -389,7 +393,7 @@ function applyShopGrid(packages) {
 
   // With no featured section on the page, nothing is dropped - everything is
   // shown in the main grid as before.
-  realGrid.innerHTML = (section ? rest : packages).map(p => productCardHTML(p)).join('');
+  realGrid.innerHTML = (section ? rest : setups).map(p => productCardHTML(p)).join('');
 
   window.initWishButtons();
   window.initShopFilters();
@@ -550,7 +554,7 @@ function applyProductDetail(packages) {
 
   const relatedGrid = document.querySelector('.related-section .product-grid');
   if (relatedGrid) {
-    const others = packages.filter(p => p.slug !== slug);
+    const others = packages.filter(p => p.slug !== slug && isMedia(p) === isMedia(pkg));
     relatedGrid.innerHTML = others.map(relatedCardHTML).join('');
     window.initWishButtons();
   }

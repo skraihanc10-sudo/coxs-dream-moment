@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to pay | Cox's Dream Moment</title>
+<meta name="description" content="How to pay for a Cox's Dream Moment booking — the advance, our own bKash and bank accounts, and how to be sure you are paying us.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cox's Dream Moment">
+<meta property="og:title" content="How to pay | Cox's Dream Moment">
+<meta property="og:image" content="https://coxsdreammoment.shop/images/logo.png">
+<link rel="icon" href="images/favicon.png" type="image/png">
+<meta name="theme-color" content="#1b2848">
+<link rel="stylesheet" href="style.css">
+<style>
+/* ==========================================================================
+   How to pay.
+
+   A page to point somebody at when they ask "is this really you?" — which,
+   given how many pages copy this name, is the question worth answering
+   properly and in one place.
+   ========================================================================== */
+.pay-page { background: var(--sand, #FBF7F1); padding: 34px 0 70px; }
+.pay-wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+
+.pay-head { margin-bottom: 26px; }
+.pay-head h1 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: clamp(27px, 5vw, 36px);
+  margin: 6px 0 10px;
+  text-wrap: balance;
+}
+.pay-head p { margin: 0; color: var(--ink-2, #6B7A93); line-height: 1.7; font-size: 15.5px; }
+
+.pay-card {
+  background: #fff;
+  border: 1px solid var(--line, #E7E2D8);
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+.pay-card h2 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: 19px;
+  margin: 0 0 14px;
+}
+
+/* The three steps. Numbered because they genuinely happen in this order. */
+.pay-steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.pay-steps li {
+  position: relative;
+  padding-left: 46px;
+  margin-bottom: 20px;
+  line-height: 1.65;
+  font-size: 15px;
+}
+.pay-steps li:last-child { margin-bottom: 0; }
+.pay-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 0; top: -1px;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--night, #0D1B2A);
+  color: #fff;
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: 15px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.pay-steps strong { display: block; margin-bottom: 2px; }
+.pay-steps span { color: var(--ink-2, #6B7A93); font-size: 14px; }
+
+.pay-accounts { display: flex; flex-direction: column; gap: 12px; }
+.pay-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 17px;
+  border: 1px solid var(--line, #E7E2D8);
+  border-radius: 14px;
+  background: var(--sand, #FBF7F1);
+}
+.pay-account .pa-text { flex: 1; min-width: 0; }
+.pay-account .pa-label {
+  font-size: 12px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink-2, #6B7A93);
+}
+.pay-account .pa-number {
+  font-size: 19px; font-weight: 700; margin-top: 2px;
+  font-variant-numeric: tabular-nums; word-break: break-all;
+}
+.pay-account .pa-note { font-size: 12.5px; color: var(--ink-2, #6B7A93); margin-top: 3px; line-height: 1.5; }
+.pay-account .pa-copy {
+  flex: 0 0 auto;
+  border: 1px solid rgba(13, 27, 42, .12);
+  background: #fff; border-radius: 9px; padding: 8px 14px;
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.pay-account .pa-copy:hover { border-color: var(--coral, #E2613C); color: var(--coral, #E2613C); }
+
+.pay-qr-box { text-align: center; padding: 6px 0 2px; }
+.pay-qr-box img {
+  width: 220px; max-width: 72%; height: auto;
+  border-radius: 16px; border: 1px solid var(--line, #E7E2D8); background: #fff;
+}
+.pay-qr-box figcaption { font-size: 13px; color: var(--ink-2, #6B7A93); margin-top: 10px; line-height: 1.55; }
+
+.pay-empty {
+  padding: 26px 20px;
+  text-align: center;
+  color: var(--ink-2, #6B7A93);
+  line-height: 1.7;
+  font-size: 14.5px;
+}
+
+.pay-warn {
+  display: flex; gap: 13px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: #FDF3E7;
+  border: 1px solid #F0DCBC;
+  margin-bottom: 16px;
+}
+.pay-warn svg {
+  flex: 0 0 22px; width: 22px; height: 22px; margin-top: 2px;
+  stroke: #B8860B; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.pay-warn h2 { font-family: inherit; font-size: 15px; margin: 0 0 6px; color: #7A5B14; }
+.pay-warn p { margin: 0; font-size: 13.5px; line-height: 1.65; color: #7A5B14; }
+
+.pay-cta { text-align: center; padding: 8px 0 0; }
+@media (max-width: 560px) {
+  .pay-card { padding: 19px; }
+  .pay-account { flex-wrap: wrap; }
+  .pay-account .pa-copy { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>Serving all of Cox’s Bazar 🌊</span>
+    <span class="topbar-sep">•</span>
+    <a href="https://wa.me/8801347059522" target="_blank" rel="noopener">+880 1347-059522</a>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="container header-main">
+    <a href="/" class="brand">
+      <span class="brand-text">
+        <span class="name">Cox's Dream Moment</span>
+        <span class="tag">Your Dream Moment</span>
+      </span>
+    </a>
+
+    <div class="header-actions">
+      <div class="location-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> Cox's Bazar</div>
+      <a href="contact" class="header-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Contact</span></a>
+    </div>
+
+    <button class="nav-toggle" aria-label="Open menu"><span></span><span></span><span></span></button>
+  </div>
+
+  <div class="nav-bar">
+    <div class="container">
+      <a href="/" class="nav-link" data-cat="all">Decoration Packages</a>
+      <a href="gallery" class="nav-link">Gallery</a>
+      <a href="contact" class="nav-link">Contact</a>
+      <a href="my-bookings" class="nav-link">My bookings</a>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-menu">
+  <button class="close-btn">&times;</button>
+  <a href="/">Decoration Packages</a>
+  <div id="mm-categories"></div>
+  <a href="gallery">Gallery</a>
+  <a href="contact">Contact</a>
+  <a href="my-bookings">My bookings</a>
+  <a href="tel:+8801347059522">Call us</a>
+</div>
+
+<section class="page-banner">
+  <div class="container">
+    <p class="crumb"><a href="/">Decoration Packages</a> <span>/</span> <span class="crumb-current">How to pay</span></p>
+    <h1>How to pay</h1>
+    <p>A 20% advance holds your date. The rest is paid on the day, once you have seen the setup.</p>
+  </div>
+</section>
+
+<main class="pay-page">
+  <div class="pay-wrap">
+
+    <section class="pay-card">
+      <h2>How it works</h2>
+      <ol class="pay-steps">
+        <li>
+          <strong>Choose a package and send the booking</strong>
+          <span>Tell us the date and how to reach you. Nothing is charged at this point.</span>
+        </li>
+        <li>
+          <strong>Send the 20% advance</strong>
+          <span>To one of our own accounts below, then attach the screenshot. This is what holds your date.</span>
+        </li>
+        <li>
+          <strong>Pay the rest on the day</strong>
+          <span>After you have seen the setup on the beach. Cash, bKash, whichever suits you.</span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="pay-card">
+      <h2>Where to send it</h2>
+      <div id="pay-qr" class="pay-qr-box" hidden>
+        <img id="pay-qr-img" alt="Scan this QR code to pay">
+        <figcaption>Scan with bKash, Nagad or your bank app</figcaption>
+      </div>
+      <div class="pay-accounts" id="pay-accounts"></div>
+      <p id="pay-advance-note" class="pay-empty" style="padding:16px 0 0;text-align:left" hidden></p>
+    </section>
+
+    <div class="pay-warn" id="pay-warn" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>
+      </svg>
+      <div>
+        <h2>Make sure you are paying us</h2>
+        <p id="pay-warn-text"></p>
+      </div>
+    </div>
+
+    <section class="pay-card">
+      <h2>Questions people ask</h2>
+      <ol class="pay-steps" style="counter-reset:none">
+        <li style="padding-left:0">
+          <strong>What if it rains?</strong>
+          <span>The date moves at no cost. The advance carries over.</span>
+        </li>
+        <li style="padding-left:0">
+          <strong>Can I change the date?</strong>
+          <span>Free up to 48 hours before. Within 24 hours the advance is not refundable, because the flowers and the cake are already bought.</span>
+        </li>
+        <li style="padding-left:0">
+          <strong>Do I have to pay the advance online?</strong>
+          <span>No. Message us and we will arrange it however suits you — but a date is only held once the advance is in.</span>
+        </li>
+      </ol>
+    </section>
+
+    <div class="pay-cta">
+      <a class="btn-cta" href="/">See the packages</a>
+    </div>
+
+  </div>
+</main>
+
+<script src="content.js"></script>
+<script src="script.js"></script>
+<script>
+(function () {
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const box = document.getElementById('pay-accounts');
+
+  fetch('/api/payment-info', { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((info) => {
+      if (!info) throw new Error('no info');
+
+      const methods = (info.methods || []).filter((m) => m.number || m.label);
+
+      if (info.qr_image) {
+        document.getElementById('pay-qr-img').src = info.qr_image;
+        document.getElementById('pay-qr').hidden = false;
+      }
+
+      if (!methods.length && !info.qr_image) {
+        // Nothing set up yet. Better to say so than to print an empty card
+        // that looks like the page failed to load.
+        box.innerHTML =
+          '<p class="pay-empty">Our payment details are not published here yet. ' +
+          'Message us on WhatsApp and we will send them to you directly.</p>';
+        return;
+      }
+
+      box.innerHTML = methods.map((m) => '' +
+        '<div class="pay-account">' +
+          '<div class="pa-text">' +
+            '<div class="pa-label">' + esc(m.label || m.type) + '</div>' +
+            (m.number ? '<div class="pa-number">' + esc(m.number) + '</div>' : '') +
+            (m.note ? '<div class="pa-note">' + esc(m.note) + '</div>' : '') +
+          '</div>' +
+          (m.number ? '<button class="pa-copy" type="button" data-copy="' + esc(m.number) + '">Copy</button>' : '') +
+        '</div>').join('');
+
+      // Typing an account number by hand is how money reaches the wrong
+      // person. One tap copies it instead.
+      box.querySelectorAll('[data-copy]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          navigator.clipboard && navigator.clipboard.writeText(btn.dataset.copy).then(() => {
+            btn.textContent = 'Copied';
+            setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+          }).catch(() => {});
+        });
+      });
+
+      if (info.advance_note) {
+        const note = document.getElementById('pay-advance-note');
+        note.textContent = info.advance_note;
+        note.hidden = false;
+      }
+    })
+    .catch(() => {
+      box.innerHTML =
+        '<p class="pay-empty">We could not load our payment details just now. ' +
+        'Message us on WhatsApp and we will send them to you.</p>';
+    });
+
+  // The warning lives in site settings so it can be changed without a deploy.
+  fetch('content/settings.json', { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((settings) => {
+      if (!settings) return;
+      const text = settings.fake_warning;
+      if (!text) return;
+      document.getElementById('pay-warn-text').textContent = text;
+      document.getElementById('pay-warn').hidden = false;
+    })
+    .catch(() => {});
+})();
+</script>
+<script src="livechat.js" defer></script>
+</body>
+</html>

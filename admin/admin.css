@@ -743,3 +743,21 @@ table.tbl tbody tr:hover { background: #FAFBFD; }
   .chat-list { max-height: 250px; }
   .chat-panel { max-height: none; }
 }
+
+
+/* Packages are shown in two groups — decoration and photography — because
+   they are sold differently and a drone package in the setup list reads as a
+   setup. */
+.pk-group {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.pk-group .pkg:last-child { margin-bottom: 0; }
+.pkg-head [data-up], .pkg-head [data-down] {
+  padding: 5px 9px;
+  line-height: 1;
+  font-size: 13px;
+}

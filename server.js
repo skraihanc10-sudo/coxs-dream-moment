@@ -2197,6 +2197,43 @@ const publicMessage = (m) => ({
   at: m.at,
 });
 
+/** An account from a chat, for somebody who has not booked anything.
+ *
+ *  Email is required because it is the only way to answer once they close
+ *  the tab. The number is optional here and required for a booking: we can
+ *  answer a question by email, but we cannot reach someone on a beach.
+ */
+app.post('/api/chat-signup', (req, res) => {
+  const body = req.body || {};
+
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (tooManyFrom('chat-signup:' + ip)) {
+    return res.status(429).json({ error: 'Too many tries. Please wait a few minutes.' });
+  }
+
+  const email = text(body.email, 120).toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.status(400).json({ error: 'Enter a valid email address so we can reply.' });
+  }
+
+  const user = upsertCustomer({
+    name: text(body.name, 80),
+    phone: tidyPhone(body.phone),
+    email,
+  });
+
+  setSession(res, req, {
+    role: 'customer',
+    uid: user.id,
+    // Started from a chat box, so it sees the conversation and its own
+    // bookings, but not payment screenshots. Same rule as a phone sign-in.
+    weak: true,
+    exp: Date.now() + CUSTOMER_SESSION_MS,
+  }, CUSTOMER_SESSION_MS);
+
+  res.json({ ok: true, name: user.name });
+});
+
 // ---------------------------------------------------------------- customer side
 
 app.get('/api/chat', requireCustomer, (req, res) => {
