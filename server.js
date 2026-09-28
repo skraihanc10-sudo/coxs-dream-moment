@@ -1653,6 +1653,13 @@ function normaliseBooking(input, existing) {
     // price: what a customer actually pays is negotiated, and the listing
     // is only where the conversation starts.
     price: input.price !== undefined ? money(input.price) : money(base.price),
+
+    // What the packages cost on the day it was booked, and why this
+    // customer is paying less. Kept so the discount is a recorded decision
+    // with a reason beside it, rather than a lower number nobody can
+    // explain six weeks later.
+    listPrice: input.listPrice !== undefined ? money(input.listPrice) : money(base.listPrice),
+    dealNote: keep('dealNote', 300),
     cost: input.cost !== undefined ? money(input.cost) : money(base.cost),
     payments,
     adminNote: keep('adminNote', 1200),
@@ -1785,6 +1792,7 @@ app.post('/api/bookings', (req, res) => {
       // The figure the customer was shown, so the owner can approve without
       // first going to look it up. They can still change it before they do.
       price: catalogueTotal(slugs),
+      listPrice: catalogueTotal(slugs),
       cost: 0, payments: [], adminNote: '',
     },
     { source: 'website', customerId: customer.id },
@@ -2101,11 +2109,37 @@ app.put('/admin/api/bookings/:id', requireOwner, (req, res) => {
 
 app.delete('/admin/api/bookings/:id', requireOwner, (req, res) => {
   const store = readBookings();
-  const before = store.bookings.length;
+  const booking = store.bookings.find((b) => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+
+  // Into the bin rather than gone: the press that deletes the wrong booking
+  // and the moment of realising it are rarely the same minute.
+  binPut('booking', booking, req, { label: `${booking.id} \u2014 ${booking.name}` });
+
   store.bookings = store.bookings.filter((b) => b.id !== req.params.id);
-  if (store.bookings.length === before) return res.status(404).json({ error: 'Booking not found.' });
   writeJSON(BOOKINGS_FILE, store);
   res.json({ ok: true });
+});
+
+/** Removes one payment from a booking. Owner only, and it keeps a copy:
+ *  a payment that vanishes is an argument with a customer waiting to
+ *  happen. */
+app.delete('/admin/api/bookings/:id/payments/:paymentId', requireOwner, (req, res) => {
+  const store = readBookings();
+  const booking = store.bookings.find((b) => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+
+  const payment = (booking.payments || []).find((p) => p.id === req.params.paymentId);
+  if (!payment) return res.status(404).json({ error: 'Payment not found.' });
+
+  binPut('payment', payment, req, {
+    bookingId: booking.id,
+    label: `${'\u09f3'}${money(payment.amount).toLocaleString('en-IN')} on ${booking.id} \u2014 ${booking.name}`,
+  });
+
+  booking.payments = booking.payments.filter((p) => p.id !== req.params.paymentId);
+  writeJSON(BOOKINGS_FILE, store);
+  res.json({ ok: true, booking: withTotals(booking) });
 });
 
 // ---------------------------------------------------------------- expenses
@@ -2137,9 +2171,14 @@ app.post('/admin/api/expenses', requireAuth, allow('costs_add'), (req, res) => {
 
 app.delete('/admin/api/expenses/:id', requireOwner, (req, res) => {
   const store = readExpenses();
-  const before = store.expenses.length;
+  const expense = store.expenses.find((e) => e.id === req.params.id);
+  if (!expense) return res.status(404).json({ error: 'Not found.' });
+
+  binPut('expense', expense, req, {
+    label: `${'\u09f3'}${money(expense.amount).toLocaleString('en-IN')} \u2014 ${expense.category}`,
+  });
+
   store.expenses = store.expenses.filter((e) => e.id !== req.params.id);
-  if (store.expenses.length === before) return res.status(404).json({ error: 'Not found.' });
   writeJSON(EXPENSES_FILE, store);
   res.json({ ok: true });
 });
@@ -2900,7 +2939,11 @@ app.post('/admin/api/chats/:customerId', requireAuth, allow('chat'), async (req,
  *  The same payment list either way — there is one record of what a
  *  customer has paid, and a second place to keep it would be a second place
  *  for it to be wrong. */
-app.post('/admin/api/bookings/:id/payment', requireOwner, async (req, res) => {
+app.post('/admin/api/bookings/:id/payment', requireAuth, async (req, res) => {
+  // Anyone who may record a cost may record money coming in: on a beach it
+  // is whoever is standing there who takes it. Who took it is recorded, and
+  // they hold it until they hand it over.
+  if (!can(req, 'costs_add')) return res.status(403).json({ error: 'You do not have access to that.' });
   const body = req.body || {};
   const amount = money(body.amount);
   if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
@@ -2918,6 +2961,10 @@ app.post('/admin/api/bookings/:id/payment', requireOwner, async (req, res) => {
     amount,
     method: PAYMENT_METHODS.includes(body.method) ? body.method : 'Cash',
     note: text(body.note, 200),
+    // Whoever took it is holding it until it reaches management.
+    heldById: req.user.id,
+    heldByName: req.user.name || 'Owner',
+    takenAt: new Date().toISOString(),
   });
   booking.updatedAt = new Date().toISOString();
   writeJSON(BOOKINGS_FILE, store);
@@ -2934,6 +2981,176 @@ app.post('/admin/api/bookings/:id/payment', requireOwner, async (req, res) => {
       tag: 'booking-' + booking.id,
     });
   }
+});
+
+// ---------------------------------------------------------------- recycle bin
+//
+// Nothing is ever really deleted on the first press. A booking, a cost or a
+// payment that is removed goes here, where the owner can put it back or
+// throw it away properly.
+//
+// The reason is simple: the person who deletes a payment by mistake is the
+// same person who then cannot remember what it was for. A bin costs a file
+// and a screen; a lost payment costs an argument with a customer.
+
+const BIN_FILE = path.join(CONTENT_DIR, 'recycle-bin.json');
+
+function readBin() {
+  const data = readJSON(BIN_FILE, null);
+  if (data && Array.isArray(data.items)) return data;
+  return { items: [] };
+}
+
+/** Puts one thing in the bin. [payload] is the whole record, so restoring
+ *  it does not depend on anything else still existing. */
+function binPut(kind, payload, req, extra) {
+  const store = readBin();
+  store.items.unshift(Object.assign({
+    id: 'x' + Date.now() + crypto.randomBytes(3).toString('hex'),
+    kind,
+    payload,
+    byId: req.user ? req.user.id : '',
+    byName: req.user ? (req.user.name || 'Owner') : '',
+    at: new Date().toISOString(),
+  }, extra || {}));
+  // A bin that never empties is a second database. Six months of deletions
+  // is far more than anyone looks back through.
+  if (store.items.length > 300) store.items = store.items.slice(0, 300);
+  writeJSON(BIN_FILE, store);
+}
+
+app.get('/admin/api/bin', requireOwner, (req, res) => {
+  const store = readBin();
+  res.json({ items: store.items, count: store.items.length });
+});
+
+/** Puts something back where it came from. */
+app.post('/admin/api/bin/:id/restore', requireOwner, (req, res) => {
+  const store = readBin();
+  const item = store.items.find((i) => i.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'Not found.' });
+
+  if (item.kind === 'booking') {
+    const bookings = readBookings();
+    if (bookings.bookings.some((b) => b.id === item.payload.id)) {
+      return res.status(400).json({ error: 'A booking with that number is already back.' });
+    }
+    bookings.bookings.unshift(item.payload);
+    // Newest first, the way the list is read.
+    bookings.bookings.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    writeJSON(BOOKINGS_FILE, bookings);
+
+  } else if (item.kind === 'expense') {
+    const expenses = readExpenses();
+    if (!expenses.expenses.some((e) => e.id === item.payload.id)) {
+      expenses.expenses.unshift(item.payload);
+      writeJSON(EXPENSES_FILE, expenses);
+    }
+
+  } else if (item.kind === 'payment') {
+    const bookings = readBookings();
+    const booking = bookings.bookings.find((b) => b.id === item.bookingId);
+    if (!booking) return res.status(400).json({ error: 'That booking is gone, so the payment has nowhere to go back to.' });
+    booking.payments = booking.payments || [];
+    if (!booking.payments.some((p) => p.id === item.payload.id)) {
+      booking.payments.push(item.payload);
+      writeJSON(BOOKINGS_FILE, bookings);
+    }
+
+  } else {
+    return res.status(400).json({ error: 'That cannot be restored.' });
+  }
+
+  store.items = store.items.filter((i) => i.id !== req.params.id);
+  writeJSON(BIN_FILE, store);
+  res.json({ ok: true });
+});
+
+app.delete('/admin/api/bin/:id', requireOwner, (req, res) => {
+  const store = readBin();
+  const before = store.items.length;
+  store.items = store.items.filter((i) => i.id !== req.params.id);
+  if (store.items.length === before) return res.status(404).json({ error: 'Not found.' });
+  writeJSON(BIN_FILE, store);
+  res.json({ ok: true });
+});
+
+app.delete('/admin/api/bin', requireOwner, (req, res) => {
+  writeJSON(BIN_FILE, { items: [] });
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------- cash in hand
+//
+// Money a customer hands over does not arrive in the business's account; it
+// arrives in somebody's pocket. Until it is passed on, that person is
+// holding it, and the accounts should say so.
+//
+// Every payment records who took it. When they hand it to management it is
+// marked transferred, and from then on the business holds it. Two figures
+// rather than one: what has been received, and how much of it is still out
+// with the team.
+
+app.post('/admin/api/bookings/:id/payments/:paymentId/transfer', requireAuth, (req, res) => {
+  const store = readBookings();
+  const booking = store.bookings.find((b) => b.id === req.params.id);
+  if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+
+  const payment = (booking.payments || []).find((p) => p.id === req.params.paymentId);
+  if (!payment) return res.status(404).json({ error: 'Payment not found.' });
+
+  // Whoever is holding it can hand it over, and the owner can record a
+  // hand-over on anyone's behalf.
+  const mine = payment.heldById === req.user.id;
+  if (!mine && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only whoever took that payment can hand it over.' });
+  }
+  if (payment.transferredAt) return res.status(400).json({ error: 'That one is already handed over.' });
+
+  payment.transferredAt = new Date().toISOString();
+  payment.transferredBy = req.user.name || 'Owner';
+  writeJSON(BOOKINGS_FILE, store);
+  res.json({ ok: true });
+});
+
+/** Who is holding what. The owner sees everyone; a staff member sees their
+ *  own, which is the number they actually need. */
+app.get('/admin/api/cash', requireAuth, (req, res) => {
+  const bookings = readBookings().bookings;
+  const holders = {};
+  let withTeam = 0;
+  let settled = 0;
+
+  for (const b of bookings) {
+    for (const p of b.payments || []) {
+      const amount = money(p.amount);
+      if (p.transferredAt) { settled += amount; continue; }
+
+      // A payment taken before this existed has no holder; it is treated as
+      // already with the business rather than invented against somebody.
+      if (!p.heldById) { settled += amount; continue; }
+
+      withTeam += amount;
+      const key = p.heldById;
+      holders[key] = holders[key] || { id: key, name: p.heldByName || 'Someone', amount: 0, items: [] };
+      holders[key].amount += amount;
+      holders[key].items.push({
+        bookingId: b.id,
+        customer: b.name,
+        paymentId: p.id,
+        amount,
+        date: p.date,
+        method: p.method,
+      });
+    }
+  }
+
+  const all = Object.values(holders).sort((a, b) => b.amount - a.amount);
+  res.json({
+    holders: req.user.role === 'owner' ? all : all.filter((h) => h.id === req.user.id),
+    withTeam: req.user.role === 'owner' ? withTeam : (holders[req.user.id] || { amount: 0 }).amount,
+    settled: req.user.role === 'owner' ? settled : 0,
+  });
 });
 
 // ---------------------------------------------------------------- salaries

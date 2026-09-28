@@ -814,3 +814,92 @@ table.tbl tbody tr:hover { background: #FAFBFD; }
 }
 .msg:hover .msg-del, .msg-del:focus-visible { opacity: 1; }
 .msg.mine .msg-del { right: auto; left: -6px; }
+
+
+/* The discount worked out between the list price and the agreed one. */
+.deal-note {
+  margin: -4px 0 14px;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: var(--warn-soft);
+  color: #7A5B14;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.deal-note strong { font-size: 14.5px; }
+
+
+/* ==========================================================================
+   The Control Room on a phone.
+
+   The owner checks this standing on a beach, one-handed, so the tables need
+   to stop being tables and the dialogs need to stop being windows.
+   ========================================================================== */
+@media (max-width: 720px) {
+  .views { padding: 12px; }
+  .topbar { padding: 10px 12px; }
+  .topbar h1 { font-size: 18px; }
+  .topbar-actions .btn { padding: 8px 12px; font-size: 12.5px; }
+
+  .card-pad { padding: 14px; }
+  .stat { padding: 13px 15px; }
+  .stat-value { font-size: 21px; }
+  .stat-label { font-size: 10.5px; }
+  .grid-stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+
+  /* A table of eight columns on a 390px screen is a horizontal scroll
+     nobody finds. Each row becomes a block, with the column name in front
+     of its value. */
+  table.tbl thead { display: none; }
+  table.tbl, table.tbl tbody, table.tbl tr, table.tbl td { display: block; width: 100%; }
+  table.tbl tr {
+    border-bottom: 1px solid var(--line);
+    padding: 12px 14px;
+  }
+  table.tbl tr:last-child { border-bottom: 0; }
+  table.tbl td {
+    border: 0;
+    padding: 3px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  table.tbl td::before {
+    content: attr(data-label);
+    flex: 0 0 82px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+  }
+  table.tbl td:empty { display: none; }
+  .num { text-align: left; }
+
+  /* Rowspan does not survive the block layout, so those cells sit on their
+     own line as a heading for the ones under them. */
+  table.tbl td[rowspan] { display: block; }
+  table.tbl td[rowspan]::before { display: none; }
+
+  .toolbar { gap: 6px; }
+  .toolbar input[type="search"] { min-width: 100%; }
+  .chip { padding: 6px 11px; font-size: 12.5px; }
+
+  /* A dialog becomes a sheet that comes up from the bottom, which is where
+     a thumb is. */
+  .sheet {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92vh;
+    margin: auto 0 0;
+    border-radius: 18px 18px 0 0;
+  }
+  .sheet-inner { max-height: 92vh; }
+  .sheet-head { padding: 14px 16px; }
+  .sheet-body { padding: 16px; }
+  .sheet-foot { padding: 12px 16px; flex-wrap: wrap; border-radius: 0; }
+  .sheet-foot .btn { flex: 1 1 auto; justify-content: center; }
+  .sheet-foot .spacer { display: none; }
+
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+}

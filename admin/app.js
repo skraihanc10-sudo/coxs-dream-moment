@@ -26,6 +26,8 @@ const state = {
   pendingChanges: 0,
   teamChat: [],
   salaries: null,
+  bin: [],
+  cash: null,
   filter: { status: 'all', q: '' },
 };
 
@@ -191,6 +193,12 @@ async function refresh() {
   const expenses = await api('/admin/api/expenses');
   state.expenses = expenses.expenses || [];
 
+  try {
+    state.cash = await api('/admin/api/cash');
+  } catch (e) {
+    state.cash = null;
+  }
+
   if (may('chat')) {
     const chats = await api('/admin/api/chats');
     state.threads = chats.threads || [];
@@ -224,12 +232,20 @@ async function refresh() {
     return;
   }
 
-  const [bookings, summary, staff, customers] = await Promise.all([
+  const [bookings, summary, staff, customers, bin] = await Promise.all([
     api('/admin/api/bookings'),
     api('/admin/api/summary'),
     api('/admin/api/staff'),
     api('/admin/api/customers'),
+    api('/admin/api/bin'),
   ]);
+  state.bin = bin.items || [];
+
+  const binBadge = $('#nav-bin');
+  if (binBadge) {
+    binBadge.textContent = state.bin.length;
+    binBadge.hidden = state.bin.length === 0;
+  }
   state.bookings = bookings.bookings || [];
   state.summary = summary;
   state.staff = staff.staff || [];
@@ -259,11 +275,12 @@ const VIEWS = {
   messages: { title: 'Messages', perm: 'chat', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
   salaries: { title: 'Salaries', owner: true, render: renderSalaries },
+  bin: { title: 'Recycle bin', owner: true, render: renderBin },
   team: { title: 'Team', owner: true, render: renderTeam },
   content: { title: 'Website content', render: () => window.ContentEditor.mount($('#view-content')) },
 };
 
-function go(name) {
+let go = function (name) {
   let view = VIEWS[name] || VIEWS.dashboard;
   // Belt and braces: the sidebar already hides these, but a stale hash or a
   // stray call must not land a staff member on an empty owner screen.
@@ -320,6 +337,8 @@ function openSheet({ title, body, saveLabel, onSave, extraFoot }) {
     });
   }
   dlg.showModal();
+  // Tables inside a dialog need the same column names on a phone.
+  if (typeof labelTableCells === 'function') labelTableCells(form);
   return { dialog: dlg, body: bodyEl };
 }
 
@@ -521,6 +540,12 @@ function editBooking(booking) {
   const packages = (window.ContentEditor && window.ContentEditor.packageList()) || [];
   const wa = waNumber(b.phone);
 
+  // Someone with no email hears nothing automatically, so say so here rather
+  // than letting the owner assume a confirmation went out.
+  const account = state.customers.find((c) => c.id === b.customerId);
+  const noEmail = !isNew && !(b.email || (account && account.email));
+
+
   const body = document.createElement('div');
   body.innerHTML = `
     <div class="field-row">
@@ -555,14 +580,30 @@ function editBooking(booking) {
     </div>
 
     <div class="field-row">
-      <div class="field"><label>Agreed price (৳)</label><input id="f-price" type="number" min="0" value="${esc(b.price || 0)}"></div>
-      <div class="field"><label>Status</label>
-        <select id="f-status">
-          ${STATUSES.map((s) => `<option value="${s.id}" ${b.status === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}
-        </select>
+      <div class="field"><label>List price (৳)</label>
+        <input id="f-list" type="number" min="0" value="${esc(b.listPrice || b.price || 0)}">
+        <p class="hint" style="margin:6px 0 0">What the packages cost normally.</p>
+      </div>
+      <div class="field"><label>Agreed price (৳)</label>
+        <input id="f-price" type="number" min="0" value="${esc(b.price || 0)}">
+        <p class="hint" style="margin:6px 0 0">What this customer actually pays.</p>
       </div>
     </div>
-    <p class="hint">The agreed price is what this customer pays — it is deliberately separate from the price listed on the site.</p>
+
+    <div class="deal-note" id="deal-note" hidden></div>
+
+    <div class="field"><label>Why the discount</label>
+      <input id="f-deal" value="${esc(b.dealNote || '')}" placeholder="e.g. friend of Shakib, repeat customer, low season">
+      <p class="hint" style="margin:6px 0 0">
+        Only needed when the agreed price is lower. Six weeks from now this is the only
+        record of why.</p>
+    </div>
+
+    <div class="field"><label>Status</label>
+      <select id="f-status">
+        ${STATUSES.map((s) => `<option value="${s.id}" ${b.status === s.id ? 'selected' : ''}>${s.label}</option>`).join('')}
+      </select>
+    </div>
 
     <div class="field"><label>What the customer wrote</label>
       <textarea id="f-note" rows="3">${esc(b.note)}</textarea></div>
@@ -605,11 +646,6 @@ function editBooking(booking) {
       <button type="button" class="btn btn-sm" id="pay-add">+ Record a payment</button>`}
   `;
 
-  // Someone with no email hears nothing automatically, so say so here rather
-  // than letting the owner assume a confirmation went out.
-  const account = state.customers.find((c) => c.id === b.customerId);
-  const noEmail = !isNew && !(b.email || (account && account.email));
-
   const extraFoot = isNew ? '' :
     `${b.status === 'new' ? '<button type="button" class="btn btn-sm btn-primary" data-approve-now>Approve &amp; notify</button>' : ''}
      ${wa ? `<a class="btn btn-sm ${noEmail ? 'btn-primary' : ''}" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
@@ -638,6 +674,8 @@ function editBooking(booking) {
         email: $('#f-email', root).value.trim(),
         adminNote: $('#f-adminnote', root).value,
         price: $('#f-price', root).value,
+        listPrice: $('#f-list', root).value,
+        dealNote: $('#f-deal', root).value,
         status: $('#f-status', root).value,
         payments: draftPayments,
         source: b.source,
@@ -667,8 +705,17 @@ function editBooking(booking) {
         <tbody>${draftPayments.map((p, i) => `
           <tr>
             <td>${esc(humanDate(p.date))}<br><span style="font-size:11.5px;color:var(--muted)">${esc(p.method)}${p.note ? ' · ' + esc(p.note) : ''}</span></td>
+            <td>${p.heldByName
+                  ? (p.transferredAt
+                      ? `<span class="pill pill-completed">With you</span>`
+                      : `<span class="pill pill-confirmed">${esc(p.heldByName)} holds it</span>`)
+                  : ''}</td>
             <td class="num"><strong>${tk(p.amount)}</strong></td>
-            <td class="num"><button type="button" class="btn btn-sm btn-ghost" data-rm="${i}">Remove</button></td>
+            <td class="num">
+              ${p.id && !p.transferredAt && p.heldById
+                ? `<button type="button" class="btn btn-sm" data-handover="${esc(p.id)}">Handed over</button>` : ''}
+              <button type="button" class="btn btn-sm btn-ghost" data-rm="${i}">Remove</button>
+            </td>
           </tr>`).join('')}
         </tbody>
       </table></div>
@@ -679,7 +726,49 @@ function editBooking(booking) {
       draftPayments.splice(Number(btn.dataset.rm), 1);
       drawPayments();
     }));
+
+    // Cash a member of the team took, now handed to management. Saved at
+    // once rather than with the rest of the form: it is a fact about money
+    // changing hands, not a draft.
+    $$('[data-handover]', wrap).forEach((btn) => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await api(`/admin/api/bookings/${encodeURIComponent(b.id)}/payments/${encodeURIComponent(btn.dataset.handover)}/transfer`,
+          { method: 'POST' });
+        const payment = draftPayments.find((p) => p.id === btn.dataset.handover);
+        if (payment) payment.transferredAt = new Date().toISOString();
+        drawPayments();
+        await refresh();
+        toast('Marked as handed over', 'good');
+      } catch (e) {
+        btn.disabled = false;
+        toast(e.message, 'bad');
+      }
+    }));
   }
+
+  // The discount, worked out as you type. Two boxes are easy to get wrong,
+  // and the gap between them is the number that actually matters.
+  function drawDeal() {
+    const box = $('#deal-note', body);
+    if (!box) return;
+    const list = Number($('#f-list', body).value || 0);
+    const agreed = Number($('#f-price', body).value || 0);
+
+    if (!list || !agreed || agreed >= list) { box.hidden = true; return; }
+
+    const off = list - agreed;
+    const pct = Math.round((off / list) * 100);
+    box.hidden = false;
+    box.innerHTML =
+      `<strong>${tk(off)} off</strong> \u2014 ${pct}% below the list price. ` +
+      `The accounts will use ${tk(agreed)}.`;
+  }
+  ['f-list', 'f-price'].forEach((id) => {
+    const field = $('#' + id, body);
+    if (field) field.addEventListener('input', drawDeal);
+  });
+  drawDeal();
 
   if (!isNew) {
     // The reminder buttons. Loaded from the server so the wording lives in
@@ -853,9 +942,12 @@ function renderStaffCosts() {
         : `<div class="empty"><strong>Nothing recorded yet</strong>Add what you spend so it is not forgotten.</div>`}
       <p class="hint" style="padding:0 18px 16px;margin:10px 0 0">
         Once a cost is saved it stays. If you enter one by mistake, ask the owner to remove it.</p>
-    </div>`;
+    </div>
+
+    ${cashHTML()}`;
 
   $('#ex-add', el).addEventListener('click', () => addCost(renderStaffCosts));
+  wireCash(renderStaffCosts);
   $('#topbar-actions').innerHTML = '';
 }
 
@@ -1619,6 +1711,61 @@ function staffForm(user) {
 
 // ---------------------------------------------------------------- shared
 
+/** Money a customer handed over that has not yet reached the business.
+ *
+ *  It arrives in somebody's pocket, not in an account, and until it is
+ *  passed on that person is holding it. Two figures rather than one \u2014 what
+ *  has been received, and how much of it is still out with the team \u2014
+ *  because treating them as the same number is how a shortfall goes
+ *  unnoticed for a month. */
+function cashHTML() {
+  const cash = state.cash;
+  if (!cash || !cash.holders.length) return '';
+
+  return `
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-pad" style="border-bottom:1px solid var(--line)">
+        <h2 class="section-title" style="margin:0">
+          ${isOwner() ? 'Cash still with the team' : 'Cash you are holding'} \u2014 ${tk(cash.withTeam)}
+        </h2>
+        <p class="hint" style="margin:6px 0 0">
+          ${isOwner()
+            ? 'Received from customers but not yet handed over. Mark it once it reaches you.'
+            : 'Money you have taken that has not reached the office yet. Mark it when you hand it over.'}
+        </p>
+      </div>
+      <div class="tablewrap"><table class="tbl">
+        <thead><tr><th>Who</th><th>From</th><th class="num">Amount</th><th></th></tr></thead>
+        <tbody>${cash.holders.map((h) => h.items.map((item, i) => `
+          <tr>
+            ${i === 0 ? `<td rowspan="${h.items.length}"><strong>${esc(h.name)}</strong><br>
+              <span style="font-size:11.5px;color:var(--muted)">${tk(h.amount)} in total</span></td>` : ''}
+            <td>${esc(item.customer)}<br>
+              <span style="font-size:11.5px;color:var(--muted)">${esc(item.bookingId)} \u00b7 ${esc(item.method)} \u00b7 ${esc(humanDate(item.date))}</span></td>
+            <td class="num"><strong>${tk(item.amount)}</strong></td>
+            <td class="num"><button class="btn btn-sm btn-primary"
+              data-cash="${esc(item.bookingId)}" data-pid="${esc(item.paymentId)}">Handed over</button></td>
+          </tr>`).join('')).join('')}
+        </tbody></table></div>
+    </div>`;
+}
+
+function wireCash(after) {
+  $$('[data-cash]').forEach((btn) => btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      await api(`/admin/api/bookings/${encodeURIComponent(btn.dataset.cash)}/payments/${encodeURIComponent(btn.dataset.pid)}/transfer`,
+        { method: 'POST' });
+      await refresh();
+      after();
+      toast('Marked as handed over', 'good');
+    } catch (e) {
+      btn.disabled = false;
+      toast(e.message, 'bad');
+    }
+  }));
+}
+
 /** Records money received. It goes onto the booking's own payment list
  *  rather than into a separate ledger: there is one record of what a
  *  customer has paid, and a second place to keep it would be a second place
@@ -1829,6 +1976,104 @@ function viewBooking(b) {
   });
 }
 
+// ================================================================ RECYCLE BIN
+//
+// Nothing is really gone on the first press. The person who deletes the
+// wrong payment and the person who realises it are the same person, ten
+// minutes apart.
+
+const BIN_LABEL = { booking: 'Booking', expense: 'Cost', payment: 'Payment' };
+
+function renderBin() {
+  const el = $('#view-bin');
+  const items = state.bin;
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-pad" style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)">
+        <div>
+          <h2 class="section-title" style="margin:0">Deleted things (${items.length})</h2>
+          <p class="hint" style="margin:6px 0 0">
+            Put anything back, or throw it away for good. Only you can see this.</p>
+        </div>
+        ${items.length ? '<button class="btn btn-sm btn-danger" style="margin-left:auto" id="bin-empty">Empty the bin</button>' : ''}
+      </div>
+      ${items.length ? `<div class="tablewrap"><table class="tbl">
+        <thead><tr><th>What</th><th>Deleted</th><th></th></tr></thead>
+        <tbody>${items.map((i) => `
+          <tr>
+            <td><span class="pill pill-new">${esc(BIN_LABEL[i.kind] || i.kind)}</span>
+              <strong style="margin-left:8px">${esc(i.label || i.payload.id || '')}</strong>
+              ${binDetail(i)}</td>
+            <td>${esc(relativeTime(i.at))}<br><span style="font-size:11.5px;color:var(--muted)">by ${esc(i.byName)}</span></td>
+            <td class="num" style="white-space:nowrap">
+              <button class="btn btn-sm btn-primary" data-restore="${esc(i.id)}">Put back</button>
+              <button class="btn btn-sm btn-ghost" data-forget="${esc(i.id)}">Delete for good</button>
+            </td>
+          </tr>`).join('')}
+        </tbody></table></div>`
+        : '<div class="empty"><strong>The bin is empty</strong>Anything you delete lands here first.</div>'}
+    </div>`;
+
+  $$('[data-restore]', el).forEach((b) => b.addEventListener('click', async () => {
+    b.disabled = true;
+    try {
+      await api(`/admin/api/bin/${encodeURIComponent(b.dataset.restore)}/restore`, { method: 'POST' });
+      await refresh();
+      renderBin();
+      toast('Put back', 'good');
+    } catch (e) {
+      b.disabled = false;
+      toast(e.message, 'bad');
+    }
+  }));
+
+  $$('[data-forget]', el).forEach((b) => b.addEventListener('click', async () => {
+    const ok = await confirmDialog('Delete this for good? It cannot be brought back.');
+    if (!ok) return;
+    try {
+      await api('/admin/api/bin/' + encodeURIComponent(b.dataset.forget), { method: 'DELETE' });
+      await refresh();
+      renderBin();
+      toast('Gone', 'good');
+    } catch (e) { toast(e.message, 'bad'); }
+  }));
+
+  const empty = $('#bin-empty', el);
+  if (empty) empty.addEventListener('click', async () => {
+    const ok = await confirmDialog(`Empty the bin? All ${items.length} will be gone for good.`, 'Empty it');
+    if (!ok) return;
+    try {
+      await api('/admin/api/bin', { method: 'DELETE' });
+      await refresh();
+      renderBin();
+      toast('Bin emptied', 'good');
+    } catch (e) { toast(e.message, 'bad'); }
+  });
+
+  $('#topbar-actions').innerHTML = '';
+}
+
+function binDetail(item) {
+  const p = item.payload || {};
+  const bits = [];
+  if (item.kind === 'booking') {
+    if (p.packageName) bits.push(p.packageName);
+    if (p.eventDate) bits.push(humanDate(p.eventDate));
+    if (p.price) bits.push(tk(p.price));
+  } else if (item.kind === 'expense') {
+    if (p.note) bits.push(p.note);
+    if (p.date) bits.push(humanDate(p.date));
+  } else if (item.kind === 'payment') {
+    if (p.method) bits.push(p.method);
+    if (p.date) bits.push(humanDate(p.date));
+    if (p.note) bits.push(p.note);
+  }
+  return bits.length
+    ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(bits.join(' \u00b7 '))}</span>`
+    : '';
+}
+
 // ================================================================ SALARIES
 //
 // What the team is owed and what has gone out. Owner only, and behind the
@@ -2009,6 +2254,8 @@ function renderAccounts() {
       <div class="stat is-warn"><div class="stat-label">Still to collect</div><div class="stat-value">${tk(t.due)}</div><div class="stat-note">${dueList.length} booking${dueList.length === 1 ? '' : 's'}</div></div>
     </div>
 
+    ${cashHTML()}
+
     ${dueList.length ? `
     <div class="card" style="margin-bottom:18px">
       <div class="card-pad" style="border-bottom:1px solid var(--line)"><h2 class="section-title" style="margin:0">Money still owed</h2></div>
@@ -2060,6 +2307,7 @@ function renderAccounts() {
     </div>`;
 
   wireBookingRows(el);
+  wireCash(renderAccounts);
 
   $('#ex-add', el).addEventListener('click', () => addCost(renderAccounts));
   $('#pay-add', el).addEventListener('click', () => addPayment(renderAccounts));
@@ -2118,6 +2366,37 @@ async function drawPushToggle() {
     }
   };
 }
+
+/** Copies each table's column names onto its cells as data-label.
+ *
+ *  On a phone every table becomes a list of blocks, and a value with no
+ *  name in front of it is a number floating on its own. Done here rather
+ *  than written into every cell by hand, which would be forgotten the first
+ *  time a column moved. */
+function labelTableCells(root) {
+  $$('table.tbl', root || document).forEach((table) => {
+    const heads = $$('thead th', table).map((th) => th.textContent.trim());
+    if (!heads.length) return;
+    $$('tbody tr', table).forEach((tr) => {
+      // A cell with rowspan covers rows below it, which throws the count
+      // off; those are left unlabelled and shown as a heading instead.
+      let column = 0;
+      Array.from(tr.children).forEach((td) => {
+        if (td.hasAttribute('rowspan')) { column += 1; return; }
+        if (heads[column]) td.setAttribute('data-label', heads[column]);
+        column += 1;
+      });
+    });
+  });
+}
+
+// Every screen redraws by replacing innerHTML, so the labels are reapplied
+// after each one rather than at load.
+const _go = go;
+go = function (name) {
+  _go(name);
+  labelTableCells();
+};
 
 // Exposed so content.js can raise a toast and reuse the dialog.
 window.Admin = { toast, api, openSheet, confirmDialog, esc, $, $$, isOwner };
