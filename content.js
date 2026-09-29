@@ -22,7 +22,17 @@ function packageUrl(pkg) {
 
 // A package can exist before its photo has been uploaded. An empty src renders
 // as a broken-image icon, so show a labelled placeholder instead.
-const PLACEHOLDER = 'images/logo-mark.png';
+// A package with no photograph yet shows the name on deep blue, the same
+// three colours as the header, rather than a logo picture.
+const PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">' +
+  '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+  '<stop offset="0" stop-color="#0E2585"/><stop offset="1" stop-color="#0A1A63"/></linearGradient></defs>' +
+  '<rect width="800" height="600" fill="url(#g)"/>' +
+  '<text x="400" y="322" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,Impact,sans-serif" ' +
+  'font-weight="800" font-size="74" letter-spacing="1">' +
+  '<tspan fill="#FFFFFF">COX’S </tspan><tspan fill="#FFB81C">DREAM </tspan><tspan fill="#1FC6FF">MOMENT</tspan>' +
+  '</text></svg>');
 
 // ---------------------------------------------------------------- pricing
 //

@@ -1,0 +1,38 @@
+/* The name, set in type instead of a logo picture: COX'S in white, DREAM
+   in gold, MOMENT in sky blue, on the deep blue it was drawn on. White
+   letters need that blue behind them on the cream pages, so the blue
+   travels with the name. One file, linked from every page, so the name
+   looks the same everywhere. */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&display=swap');
+
+.wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .24em;
+  padding: .3em .55em .26em;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #0E2585 0%, #0A1A63 100%);
+  font-family: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', Impact, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: .015em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.wordmark .wm-1 { color: #FFFFFF; }
+.wordmark .wm-2 { color: #FFB81C; }
+.wordmark .wm-3 { color: #1FC6FF; }
+
+.wordmark--lg { font-size: clamp(30px, 8vw, 46px); }
+.wordmark--sm { font-size: 17px; }
+
+@media (max-width: 420px) {
+  .site-header .wordmark { font-size: 19px; }
+}
+
+.mm-wordmark { align-self: flex-start; margin-bottom: 10px; font-size: 22px; }
+.login-wordmark { font-size: 26px; margin-bottom: 6px; }
+.side-brand .wordmark { font-size: 15px; }
+.side-brand { flex-wrap: wrap; }

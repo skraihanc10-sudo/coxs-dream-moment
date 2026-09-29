@@ -20,7 +20,7 @@
 
 // Bumping this name is what retires the old caches. It is the one thing to
 // change when a release must not be served from an old copy.
-const VERSION = 'cdm-v-drone-1';
+const VERSION = 'cdm-v-wordmark-1';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 
@@ -33,7 +33,7 @@ const PRECACHE = [
   '/livechat.js',
   '/manifest.webmanifest',
   '/images/logo.png',
-  '/images/logo-mark.png',
+  '/wordmark.css',
   '/images/icon-192.png',
   '/offline',
 ];
