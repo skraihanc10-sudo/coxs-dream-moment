@@ -696,6 +696,7 @@ document.addEventListener('DOMContentLoaded', function () {
       buildMobileMenu(packages);
       buildFooterPackageLinks(packages);
       applyShopGrid(packages);
+      applyMediaSection(packages);
       applyProductDetail(packages);
     }
     if (gallery) applyGallery(gallery);

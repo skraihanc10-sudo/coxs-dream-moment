@@ -1940,3 +1940,16 @@ body { padding-bottom: 0; }
 @media (max-width: 620px) {
   .site-footer { padding-bottom: 160px; }
 }
+
+/* ---------- /drone: the photo and video packages on their own ---------- */
+.media-page { margin-top: 0; padding: 40px 0 72px; min-height: 60vh; }
+.media-page .media-head h1 {
+  font-family: var(--display, 'Fraunces', Georgia, serif);
+  font-size: clamp(28px, 5vw, 40px);
+  margin: 8px 0 12px;
+  color: #fff;
+  text-wrap: balance;
+}
+.media-back { margin: 0 0 18px; font-size: 14px; }
+.media-back a { color: #9FB0C8; text-decoration: none; }
+.media-back a:hover, .media-back a:focus-visible { color: #fff; text-decoration: underline; }

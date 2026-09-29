@@ -2854,10 +2854,10 @@ app.post('/admin/api/team-chat', requireAuth, allow('team_chat'), (req, res) => 
 // a laundry-list of messages between a customer and whoever is working, with
 // an email on each side so nobody has to sit watching the page.
 //
-// Both sides are emailed, but not on every message. A conversation is a
-// burst of four or five lines, and five emails for one exchange teaches
-// people to ignore our emails. One goes out, then nothing for MAIL_GAP_MS
-// unless the other side has spoken since.
+// Every message a customer sends is emailed to the owner and to everyone
+// on the team: the owner asked that nobody miss one. Replies to the
+// customer are still spaced out by MAIL_GAP_MS, so a burst of four lines
+// from us is one email in their inbox, not four.
 
 const CHAT_FILE = path.join(CONTENT_DIR, 'chats.json');
 // Three minutes. Long enough that a burst of four lines is one email,
@@ -2993,23 +2993,17 @@ app.post('/api/chat', requireCustomer, async (req, res) => {
     readBy: { customer: true, team: false },
   });
 
-  const shouldMail = Date.now() - (thread.lastMailedTeam || 0) > MAIL_GAP_MS;
-  if (shouldMail) thread.lastMailedTeam = Date.now();
+  thread.lastMailedTeam = Date.now();
   writeJSON(CHAT_FILE, store);
 
   res.json({ ok: true, messages: thread.messages.map(publicMessage) });
 
-  // A notification every time, even when the email is held back: a phone
-  // alert is cheap and silent, an inbox full of near-identical emails is
-  // what makes people stop reading them.
   pushTeam({
     title: `Message from ${req.user.name || 'a customer'}`,
     body: text ? text.slice(0, 120) : 'Sent a photo',
     url: '/admin/',
     tag: 'chat-' + req.user.id,
   });
-
-  if (!shouldMail) return;
 
   // After the reply: the customer should never wait on our mail provider.
   const who = req.user.name || 'A customer';
@@ -3023,7 +3017,8 @@ app.post('/api/chat', requireCustomer, async (req, res) => {
                    '<em style="color:#6B7A93">Sent a photograph</em>'}</div>
        <p style="margin:16px 0 0;font-size:13px;color:#6B7A93;line-height:1.6">
          Reply in the Control Room and it reaches them on the website and by email.</p>`,
-      'Open the Control Room', `${SITE_URL}/admin/`)).catch(() => {});
+      // The owner signs in at /admin; everyone else at /team.
+      'Open the Control Room', `${SITE_URL}${address === GMAIL_USER ? '/admin/' : '/team'}`)).catch(() => {});
   }
 });
 

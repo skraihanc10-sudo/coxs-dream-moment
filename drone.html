@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Package | Cox's Dream Moment</title>
-<meta name="description" content="Full details of our proposal and decoration packages on Cox's Bazar beach.">
+<title>Drone &amp; Video Packages | Cox's Dream Moment</title>
+<meta name="description" content="Book proposal, candlelight dinner and decoration packages on Cox's Bazar sea beach — a simple online booking system.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cox's Dream Moment">
-<meta property="og:title" content="Package | Cox's Dream Moment">
-<meta property="og:description" content="Full details of our proposal and decoration packages on Cox's Bazar beach.">
+<meta property="og:title" content="Drone &amp; Video Packages | Cox's Dream Moment">
+<meta property="og:description" content="Book proposal, candlelight dinner and decoration packages on Cox's Bazar sea beach — a simple online booking system.">
 <meta property="og:image" content="https://coxsdreammoment.shop/images/logo.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="images/favicon.png" type="image/png">
@@ -88,11 +88,16 @@
 <header class="site-header">
   <div class="container header-main">
     <a href="/" class="brand">
+      <img class="brand-logo" src="images/logo-mark.png" alt="Cox's Dream Moment"
+           width="220" height="102"
+           onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+      <span class="brand-mark" hidden>CDM</span>
       <span class="brand-text">
         <span class="name">Cox's Dream Moment</span>
         <span class="tag">Your Dream Moment</span>
       </span>
     </a>
+
     <div class="header-actions">
       <div class="location-pill">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -103,12 +108,14 @@
         <span>Contact</span>
       </a>
     </div>
+
     <button class="nav-toggle" aria-label="Open menu"><span></span><span></span><span></span></button>
   </div>
+
   <div class="nav-bar">
     <div class="container">
       <a href="/" class="nav-link" data-cat="all">Decoration Packages</a>
-      <a href="/drone" class="nav-link" data-cat="drone">Drone &amp; video</a>
+      <a href="/drone" class="nav-link active" data-cat="drone">Drone &amp; video</a>
       <a href="gallery" class="nav-link">Gallery</a>
       <a href="contact" class="nav-link">Contact</a>
       <a href="my-bookings" class="nav-link">My bookings</a>
@@ -131,143 +138,42 @@
   <a href="tel:+8801347059522">Call us</a>
 </div>
 
-<section class="page-banner">
-  <h1>Loading…</h1>
-  <p class="crumb"><a href="/">Decoration Packages</a> / <span class="crumb-current">Loading…</span></p>
-</section>
-
-<section class="product-detail">
-  <div class="container pd-grid">
-
-    <div class="pd-gallery">
-      <!-- No photograph here on purpose. This used to hold one package's
-           picture, so every other package flashed the wrong image before its
-           own loaded. It waits on the logo instead. -->
-      <div class="pd-main-img is-loading">
-        <div class="pd-loading">
-          <img src="images/logo.png" alt="Cox's Dream Moment"
-               onerror="this.onerror=null;this.src='images/logo-mark.png';">
-          <span>Loading</span>
-        </div>
-      </div>
-      <div class="pd-thumbs"></div>
-    </div>
-
-    <div class="pd-info">
-      <h1>Loading…</h1>
-      <div class="pd-trust">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
-        <span class="pd-trust-text">Cox's Bazar</span>
-      </div>
-      <p class="pd-code" hidden></p>
-
-      <p class="pd-section-label">What is included</p>
-      <ul class="pd-inclusions"></ul>
-
-      <div class="booking-box">
-        <div class="bb-price-row">
-          <span class="bb-price-label">Package price</span>
-          <span class="bb-price-value"></span>
-        </div>
-
-        <div class="bb-row">
-          <div class="bb-field">
-            <label>Location</label>
-            <input type="text" id="bb-location" value="Cox's Bazar" readonly>
-          </div>
-          <div class="bb-field">
-            <label>Date</label>
-            <input type="date" id="bb-date">
-          </div>
-        </div>
-
-        <div class="bb-row">
-          <div class="bb-field">
-            <label>Guests</label>
-            <input type="number" id="bb-guests" value="2" min="2" max="10">
-          </div>
-          <div class="bb-field">
-            <label>Time</label>
-            <input type="time" id="bb-slot" step="900" value="17:30">
-          </div>
-        </div>
-
-        <div class="bb-field" style="margin-bottom:16px;">
-          <label>Occasion</label>
-          <select id="bb-occasion">
-            <option selected>Proposal</option>
-            <option>Anniversary</option>
-            <option>Birthday</option>
-            <option>Date night</option>
-            <option>Something else</option>
-          </select>
-        </div>
-
-        <div class="bb-addons" hidden>
-          <p class="bb-addons-label">Add photography</p>
-          <div class="bb-addons-list"></div>
-        </div>
-
-        <div class="bb-total-row">
-          <span class="bb-total-label">Total</span>
-          <span class="bb-total-value"></span>
-        </div>
-        <p class="bb-total-note" hidden></p>
-
-        <button class="bb-book-btn">Book on this website</button>
-        <button class="bb-wa-btn">
-          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.07-1.33A9.94 9.94 0 0012 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.6 0-3.1-.44-4.38-1.2l-.31-.19-3.01.79.8-2.94-.2-.3A7.94 7.94 0 014 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8zm4.4-5.9c-.24-.12-1.43-.7-1.65-.79-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.19-.46-.39-.4-.54-.41-.14-.01-.3-.01-.46-.01s-.42.06-.64.3c-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.43-.58 1.63-1.15.2-.56.2-1.04.14-1.15-.06-.1-.22-.16-.46-.28z"/></svg>
-          Book on WhatsApp
-        </button>
-        <p class="bb-book-note">
-          Booking here gives you an account, so you can check the date, what you have paid
-          and how many days are left. No password needed &mdash; just your number.
-        </p>
-
-        <!-- Filled from site settings, so the owner can change what is
-             promised here without a deploy. -->
-        <ul class="bb-trust"></ul>
-
-        <div class="bb-warning" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>
-          </svg>
-          <p></p>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Out of the grid on purpose: the photographs column is short, so tabs
-       inside it left a column of blank space beside the description. -->
+<!-- Only the photo and video packages. The home page's hero button
+     comes here, so it always lands on these and nothing else. -->
+<section class="media-section media-page" id="media">
   <div class="container">
-    <div class="pd-tabs">
-      <div class="pd-tab-headers">
-        <div class="pd-tab-head active" data-tab="desc">Description</div>
-        <div class="pd-tab-head" data-tab="policy">Booking policy</div>
-        <div class="pd-tab-head" data-tab="faq">Common questions</div>
-      </div>
-      <div class="pd-tab-content active-tab" data-tab-content="desc">
-        <p></p>
-      </div>
-      <div class="pd-tab-content" data-tab-content="policy">
-        <p>A 30% advance confirms the booking. The date can be changed free of charge up to 48 hours before the event. Cancellations within 24 hours are not refundable.</p>
-      </div>
-      <div class="pd-tab-content" data-tab-content="faq">
-        <p>The setup takes about 45 to 60 minutes. If it rains, the date can be moved at no cost.</p>
-      </div>
+    <p class="media-back"><a href="/">&larr; All decoration packages</a></p>
+    <div class="media-head">
+      <span class="eyebrow">Drone, photo and video</span>
+      <h1>Drone &amp; video packages</h1>
+      <p>
+        The setup lasts an evening; the film lasts. Our own drone operator and camera
+        team can cover your booking, so you leave with more than phone photographs.
+        Add one to any decoration package, or book it on its own.
+      </p>
     </div>
+    <div class="media-grid"></div>
   </div>
 </section>
 
-<section class="related-section">
-  <div class="container">
-    <div class="section-head">
-      <h2>More packages</h2>
-      <a href="/">See all →</a>
+<section class="trust-strip">
+  <div class="container trust-grid">
+    <div class="trust-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+      <div><h5>A year on this beach</h5><p>200+ events, and we know the spots</p></div>
     </div>
-    <div class="product-grid" style="padding:0;"></div>
+    <div class="trust-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+      <div><h5>Safe booking</h5><p>Simple, safe payment</p></div>
+    </div>
+    <div class="trust-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <div><h5>Quick to answer</h5><p>Answered within 30 minutes</p></div>
+    </div>
+    <div class="trust-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+      <div><h5>Personal help</h5><p>A dedicated team on every event</p></div>
+    </div>
   </div>
 </section>
 
@@ -275,8 +181,14 @@
   <div class="container">
     <div class="footer-grid">
       <div>
-        <div class="footer-brand"><img class="footer-logo" src="images/logo-mark.png" alt="Cox's Dream Moment" width="220" height="102" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><span class="brand-mark" hidden>CDM</span><span class="name">Cox's Dream Moment</span></div>
-        <p class="footer-desc">Proposal and decoration setups on Cox’s Bazar sea beach.</p>
+        <div class="footer-brand">
+          <img class="footer-logo" src="images/logo-mark.png" alt="Cox's Dream Moment"
+               width="220" height="102"
+               onerror="this.hidden=true;this.nextElementSibling.hidden=false;">
+          <span class="brand-mark" hidden>CDM</span>
+          <span class="name">Cox's Dream Moment</span>
+        </div>
+        <p class="footer-desc">Proposal and decoration setups on Cox’s Bazar sea beach. We make your moment one you will remember.</p>
       </div>
       <div class="footer-col">
         <h4>Pages</h4>
