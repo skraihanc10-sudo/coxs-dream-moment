@@ -71,7 +71,7 @@ button { cursor: pointer; }
   box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
   text-align: center;
 }
-.login-logo { width: 56px; height: 56px; object-fit: contain; }
+.login-logo { width: 150px; height: auto; object-fit: contain; }
 .login-card h1 {
   font-family: var(--display);
   font-size: 24px;
@@ -134,7 +134,7 @@ button { cursor: pointer; }
   padding: 20px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
-.side-brand img { width: 34px; height: 34px; object-fit: contain; }
+.side-brand img { width: 52px; height: auto; object-fit: contain; }
 .side-brand strong { display: block; font-size: 14px; color: #fff; }
 .side-brand span { display: block; font-size: 11px; color: #8FA3BF; }
 
