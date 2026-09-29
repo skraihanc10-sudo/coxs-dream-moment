@@ -64,7 +64,7 @@
   border-radius: 10px; object-fit: cover;
   background: var(--sand-2, #F6EFE6); flex: 0 0 54px;
 }
-.bk-line .is-placeholder { display: block; width: 64px; height: 64px; flex: none; border-radius: 10px; background: linear-gradient(135deg, #0E2585, #0A1A63); }
+.bk-line img.is-placeholder { object-fit: contain; padding: 9px; opacity: .5; }
 .bk-line .bl-text { flex: 1; min-width: 0; }
 .bk-line .bl-name { font-size: 14.5px; font-weight: 600; display: block; line-height: 1.35; }
 .bk-line .bl-sub { font-size: 12px; color: var(--ink-2, #6B7A93); }
@@ -236,7 +236,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Dream Moment">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="/wordmark.css">
 </head>
 <body>
 
@@ -250,7 +249,12 @@
 
 <header class="site-header">
   <div class="container header-main">
-    <a href="/" class="brand" aria-label="Cox’s Dream Moment — home"><span class="wordmark" aria-hidden="true"><span class="wm-1">Cox’s</span> <span class="wm-2">Dream</span> <span class="wm-3">Moment</span></span></a>
+    <a href="/" class="brand">
+      <span class="brand-text">
+        <span class="name">Cox's Dream Moment</span>
+        <span class="tag">Your Dream Moment</span>
+      </span>
+    </a>
     <div class="header-actions">
       <a href="/" class="header-action">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -369,7 +373,7 @@
     const money = priceOf(pkg);
     const img = pkg.main_image
       ? '<img src="' + esc(pkg.main_image) + '" alt="">'
-      : '<span class="is-placeholder" aria-hidden="true"></span>';
+      : '<img class="is-placeholder" src="images/logo-mark.png" alt="">';
     return '<div class="bk-line">' + img +
       '<div class="bl-text">' +
         '<span class="bl-name">' + esc(pkg.name) + '</span>' +
