@@ -56,6 +56,7 @@ window.ContentEditor = (function () {
     const list = (state.packages && state.packages.packages) || [];
     return list.map((p) => ({
       slug: p.slug,
+      code: p.code || '',
       name: p.name,
       kind: p.kind || '',
       price: finalPrice(p),
@@ -205,6 +206,35 @@ window.ContentEditor = (function () {
     };
   }
 
+  /** The next free "CDM 1xx" code, so a new package is numbered on sight. */
+  function nextCode(list) {
+    // Decoration setups are numbered 1xx and photo/drone 2xx; continue the setups' run.
+    const all = list.map((p) => Number(String(p.code || '').replace(/\D/g, '')) || 0);
+    const setups = list.filter((p) => p.kind !== 'media').map((p) => Number(String(p.code || '').replace(/\D/g, '')) || 0);
+    let n = Math.max(100, ...setups) + 1;
+    while (all.includes(n)) n++;
+    return 'CDM ' + n;
+  }
+
+  /** A new package starts as a copy of the details every setup shares
+   *  (what is included, description, policy, FAQ, trust line), taken from the
+   *  first decoration package. Photos, name, web address and featured are
+   *  left for the admin. */
+  function newPackageFrom(list) {
+    const pkg = blankPackage();
+    const model = list.find((p) => p.kind !== 'media' && (p.inclusions || []).length) || list.find((p) => p.kind !== 'media');
+    if (model) {
+      for (const k of ['badge', 'trust_extra', 'description', 'booking_policy', 'faq', 'price_amount', 'discount_percent']) {
+        if (model[k] !== undefined) pkg[k] = model[k];
+      }
+      pkg.categories = (model.categories || []).slice();
+      pkg.inclusions = (model.inclusions || []).slice();
+    }
+    pkg.code = nextCode(list);
+    pkg.name = 'New package';
+    return pkg;
+  }
+
   function drawPackages(panel) {
     const list = state.packages.packages;
     const setups = list.filter((p) => p.kind !== 'media');
@@ -246,8 +276,12 @@ window.ContentEditor = (function () {
     if (!media.length) mediaWrap.innerHTML = '<p class="hint" style="margin:0">No photo or video packages yet.</p>';
 
     $('#pk-add', panel).addEventListener('click', () => {
-      list.unshift(blankPackage());
+      list.unshift(newPackageFrom(list));
       drawPackages(panel);
+      // Open it straight away: only the name, photos and price are left to do.
+      const first = $('#pk-list .pkg [data-toggle]', panel);
+      if (first) first.click();
+      toast('New package added with the usual details filled in. Add its photos and price, then Save.', 'good');
     });
 
     $('#pk-save', panel).addEventListener('click', async (e) => {

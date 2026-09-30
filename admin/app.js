@@ -625,7 +625,7 @@ async function editBooking(booking) {
       <select id="f-package">
         <option value="">Not decided</option>
         ${setups.map((p) => `<option value="${esc(p.slug)}" ${b.packageSlug === p.slug ? 'selected' : ''}>
-          ${esc(p.name)}${p.price ? ' — ' + tk(p.price) : ''}</option>`).join('')}
+          ${p.code ? esc(p.code) + ' · ' : ''}${esc(p.name)}${p.price ? ' — ' + tk(p.price) : ''}</option>`).join('')}
         ${b.packageName && !packages.some((p) => p.slug === b.packageSlug)
           ? `<option value="__keep" selected>${esc(b.packageName)}</option>` : ''}
       </select>
@@ -636,7 +636,7 @@ async function editBooking(booking) {
         <select id="f-media">
           <option value="">None</option>
           ${media.map((p) => `<option value="${esc(p.slug)}" ${chosenMedia === p.slug ? 'selected' : ''}>
-            ${esc(p.name)}${p.price ? ' — +' + tk(p.price) : ''}</option>`).join('')}
+            ${p.code ? esc(p.code) + ' · ' : ''}${esc(p.name)}${p.price ? ' — +' + tk(p.price) : ''}</option>`).join('')}
         </select>
       </div>` : ''}
 
@@ -1763,7 +1763,7 @@ function renderTeam() {
         <thead><tr><th>Name</th><th>Signs in with</th><th>Status</th><th></th></tr></thead>
         <tbody>${state.staff.map((u) => `
           <tr>
-            <td><strong>${esc(u.name)}</strong>
+            <td><a href="#" data-profile="${esc(u.id)}" style="color:inherit"><strong>${esc(u.name)}</strong></a>
               ${u.role === 'super' ? '<span class="role-tag">super admin</span>' : ''}
               ${u.phone ? `<br><span style="font-size:11.5px;color:var(--muted)">${esc(u.phone)}</span>` : ''}</td>
             <td>${esc(u.email)}</td>
@@ -1772,6 +1772,7 @@ function renderTeam() {
               <div style="margin-top:5px;font-size:11px;color:var(--muted);line-height:1.5">${esc(summarisePerms(u))}</div>
             </td>
             <td class="num">
+              <button class="btn btn-sm btn-primary" data-profile="${esc(u.id)}">Profile</button>
               <button class="btn btn-sm" data-edit="${esc(u.id)}">Edit</button>
               <button class="btn btn-sm btn-ghost" data-toggle="${esc(u.id)}">${u.active ? 'Block' : 'Unblock'}</button>
               <button class="btn btn-sm btn-danger" data-del="${esc(u.id)}">Remove</button>
@@ -1796,6 +1797,7 @@ function renderTeam() {
     </div>`;
 
   $('#st-add', el).addEventListener('click', () => staffForm(null));
+  $$('[data-profile]', el).forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); staffProfile(b.dataset.profile); }));
   $$('[data-edit]', el).forEach((b) => b.addEventListener('click',
     () => staffForm(state.staff.find((u) => u.id === b.dataset.edit))));
 
@@ -2621,7 +2623,7 @@ async function staffNewBooking() {
   try { if (!list) list = await loadCatalogue(); } catch (e) { toast(e.message, 'bad'); return; }
   const setups = list.filter((p) => p.kind !== 'media');
   const media = list.filter((p) => p.kind === 'media');
-  const opt = (p) => { const pr = pkgPrice(p); return `<option value="${esc(p.slug)}">${esc(p.name)}${p.code ? ' · ' + esc(p.code) : ''} — ${pr.now ? tk(pr.now) : 'for contact'}</option>`; };
+  const opt = (p) => { const pr = pkgPrice(p); return `<option value="${esc(p.slug)}">${p.code ? esc(p.code) + ' · ' : ''}${esc(p.name)} — ${pr.now ? tk(pr.now) : 'for contact'}</option>`; };
 
   openSheet({
     title: 'New booking',
@@ -2730,4 +2732,63 @@ async function renderProfile() {
     } catch (e) { toast(e.message, 'bad'); }
     save.disabled = false;
   });
+}
+
+
+// ================================================================ A TEAM MEMBER'S PROFILE (admin)
+//
+// Everything about one person on one sheet: contact, permissions, the money
+// they took and whether it reached the office, what they spent, and the
+// bookings they entered.
+
+async function staffProfile(id) {
+  let p;
+  try { p = await api('/admin/api/staff/' + encodeURIComponent(id) + '/profile'); } catch (e) { toast(e.message, 'bad'); return; }
+  const u = p.user; const t = p.ledger.totals;
+  const status = (s) => `<span class="pill pill-${esc(s)}">${esc((STATUSES.find((x) => x.id === s) || {}).label || s)}</span>`;
+  const table = (head, rows, empty) => rows.length
+    ? `<div class="tablewrap"><table class="tbl"><thead><tr>${head.map((h) => `<th${/Amount|Price/.test(h) ? ' class="num"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`
+    : `<p class="hint" style="margin:0">${empty}</p>`;
+  const initials = String(u.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+  openSheet({
+    title: u.name,
+    body: `
+      <div class="prof-head" style="margin-bottom:14px">
+        <span class="prof-av">${esc(initials)}</span>
+        <div>
+          <strong>${esc(u.name)}</strong> ${u.role === 'super' ? '<span class="role-tag">super admin</span>' : ''}
+          <span class="pill ${u.active ? 'pill-completed' : 'pill-cancelled'}" style="margin-left:6px">${u.active ? 'Active' : 'Blocked'}</span>
+          <p class="hint" style="margin:3px 0 0">${[u.email, u.phone].filter(Boolean).map(esc).join(' · ')}${u.createdAt ? ' · since ' + esc(humanDate(String(u.createdAt).slice(0, 10))) : ''}</p>
+        </div>
+      </div>
+
+      <div class="grid grid-stats" style="margin-bottom:16px">
+        <div class="stat ${t.holding ? 'is-warn' : ''}"><div class="stat-label">Holding now</div><div class="stat-value">${tk(t.holding)}</div><div class="stat-note">not handed over</div></div>
+        <div class="stat is-good"><div class="stat-label">Payments taken</div><div class="stat-value">${tk(t.collected)}</div><div class="stat-note">${tk(t.collectedThisMonth)} this month</div></div>
+        <div class="stat"><div class="stat-label">Spent</div><div class="stat-value">${tk(t.spent)}</div><div class="stat-note">${tk(t.spentThisMonth)} this month</div></div>
+        <div class="stat"><div class="stat-label">Bookings entered</div><div class="stat-value">${p.bookings.length}</div></div>
+      </div>
+
+      <h3 class="section-title">Payments received from customers</h3>
+      ${table(['Date', 'Booking', 'Customer', 'Method', 'Amount', 'Status'], p.ledger.taken.map((x) => `<tr>
+        <td>${esc(humanDate(x.date))}</td><td>${esc(x.bookingId)}</td><td>${esc(x.customer)}</td><td>${esc(x.method)}</td>
+        <td class="num"><strong>${tk(x.amount)}</strong></td>
+        <td>${x.transferredAt ? '<span class="pill pill-completed">Handed over</span>' : '<span class="pill pill-confirmed">With them</span>'}</td></tr>`), 'No payments taken yet.')}
+
+      <h3 class="section-title" style="margin-top:20px">Costs</h3>
+      ${table(['Date', 'What for', 'Amount'], p.ledger.costs.map((e) => `<tr>
+        <td>${esc(humanDate(e.date))}</td><td>${esc(e.category || '')}${e.note ? ' — ' + esc(e.note) : ''}${e.bookingId ? ` <span class="hint">· ${esc(e.bookingId)}</span>` : ''}</td>
+        <td class="num"><strong>${tk(e.amount)}</strong></td></tr>`), 'No costs recorded yet.')}
+
+      <h3 class="section-title" style="margin-top:20px">Bookings entered</h3>
+      ${table(['Booking', 'Customer', 'Package', 'Date', 'Price', 'Status'], p.bookings.map((b) => `<tr>
+        <td><strong>${esc(b.id)}</strong></td><td>${esc(b.name)}</td><td>${esc(b.packageName || '—')}</td>
+        <td>${esc(humanDate(b.eventDate) || '—')}</td><td class="num">${b.price ? tk(b.price) : '—'}</td><td>${status(b.status)}</td></tr>`), 'No bookings entered yet.')}
+
+      <h3 class="section-title" style="margin-top:20px">Permissions</h3>
+      <ul class="prof-perms">${p.permissions.map((x) => `<li class="${x.on ? 'is-on' : ''}">${x.on ? '✓' : '—'} ${esc(x.label)}</li>`).join('')}</ul>`,
+    extraFoot: `<button type="button" class="btn btn-sm" id="sp-edit">Edit permissions</button>`,
+  });
+  $('#sp-edit').addEventListener('click', () => { $('#sheet').close(); staffForm(state.staff.find((x) => x.id === id)); });
 }

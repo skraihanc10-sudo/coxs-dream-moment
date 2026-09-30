@@ -2523,13 +2523,18 @@ app.get('/admin/api/summary', requireOwner, (req, res) => {
  *
  *  Their own only. A staff member needs to be able to check their own work
  *  without being shown the business's takings to do it. */
-app.get('/admin/api/my-ledger', requireAuth, (req, res) => {
-  const mineCosts = readExpenses().expenses.filter((e) => e.byId === req.user.id);
+app.get('/admin/api/my-ledger', requireAuth, (req, res) => res.json(ledgerFor(req.user.id)));
+
+/** One person's money: what they spent, what they took from customers and
+ *  whether it has reached the office. The team member's own page and the
+ *  admin's view of them read the same figures. */
+function ledgerFor(userId) {
+  const mineCosts = readExpenses().expenses.filter((e) => e.byId === userId);
 
   const taken = [];
   for (const b of readBookings().bookings) {
     for (const p of b.payments || []) {
-      if (p.heldById !== req.user.id) continue;
+      if (p.heldById !== userId) continue;
       taken.push({
         paymentId: p.id,
         bookingId: b.id,
@@ -2548,7 +2553,7 @@ app.get('/admin/api/my-ledger', requireAuth, (req, res) => {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const inMonth = (d) => String(d || '').slice(0, 7) === thisMonth;
 
-  res.json({
+  return {
     costs: mineCosts,
     taken,
     totals: {
@@ -2558,6 +2563,21 @@ app.get('/admin/api/my-ledger', requireAuth, (req, res) => {
       collectedThisMonth: taken.filter((t) => inMonth(t.date)).reduce((sum, t) => sum + t.amount, 0),
       holding: taken.filter((t) => !t.transferredAt).reduce((sum, t) => sum + t.amount, 0),
     },
+  };
+}
+
+// The admin's view of one team member: who they are, what they may do,
+// their money and the bookings they entered.
+app.get('/admin/api/staff/:id/profile', requireOwner, (req, res) => {
+  const u = readUsers().users.find((x) => x.id === req.params.id && (x.role === 'staff' || x.role === 'super'));
+  if (!u) return res.status(404).json({ error: 'Team member not found.' });
+  const entered = readBookings().bookings.filter((b) => b.createdById === u.id).map((b) => withTotals(b));
+  res.json({
+    user: publicUser(u),
+    permissions: PERMISSIONS.map((p) => ({ label: p.label, on: permissionsOf(u)[p.id] === true })),
+    ledger: ledgerFor(u.id),
+    bookings: entered.map((b) => ({ id: b.id, name: b.name, packageName: b.packageName, eventDate: b.eventDate,
+      status: b.status, price: money(b.price), createdAt: b.createdAt })),
   });
 });
 
