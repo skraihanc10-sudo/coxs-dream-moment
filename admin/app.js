@@ -251,6 +251,15 @@ async function refresh() {
     // A staff session would be refused by these, and asking anyway would
     // log them out on the 401.
     state.staffSummary = await api('/admin/api/staff-summary');
+    state.bookings = [];
+    state.customers = state.customers || [];
+    if (may('bookings_view')) {
+      try { state.bookings = (await api('/admin/api/bookings')).bookings || []; } catch (e) { /* permission just removed */ }
+    }
+    const staffNew = $('#nav-new');
+    const n = state.bookings.filter((b) => b.status === 'new').length;
+    staffNew.textContent = n;
+    staffNew.hidden = n === 0;
     return;
   }
 
@@ -292,13 +301,13 @@ const VIEWS = {
   'team-chat': { title: 'Team chat', perm: 'team_chat', render: renderTeamChat },
   approvals: { title: 'Approvals', owner: true, render: renderApprovals },
   dashboard: { title: 'Dashboard', render: () => (isOwner() ? renderDashboard() : renderStaffHome()) },
-  bookings: { title: 'Bookings', owner: true, render: renderBookings },
+  bookings: { title: 'Bookings', perm: 'bookings_view', render: renderBookings },
   accounts: { title: 'Accounts', render: () => (isOwner() ? renderAccounts() : renderStaffCosts()) },
   messages: { title: 'Messages', perm: 'chat', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
   bin: { title: 'Recycle bin', mainAdmin: true, render: renderBin },
   team: { title: 'Team', owner: true, render: renderTeam },
-  content: { title: 'Website content', render: () => window.ContentEditor.mount($('#view-content')) },
+  content: { title: 'Website content', owner: true, render: () => window.ContentEditor.mount($('#view-content')) },
 };
 
 let go = function (name) {
@@ -486,10 +495,11 @@ function bookingTable(list) {
   if (!list.length) {
     return `<div class="empty"><strong>Nothing here yet</strong>Bookings from the website land here automatically.</div>`;
   }
+  const money = may('bookings_money');
   return `<div class="tablewrap"><table class="tbl">
     <thead><tr>
       <th>Booking</th><th>Customer</th><th>Package</th><th>Date</th>
-      <th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th><th>Status</th>
+      ${money ? '<th class="num">Price</th><th class="num">Paid</th><th class="num">Due</th>' : ''}<th>Status</th>
     </tr></thead>
     <tbody>${list.map((b) => `
       <tr class="row-link" data-id="${esc(b.id)}">
@@ -497,12 +507,12 @@ function bookingTable(list) {
         <td>${esc(b.name)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(b.phone)}</span></td>
         <td>${esc(b.packageName || '—')}</td>
         <td>${esc(humanDate(b.eventDate) || '—')}<br><span style="font-size:11.5px;color:var(--muted)">${esc(prettyTime(b.eventTime))}</span></td>
-        <td class="num">${b.price ? tk(b.price) : '—'}</td>
+        ${money ? `<td class="num">${b.price ? tk(b.price) : '—'}</td>
         <td class="num">${b.paid ? tk(b.paid) : '—'}</td>
-        <td class="num" style="${b.due ? 'color:var(--warn);font-weight:700' : ''}">${b.due ? tk(b.due) : '—'}</td>
+        <td class="num" style="${b.due ? 'color:var(--warn);font-weight:700' : ''}">${b.due ? tk(b.due) : '—'}</td>` : ''}
         <td>
           <span class="pill pill-${esc(b.status)}">${esc((STATUSES.find((s) => s.id === b.status) || {}).label || b.status)}</span>
-          ${b.status === 'new' ? `<button class="btn btn-sm btn-primary" style="margin-left:8px" data-approve="${esc(b.id)}">Approve</button>` : ''}
+          ${b.status === 'new' && isOwner() ? `<button class="btn btn-sm btn-primary" style="margin-left:8px" data-approve="${esc(b.id)}">Approve</button>` : ''}
         </td>
       </tr>`).join('')}
     </tbody></table></div>`;
@@ -564,6 +574,7 @@ function renderBookings() {
   }));
   wireBookingRows(el);
 
+  if (!isOwner()) { $('#topbar-actions').innerHTML = ''; return; }
   $('#topbar-actions').innerHTML = '<button class="btn btn-primary" id="tb-add">+ New booking</button>';
   $('#tb-add').addEventListener('click', () => editBooking(null));
 }
@@ -1022,7 +1033,7 @@ async function renderStaffHome() {
       ${may('costs_add') ? '<button class="btn btn-primary" id="sh-pay">+ Payment received</button>' : ''}
       ${may('costs_add') ? '<button class="btn" id="sh-cost">+ Cost</button>' : ''}
       ${may('chat') ? `<button class="btn" data-go="messages">Messages${state.chatUnread ? ' (' + state.chatUnread + ')' : ''}</button>` : ''}
-      ${may('packages') ? '<button class="btn" data-go="content">Packages</button>' : ''}
+      ${may('bookings_view') ? '<button class="btn" data-go="bookings">Bookings</button>' : ''}
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -1762,15 +1773,16 @@ function renderTeam() {
             </td>
           </tr>`).join('')}
         </tbody></table></div>`
-        : `<div class="empty"><strong>No team members yet</strong>Add someone and they can record costs and edit the packages.</div>`}
+        : `<div class="empty"><strong>No team members yet</strong>Add someone and they can record costs, answer messages and, if you allow it, see bookings.</div>`}
     </div>
 
     <div class="card card-pad" style="margin-top:14px">
       <h2 class="section-title">What a team member can do</h2>
       <p style="margin:0;line-height:1.7;font-size:13.5px">
-        <strong>Yes:</strong> record what they spend, add and edit packages, see the live catalogue.<br>
-        <strong>No:</strong> bookings, customers, income, profit, what anyone owes, the site's contact details,
-        and removing a cost once it is saved.
+        <strong>Yes:</strong> whatever you tick for them — record what they spend, answer messages,
+        see bookings (which package, date and customer), and with a second tick the prices and what is owed.<br>
+        <strong>No, ever:</strong> editing the website content (packages, prices, photos, site details) — that is
+        the admin's alone — customers, income, profit, and removing a cost once it is saved.
       </p>
       <p class="hint" style="margin:10px 0 0">
         Everyone on the team signs in at <strong>coxsdreammoment.shop/team</strong> with

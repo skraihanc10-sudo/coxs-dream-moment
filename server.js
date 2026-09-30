@@ -1533,20 +1533,26 @@ app.put('/admin/api/settings', requireOwner, (req, res) => {
   res.json({ ok: true });
 });
 
-app.put('/admin/api/packages', requireAuth, allow('packages'), (req, res) => {
+app.put('/admin/api/packages', requireOwner, (req, res) => {
   const body = req.body;
   if (!body || !Array.isArray(body.packages)) return res.status(400).json({ error: 'Invalid data' });
 
   const slugs = new Set();
   const codes = new Set();
+  const toSlug = (v) => String(v || '').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
   for (const pkg of body.packages) {
-    if (!pkg.slug || typeof pkg.slug !== 'string' || !/^[a-z0-9-]+$/.test(pkg.slug)) {
-      return res.status(400).json({ error: `Invalid slug: "${pkg.slug}" — use lowercase letters, numbers and hyphens only` });
+    if (!pkg || typeof pkg !== 'object') return res.status(400).json({ error: 'Invalid package data' });
+    if (!String(pkg.name || '').trim()) {
+      return res.status(400).json({ error: 'Every package needs a name.' });
     }
-    if (slugs.has(pkg.slug)) {
-      return res.status(400).json({ error: `Slug "${pkg.slug}" is used more than once — every package needs a unique slug` });
-    }
-    slugs.add(pkg.slug);
+    // A slug is only the package's web address. Typed one is tidied; a blank
+    // one (every new package, or a Bangla-only name) is made for them.
+    let slug = toSlug(pkg.slug) || toSlug(pkg.name) || 'package';
+    const base = slug;
+    for (let n = 2; slugs.has(slug); n++) slug = `${base}-${n}`;
+    pkg.slug = slug;
+    slugs.add(slug);
 
     // Package code: normalise "cdm101" / "CDM  101" to "CDM 101", and keep
     // codes unique. A blank code is filled in from the next free number so
@@ -2631,7 +2637,6 @@ app.post('/admin/api/push-test', requireAuth, async (req, res) => {
 
 const PERMISSIONS = [
   { id: 'chat',            label: 'Answer customer messages',      fallback: true },
-  { id: 'packages',        label: 'Edit packages and prices',      fallback: true },
   { id: 'costs_add',       label: 'Record what they spend',        fallback: true },
   { id: 'bookings_view',   label: 'See bookings (no money)',       fallback: false },
   { id: 'bookings_money',  label: 'See prices and what is owed',   fallback: false },
@@ -3452,15 +3457,23 @@ const upload = multer({
       cb(null, `${base}-${Date.now()}${ext}`);
     },
   }),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => {
     cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype));
   },
 });
 
-app.post('/admin/api/upload', requireAuth, upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Image upload failed (jpg/png/webp/gif, up to 8MB)' });
-  res.json({ path: `images/${req.file.filename}` });
+// Multer reports a too-large file by throwing, which Express would answer with
+// an HTML error page the admin panel cannot read. Answer in words instead.
+app.post('/admin/api/upload', requireOwner, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      const big = err.code === 'LIMIT_FILE_SIZE';
+      return res.status(400).json({ error: big ? 'That photo is larger than 15 MB. Choose a smaller one.' : 'Upload failed. Try again.' });
+    }
+    if (!req.file) return res.status(400).json({ error: 'Only JPG, PNG, WebP or GIF photos can be uploaded. iPhone HEIC photos must be saved as JPG first.' });
+    res.json({ path: `images/${req.file.filename}` });
+  });
 });
 
 // ---------------------------------------------------------------- static site + admin UI

@@ -78,18 +78,12 @@ window.ContentEditor = (function () {
   function draw() {
     host.innerHTML = `
       <div class="cnt-tabs">
-        ${(window.Admin.isOwner()
-            ? [['packages', 'Packages'], ['settings', 'Site details'], ['payment', 'How to pay'], ['gallery', 'Gallery']]
-            : [['packages', 'Packages']])
+        ${[['packages', 'Packages'], ['settings', 'Site details'], ['payment', 'How to pay'], ['gallery', 'Gallery']]
           .map(([id, label]) => `<button class="chip ${state.tab === id ? 'is-on' : ''}" data-tab="${id}">${label}</button>`).join('')}
       </div>
       <div id="cnt-panel"></div>`;
 
     $$('[data-tab]', host).forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; draw(); }));
-
-    // A staff member landing on a tab they cannot use would see a screen
-    // whose Save button always fails; send them back to the one they can.
-    if (!window.Admin.isOwner() && state.tab !== 'packages') state.tab = 'packages';
 
     const panel = $('#cnt-panel', host);
     if (state.tab === 'packages') drawPackages(panel);
@@ -331,7 +325,7 @@ window.ContentEditor = (function () {
     bodyEl.innerHTML = `
       <div class="field-row">
         ${text('Package name', 'name')}
-        ${text('Slug (lowercase, hyphens)', 'slug')}
+        ${text('Web address (slug)', 'slug', 'Leave blank and one is made from the name on save.')}
       </div>
       <div class="field-row">
         ${text('Package code', 'code', 'Leave blank and one is assigned on save.')}
