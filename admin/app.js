@@ -43,7 +43,8 @@ const isMainAdmin = () => state.role === 'owner';
 /** What this account may do. The owner may do everything; a staff member
  *  only what the owner ticked for them. Checked on the server too \u2014 this
  *  is for what to draw, not for what to allow. */
-const may = (id) => isOwner() || state.perms[id] === true;
+// "a|b" means either permission is enough.
+const may = (id) => isOwner() || String(id).split('|').some((x) => state.perms[x] === true);
 
 const STATUSES = [
   { id: 'new', label: 'New' },
@@ -301,7 +302,9 @@ const VIEWS = {
   'team-chat': { title: 'Team chat', perm: 'team_chat', render: renderTeamChat },
   approvals: { title: 'Approvals', owner: true, render: renderApprovals },
   dashboard: { title: 'Dashboard', render: () => (isOwner() ? renderDashboard() : renderStaffHome()) },
-  bookings: { title: 'Bookings', perm: 'bookings_view', render: renderBookings },
+  bookings: { title: 'Bookings', perm: 'bookings_view|bookings_add', render: renderBookings },
+  catalogue: { title: 'Packages', render: renderCatalogue },
+  profile: { title: 'My profile', render: renderProfile },
   accounts: { title: 'Accounts', render: () => (isOwner() ? renderAccounts() : renderStaffCosts()) },
   messages: { title: 'Messages', perm: 'chat', render: renderMessages },
   customers: { title: 'Customers', owner: true, render: renderCustomers },
@@ -503,7 +506,7 @@ function bookingTable(list) {
     </tr></thead>
     <tbody>${list.map((b) => `
       <tr class="row-link" data-id="${esc(b.id)}">
-        <td><strong>${esc(b.id)}</strong><br><span style="font-size:11.5px;color:var(--muted)">${esc(b.source === 'manual' ? 'Entered by you' : 'From website')}</span></td>
+        <td><strong>${esc(b.id)}</strong><br><span style="font-size:11.5px;color:var(--muted)">${esc(b.source !== 'manual' ? 'From website' : 'Entered by ' + (b.createdByName || 'Admin'))}</span></td>
         <td>${esc(b.name)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(b.phone)}</span></td>
         <td>${esc(b.packageName || '—')}</td>
         <td>${esc(humanDate(b.eventDate) || '—')}<br><span style="font-size:11.5px;color:var(--muted)">${esc(prettyTime(b.eventTime))}</span></td>
@@ -574,9 +577,9 @@ function renderBookings() {
   }));
   wireBookingRows(el);
 
-  if (!isOwner()) { $('#topbar-actions').innerHTML = ''; return; }
+  if (!may('bookings_add')) { $('#topbar-actions').innerHTML = ''; return; }
   $('#topbar-actions').innerHTML = '<button class="btn btn-primary" id="tb-add">+ New booking</button>';
-  $('#tb-add').addEventListener('click', () => editBooking(null));
+  $('#tb-add').addEventListener('click', () => (isOwner() ? editBooking(null) : staffNewBooking()));
 }
 
 /** The booking editor. One dialog for both a new booking and an existing
@@ -1033,7 +1036,9 @@ async function renderStaffHome() {
       ${may('costs_add') ? '<button class="btn btn-primary" id="sh-pay">+ Payment received</button>' : ''}
       ${may('costs_add') ? '<button class="btn" id="sh-cost">+ Cost</button>' : ''}
       ${may('chat') ? `<button class="btn" data-go="messages">Messages${state.chatUnread ? ' (' + state.chatUnread + ')' : ''}</button>` : ''}
-      ${may('bookings_view') ? '<button class="btn" data-go="bookings">Bookings</button>' : ''}
+      ${may('bookings_view|bookings_add') ? '<button class="btn" data-go="bookings">Bookings</button>' : ''}
+      <button class="btn" data-go="catalogue">Packages</button>
+      <button class="btn" data-go="profile">My profile</button>
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -2205,6 +2210,7 @@ function viewBooking(b) {
     ['People', b.people],
     ['Occasion', b.occasion],
     ['Status', (STATUSES.find((s) => s.id === b.status) || {}).label || b.status],
+    ['Entered by', b.source === 'manual' ? (b.createdByName || 'Admin') : 'Customer, on the website'],
   ].filter(([, v]) => v);
 
   if (money) {
@@ -2551,3 +2557,177 @@ go = function (name) {
 window.Admin = { toast, api, openSheet, confirmDialog, esc, $, $$, isOwner };
 
 boot();
+
+
+// ================================================================ PACKAGES (read only)
+//
+// The catalogue as the website shows it, for everyone on the team, drone and
+// photography included. Changing it is the admin's, under Website content.
+
+const pkgPrice = (p) => {
+  const full = Number(p.price_amount) || 0;
+  if (!full) return { full: 0, now: 0, pct: 0 };
+  const pct = Math.min(Math.max(Number(p.discount_percent) || 0, 0), 95);
+  return { full, now: Math.round(full * (1 - pct / 100)), pct };
+};
+let catalogueCache = null;
+async function loadCatalogue() {
+  const data = await api('/admin/api/data');
+  catalogueCache = ((data.packages && data.packages.packages) || []).filter((p) => p && p.name);
+  return catalogueCache;
+}
+
+async function renderCatalogue() {
+  const el = $('#view-catalogue');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  let list;
+  try { list = await loadCatalogue(); } catch (e) { el.innerHTML = `<div class="empty"><strong>Could not load</strong>${esc(e.message)}</div>`; return; }
+  const card = (p) => {
+    const pr = pkgPrice(p);
+    return `<article class="cat-card">
+      ${(p.main_image || (p.thumbnails || []).filter(Boolean)[0]) ? `<img src="/${esc(p.main_image || p.thumbnails.filter(Boolean)[0])}" alt="" loading="lazy">` : '<div class="cat-noimg"></div>'}
+      <div class="cat-body">
+        <div class="cat-top"><span class="cat-code">${esc(p.code || '')}</span>${p.badge ? `<span class="pill pill-confirmed">${esc(p.badge)}</span>` : ''}</div>
+        <h3>${esc(p.name)}</h3>
+        <p class="cat-price">${pr.full ? `${pr.pct ? `<s>${tk(pr.full)}</s> ` : ''}<strong>${tk(pr.now)}</strong>${pr.pct ? ` <span class="cat-off">${pr.pct}% OFF</span>` : ''}` : '<strong>For contact</strong>'}</p>
+        ${(p.inclusions || []).filter(Boolean).length ? `<ul>${p.inclusions.filter(Boolean).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+        ${p.description ? `<details><summary>Details</summary><p>${esc(p.description)}</p></details>` : ''}
+      </div>
+    </article>`;
+  };
+  const setups = list.filter((p) => p.kind !== 'media');
+  const media = list.filter((p) => p.kind === 'media');
+  el.innerHTML = `
+    <p class="hint" style="margin:0 0 14px">The packages exactly as customers see them on the website.${isOwner() ? ' Change them under <a href="#" data-go="content">Website content</a>.' : ' Only the admin can change them.'}</p>
+    <h2 class="section-title">Decoration packages <span class="hint">(${setups.length})</span></h2>
+    <div class="cat-grid">${setups.map(card).join('') || '<div class="empty">No packages yet.</div>'}</div>
+    <h2 class="section-title" style="margin-top:26px">Photo, video &amp; drone <span class="hint">(${media.length})</span></h2>
+    <div class="cat-grid">${media.map(card).join('') || '<div class="empty">No photo or drone packages yet.</div>'}</div>`;
+  $$('[data-go]', el).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); go(a.dataset.go); }));
+  if (may('bookings_add')) {
+    $('#topbar-actions').innerHTML = '<button class="btn btn-primary" id="tb-add">+ New booking</button>';
+    $('#tb-add').addEventListener('click', () => (isOwner() ? editBooking(null) : staffNewBooking()));
+  }
+}
+
+// ================================================================ TEAM BOOKING ENTRY
+//
+// A team member with "Enter new bookings" takes a booking over the phone or
+// on the beach. The price is the package's own; the server recomputes it and
+// records who entered it. Anything else (discounts, payments) is the admin's.
+
+async function staffNewBooking() {
+  let list = catalogueCache;
+  try { if (!list) list = await loadCatalogue(); } catch (e) { toast(e.message, 'bad'); return; }
+  const setups = list.filter((p) => p.kind !== 'media');
+  const media = list.filter((p) => p.kind === 'media');
+  const opt = (p) => { const pr = pkgPrice(p); return `<option value="${esc(p.slug)}">${esc(p.name)}${p.code ? ' · ' + esc(p.code) : ''} — ${pr.now ? tk(pr.now) : 'for contact'}</option>`; };
+
+  openSheet({
+    title: 'New booking',
+    saveLabel: 'Enter booking',
+    body: `
+      <div class="field-row">
+        <div class="field"><label for="sn-name">Customer name</label><input id="sn-name" autocomplete="off"></div>
+        <div class="field"><label for="sn-phone">Mobile number</label><input id="sn-phone" inputmode="tel" placeholder="01XXXXXXXXX"></div>
+      </div>
+      <div class="field"><label for="sn-email">Email (optional)</label><input id="sn-email" type="email"></div>
+      <div class="field"><label for="sn-pkg">Package</label><select id="sn-pkg"><option value="">Choose a package</option>${setups.map(opt).join('')}</select></div>
+      <div class="field"><label for="sn-media">Photo, video or drone (optional)</label><select id="sn-media"><option value="">None</option>${media.map(opt).join('')}</select></div>
+      <div class="field-row">
+        <div class="field"><label for="sn-date">Date</label><input id="sn-date" type="date"></div>
+        <div class="field"><label for="sn-time">Time</label><input id="sn-time" placeholder="e.g. Sunset, 5:30 pm"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="sn-people">People</label><input id="sn-people" type="number" min="1" max="500"></div>
+        <div class="field"><label for="sn-occ">Occasion</label><input id="sn-occ" placeholder="e.g. Proposal, Birthday"></div>
+      </div>
+      <div class="field"><label for="sn-note">Note</label><textarea id="sn-note" rows="3"></textarea></div>
+      <div class="price-preview" id="sn-price"></div>
+      <p class="hint" style="margin:8px 0 0">The price is fixed by the packages. Only the admin can change it or give a discount. Your name is saved on this booking.</p>`,
+    onSave: async (root) => {
+      const slug = $('#sn-pkg', root).value;
+      const extra = $('#sn-media', root).value;
+      const name = $('#sn-name', root).value.trim();
+      if (!name) { toast('Enter the customer name.', 'bad'); return false; }
+      if ($('#sn-phone', root).value.replace(/\D/g, '').length < 10) { toast("Enter the customer's mobile number.", 'bad'); return false; }
+      if (!slug) { toast('Choose a package.', 'bad'); return false; }
+      const names = [slug, extra].filter(Boolean).map((s) => (list.find((p) => p.slug === s) || {}).name).filter(Boolean);
+      const r = await api('/admin/api/bookings', { method: 'POST', body: JSON.stringify({
+        name, phone: $('#sn-phone', root).value, email: $('#sn-email', root).value.trim(),
+        packageSlug: slug, packageName: names.join(' + '), slugs: [slug, extra].filter(Boolean),
+        eventDate: $('#sn-date', root).value, eventTime: $('#sn-time', root).value,
+        people: $('#sn-people', root).value, occasion: $('#sn-occ', root).value, note: $('#sn-note', root).value,
+      }) });
+      await refresh();
+      go(currentView() === 'catalogue' ? 'catalogue' : (may('bookings_view') ? 'bookings' : 'profile'));
+      toast(`Booking ${r.booking.id} entered`, 'good');
+    },
+  });
+
+  const paint = () => {
+    const chosen = [$('#sn-pkg').value, $('#sn-media').value].filter(Boolean).map((s) => list.find((p) => p.slug === s)).filter(Boolean);
+    const total = chosen.reduce((sum, p) => sum + pkgPrice(p).now, 0);
+    $('#sn-price').innerHTML = chosen.length
+      ? `<span class="pp-label">Price</span><span class="pp-now">${total ? tk(total) : 'For contact'}</span>`
+      : '<span class="pp-none">Choose a package to see the price.</span>';
+  };
+  $('#sn-pkg').addEventListener('change', paint);
+  $('#sn-media').addEventListener('change', paint);
+  paint();
+}
+
+// ================================================================ MY PROFILE
+
+async function renderProfile() {
+  const el = $('#view-profile');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  let p;
+  try { p = await api('/admin/api/profile'); } catch (e) { el.innerHTML = `<div class="empty"><strong>Could not load</strong>${esc(e.message)}</div>`; return; }
+  const roleName = { owner: 'Main admin', super: 'Super admin', staff: 'Team member' }[p.role] || p.role;
+  const initials = String(p.name || '?').split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const status = (s) => `<span class="pill pill-${esc(s)}">${esc((STATUSES.find((x) => x.id === s) || {}).label || s)}</span>`;
+  el.innerHTML = `
+    <div class="card card-pad prof-head">
+      <span class="prof-av">${esc(initials)}</span>
+      <div>
+        <h2 class="section-title" style="margin:0">${esc(p.name)}</h2>
+        <p class="hint" style="margin:2px 0 0">${esc(roleName)}${p.since ? ' · since ' + esc(humanDate(String(p.since).slice(0, 10))) : ''}</p>
+        <p style="margin:6px 0 0;font-size:13.5px">${[p.email, p.phone].filter(Boolean).map(esc).join(' · ')}</p>
+      </div>
+    </div>
+
+    <div class="grid grid-stats" style="margin:16px 0">
+      <div class="stat"><div class="stat-label">Bookings I entered</div><div class="stat-value">${p.counts.total}</div></div>
+      <div class="stat"><div class="stat-label">This month</div><div class="stat-value">${p.counts.thisMonth}</div></div>
+      <div class="stat is-good"><div class="stat-label">Confirmed or done</div><div class="stat-value">${p.counts.confirmed}</div></div>
+    </div>
+
+    <div class="prof-cols">
+      <div class="card">
+        <div class="card-pad" style="border-bottom:1px solid var(--line)"><h2 class="section-title" style="margin:0">Bookings I entered</h2></div>
+        ${p.bookings.length ? `<div class="tablewrap"><table class="tbl"><thead><tr><th>Booking</th><th>Customer</th><th>Package</th><th>Date</th>${p.bookings[0].price !== null ? '<th class="num">Price</th>' : ''}<th>Status</th></tr></thead><tbody>
+          ${p.bookings.map((b) => `<tr><td><strong>${esc(b.id)}</strong></td><td>${esc(b.name)}</td><td>${esc(b.packageName || '—')}</td><td>${esc(humanDate(b.eventDate) || '—')}</td>${b.price !== null ? `<td class="num">${b.price ? tk(b.price) : '—'}</td>` : ''}<td>${status(b.status)}</td></tr>`).join('')}
+        </tbody></table></div>` : `<div class="empty"><strong>None yet</strong>${may('bookings_add') ? 'Bookings you enter show here with your name on them.' : 'Ask the admin for “Enter new bookings” to take bookings.'}</div>`}
+      </div>
+      <div style="display:grid;gap:16px;align-content:start">
+        <div class="card card-pad"><h2 class="section-title">What I can do</h2>
+          <ul class="prof-perms">${p.permissions.map((x) => `<li class="${x.on ? 'is-on' : ''}">${x.on ? '✓' : '—'} ${esc(x.label)}</li>`).join('')}</ul>
+          <p class="hint" style="margin:8px 0 0">Changing the website content is for the admin only.</p></div>
+        ${p.canChangePassword ? `<div class="card card-pad"><h2 class="section-title">Change password</h2>
+          <div class="field"><label for="pf-cur">Current password</label><input id="pf-cur" type="password" autocomplete="current-password"></div>
+          <div class="field"><label for="pf-new">New password</label><input id="pf-new" type="password" autocomplete="new-password" minlength="8"></div>
+          <button class="btn btn-primary btn-sm" id="pf-save">Change password</button></div>` : ''}
+      </div>
+    </div>`;
+  const save = $('#pf-save', el);
+  if (save) save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      await api('/admin/api/profile/password', { method: 'POST', body: JSON.stringify({ current: $('#pf-cur').value, next: $('#pf-new').value }) });
+      $('#pf-cur').value = ''; $('#pf-new').value = '';
+      toast('Password changed', 'good');
+    } catch (e) { toast(e.message, 'bad'); }
+    save.disabled = false;
+  });
+}

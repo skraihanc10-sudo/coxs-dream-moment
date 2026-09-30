@@ -919,6 +919,46 @@ app.post('/admin/api/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// A team member's own page: who they are, what they may do, and the
+// bookings they entered.
+app.get('/admin/api/profile', requireAuth, (req, res) => {
+  const management = req.user.role === 'owner';
+  const u = management ? null : readUsers().users.find((x) => x.id === req.user.id);
+  const mine = readBookings().bookings.filter((b) => b.createdById === (req.user.id || 'owner'));
+  const seesMoney = can(req, 'bookings_money') || req.user.role !== 'staff';
+  res.json({
+    name: management ? 'Admin' : (u && u.name) || '',
+    email: u ? u.email : '',
+    phone: u ? u.phone : '',
+    role: req.user.role,
+    since: u ? u.createdAt : '',
+    permissions: PERMISSIONS.map((p) => ({ label: p.label, on: management || permissionsOf(u)[p.id] === true })),
+    canChangePassword: !management,
+    bookings: mine.slice(0, 100).map((b) => ({
+      id: b.id, name: b.name, packageName: b.packageName, eventDate: b.eventDate, status: b.status,
+      createdAt: b.createdAt, price: seesMoney ? money(b.price) : null,
+    })),
+    counts: {
+      total: mine.length,
+      thisMonth: mine.filter((b) => String(b.createdAt).slice(0, 7) === new Date().toISOString().slice(0, 7)).length,
+      confirmed: mine.filter((b) => b.status === 'confirmed' || b.status === 'completed').length,
+    },
+  });
+});
+
+app.post('/admin/api/profile/password', requireAuth, (req, res) => {
+  if (req.user.role === 'owner') return res.status(400).json({ error: 'The main admin password is set in Coolify.' });
+  const { current, next } = req.body || {};
+  const store = readUsers();
+  const u = store.users.find((x) => x.id === req.user.id);
+  if (!u || !passwordMatches(current, u)) return res.status(400).json({ error: 'Your current password is not correct.' });
+  if (String(next || '').length < 8) return res.status(400).json({ error: 'Use a new password of at least 8 characters.' });
+  const { salt, hash } = hashPassword(String(next));
+  u.salt = salt; u.hash = hash;
+  writeJSON(USERS_FILE, store);
+  res.json({ ok: true });
+});
+
 app.get('/admin/api/session', (req, res) => {
   const user = currentUser(req);
   res.json({
@@ -1754,6 +1794,9 @@ function normaliseBooking(input, existing) {
     // The account this booking belongs to, so the customer can come back
     // and see it. Set once, on creation, and never taken from the request.
     customerId: base.customerId || '',
+    createdById: base.createdById || '',
+    createdByName: base.createdByName || '',
+    createdByRole: base.createdByRole || '',
 
     // Screenshots of bKash / bank transfers the customer sent in.
     receipts: Array.isArray(base.receipts) ? base.receipts : [],
@@ -2126,6 +2169,21 @@ app.post('/admin/api/bookings/:id/remind', requireOwner, async (req, res) => {
 
 // ---------------------------------------------------------------- admin bookings
 
+// Bookings typed in before customer accounts were made for them could never
+// be opened under My bookings. Link each one that has a number or an email.
+(function linkManualBookings() {
+  try {
+    const store = readBookings();
+    let changed = 0;
+    for (const b of store.bookings) {
+      if (b.customerId || !(String(b.phone || '').replace(/\D/g, '').length >= 10 || b.email)) continue;
+      b.customerId = upsertCustomer({ name: b.name, phone: b.phone, email: b.email }).id;
+      changed++;
+    }
+    if (changed) { writeJSON(BOOKINGS_FILE, store); console.log(`Linked ${changed} booking(s) to customer accounts`); }
+  } catch (e) { console.error('[link bookings]', e.message); }
+})();
+
 app.get('/admin/api/bookings', requireAuth, (req, res) => {
   if (!can(req, 'bookings_view')) return res.status(403).json({ error: 'You do not have access to that.' });
 
@@ -2148,16 +2206,50 @@ app.get('/admin/api/bookings', requireAuth, (req, res) => {
   });
 });
 
-app.post('/admin/api/bookings', requireOwner, (req, res) => {
-  const store = readBookings();
-  const booking = normaliseBooking(req.body || {}, { source: 'manual' });
+app.post('/admin/api/bookings', requireAuth, allow('bookings_add'), (req, res) => {
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  let input = req.body || {};
+  if (!management) {
+    // A team member enters what the customer chose. The price is the
+    // catalogue's, never typed, and money, notes and status stay with the admin.
+    const slugs = Array.isArray(input.slugs) ? input.slugs : [];
+    const fixed = catalogueTotal(slugs.map((x) => text(x, 80)));
+    input = {
+      name: input.name, phone: input.phone, email: input.email,
+      packageSlug: input.packageSlug, packageName: input.packageName, slugs,
+      eventDate: input.eventDate, eventTime: input.eventTime, people: input.people,
+      occasion: input.occasion, note: input.note,
+      price: fixed, listPrice: fixed, status: 'new',
+    };
+  }
+  const booking = normaliseBooking(input, { source: 'manual' });
   if (!booking.name) return res.status(400).json({ error: 'A name is required.' });
+  if (!management && String(booking.phone).replace(/\D/g, '').length < 10) {
+    return res.status(400).json({ error: "Enter the customer's mobile number." });
+  }
+  if (!management && !booking.packageSlug) return res.status(400).json({ error: 'Choose a package.' });
+  const store = readBookings();
   booking.id = `CDM-${store.nextNumber}`;
   store.nextNumber += 1;
+  booking.createdById = req.user.id || 'owner';
+  booking.createdByName = whoIs(req);
+  booking.createdByRole = req.user.role;
+  // Every booking gets the customer an account, so they can open it under
+  // My bookings with the same number.
+  if (booking.phone || booking.email) {
+    booking.customerId = upsertCustomer({ name: booking.name, phone: booking.phone, email: booking.email }).id;
+  }
   store.bookings.unshift(booking);
   writeJSON(BOOKINGS_FILE, store);
   res.json({ ok: true, booking: withTotals(booking) });
 });
+
+/** The name shown next to anything a person did in the Control Room. */
+function whoIs(req) {
+  if (req.user.role === 'owner') return 'Admin';
+  const u = readUsers().users.find((x) => x.id === req.user.id);
+  return (u && u.name) || req.user.name || 'Team member';
+}
 
 app.put('/admin/api/bookings/:id', requireOwner, (req, res) => {
   const store = readBookings();
@@ -2639,6 +2731,7 @@ const PERMISSIONS = [
   { id: 'chat',            label: 'Answer customer messages',      fallback: true },
   { id: 'costs_add',       label: 'Record what they spend',        fallback: true },
   { id: 'bookings_view',   label: 'See bookings (no money)',       fallback: false },
+  { id: 'bookings_add',    label: 'Enter new bookings (package price)', fallback: false },
   { id: 'bookings_money',  label: 'See prices and what is owed',   fallback: false },
   { id: 'bookings_edit',   label: 'Propose changes to a booking',  fallback: false },
   { id: 'team_chat',       label: 'Use the team chat',             fallback: true },
