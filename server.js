@@ -78,6 +78,7 @@ ensureDataDir();
 // against production data on every deploy.
 const CODE_PREFIX = 'CDM';
 const CODE_START = 101;
+const MEDIA_CODE_START = 201;
 
 function codeNumber(code) {
   const m = /^\s*CDM\s*(\d+)\s*$/i.exec(String(code || ''));
@@ -855,6 +856,22 @@ function fivePackagesAndMedia() {
   return true;
 }
 
+// Codes in two runs, in the order the packages are shown: decoration setups
+// CDM 101, 102, ... and photo / video / drone CDM 201, 202, ... Bookings
+// refer to packages by slug, so renumbering never touches an existing booking.
+function serialCodes(packages) {
+  let setup = CODE_START;
+  let media = MEDIA_CODE_START;
+  for (const p of packages) p.code = `${CODE_PREFIX} ${p.kind === 'media' ? media++ : setup++}`;
+}
+runOnce('serial-codes-101-201', () => {
+  const data = readJSON(PACKAGES_FILE, null);
+  if (!data || !Array.isArray(data.packages) || !data.packages.length) return false;
+  serialCodes(data.packages);
+  writeJSON(PACKAGES_FILE, data);
+  return true;
+});
+
 // ---------------------------------------------------------------- app
 const app = express();
 app.disable('x-powered-by');
@@ -1573,6 +1590,13 @@ app.put('/admin/api/settings', requireOwner, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/admin/api/packages/renumber', requireOwner, (req, res) => {
+  const data = readJSON(PACKAGES_FILE, { packages: [] });
+  serialCodes(data.packages || []);
+  writeJSON(PACKAGES_FILE, data);
+  res.json({ ok: true, packages: data });
+});
+
 app.put('/admin/api/packages', requireOwner, (req, res) => {
   const body = req.body;
   if (!body || !Array.isArray(body.packages)) return res.status(400).json({ error: 'Invalid data' });
@@ -1638,9 +1662,11 @@ app.put('/admin/api/packages', requireOwner, (req, res) => {
 
   // Fill in any package saved without a code, reusing the same numbering
   // rule as the boot-time backfill.
-  let next = CODE_START;
   for (const pkg of body.packages) {
     if (pkg.code) continue;
+    const media = pkg.kind === 'media';
+    const inRun = body.packages.filter((p) => (p.kind === 'media') === media).map((p) => codeNumber(p.code) || 0);
+    let next = Math.max(media ? MEDIA_CODE_START - 1 : CODE_START - 1, ...inRun) + 1;
     while (codes.has(`${CODE_PREFIX} ${next}`)) next++;
     pkg.code = `${CODE_PREFIX} ${next}`;
     codes.add(pkg.code);

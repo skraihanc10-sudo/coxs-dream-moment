@@ -207,11 +207,11 @@ window.ContentEditor = (function () {
   }
 
   /** The next free "CDM 1xx" code, so a new package is numbered on sight. */
-  function nextCode(list) {
+  function nextCode(list, media) {
     // Decoration setups are numbered 1xx and photo/drone 2xx; continue the setups' run.
     const all = list.map((p) => Number(String(p.code || '').replace(/\D/g, '')) || 0);
-    const setups = list.filter((p) => p.kind !== 'media').map((p) => Number(String(p.code || '').replace(/\D/g, '')) || 0);
-    let n = Math.max(100, ...setups) + 1;
+    const run = list.filter((p) => (p.kind === 'media') === !!media).map((p) => Number(String(p.code || '').replace(/\D/g, '')) || 0);
+    let n = Math.max(media ? 200 : 100, ...run) + 1;
     while (all.includes(n)) n++;
     return 'CDM ' + n;
   }
@@ -244,6 +244,8 @@ window.ContentEditor = (function () {
       <div class="toolbar">
         <button class="btn btn-primary" id="pk-save">Save packages</button>
         <button class="btn" id="pk-add">+ Add a package</button>
+        <button class="btn" id="pk-add-media">+ Add photo / drone</button>
+        <button class="btn btn-ghost" id="pk-renumber" title="Decoration CDM 101, 102… and photo/drone CDM 201, 202… in the order shown">Renumber codes</button>
         <span class="hint" style="margin:0">${setups.length} decoration \u00b7 ${media.length} photo &amp; video</span>
       </div>
 
@@ -282,6 +284,29 @@ window.ContentEditor = (function () {
       const first = $('#pk-list .pkg [data-toggle]', panel);
       if (first) first.click();
       toast('New package added with the usual details filled in. Add its photos and price, then Save.', 'good');
+    });
+
+    $('#pk-add-media', panel).addEventListener('click', () => {
+      const model = list.find((p) => p.kind === 'media');
+      const pkg = Object.assign(blankPackage(), model ? {
+        description: model.description || '', booking_policy: model.booking_policy || '', faq: model.faq || '',
+        trust_extra: model.trust_extra || '', inclusions: (model.inclusions || []).slice(), categories: (model.categories || []).slice(),
+      } : {}, { kind: 'media', name: 'New photo / drone service', code: nextCode(list, true) });
+      list.push(pkg);
+      drawPackages(panel);
+      const cards = $$('#pk-media .pkg [data-toggle]', panel);
+      if (cards.length) cards[cards.length - 1].click();
+    });
+
+    $('#pk-renumber', panel).addEventListener('click', async () => {
+      const ok = await window.Admin.confirmDialog('Give every package a fresh code in the order shown: decoration CDM 101, 102… and photo / drone CDM 201, 202…? Save any unsaved changes first.');
+      if (!ok) return;
+      try {
+        const r = await api('/admin/api/packages/renumber', { method: 'POST' });
+        state.packages = r.packages;
+        drawPackages(panel);
+        toast('Codes renumbered', 'good');
+      } catch (err) { toast(err.message, 'bad'); }
     });
 
     $('#pk-save', panel).addEventListener('click', async (e) => {
