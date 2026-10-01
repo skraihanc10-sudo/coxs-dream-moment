@@ -1823,6 +1823,7 @@ function normaliseBooking(input, existing) {
     createdById: base.createdById || '',
     createdByName: base.createdByName || '',
     createdByRole: base.createdByRole || '',
+    updatedByName: base.updatedByName || '',
 
     // Screenshots of bKash / bank transfers the customer sent in.
     receipts: Array.isArray(base.receipts) ? base.receipts : [],
@@ -2241,15 +2242,7 @@ app.post('/admin/api/bookings', requireAuth, allow('bookings_add'), (req, res) =
   if (!management) {
     // A team member enters what the customer chose. The price is the
     // catalogue's, never typed, and money, notes and status stay with the admin.
-    const slugs = Array.isArray(input.slugs) ? input.slugs : [];
-    const fixed = catalogueTotal(slugs.map((x) => text(x, 80)));
-    input = {
-      name: input.name, phone: input.phone, email: input.email,
-      packageSlug: input.packageSlug, packageName: input.packageName, slugs,
-      eventDate: input.eventDate, eventTime: input.eventTime, people: input.people,
-      occasion: input.occasion, note: input.note,
-      price: fixed, listPrice: fixed, status: 'new',
-    };
+    input = { ...teamBookingFields(input), status: 'new' };
   }
   // The money handed over when the booking is made. Recorded against the
   // person who took it, who holds it until it reaches the office.
@@ -2292,13 +2285,38 @@ function whoIs(req) {
   return (u && u.name) || req.user.name || 'Team member';
 }
 
-app.put('/admin/api/bookings/:id', requireOwner, (req, res) => {
+/** What a team member may set on a booking: who, what, when and the agreed
+ *  price. The list price always comes from the catalogue; payments, costs and
+ *  internal notes stay with the admin. */
+function teamBookingFields(input) {
+  const slugs = (Array.isArray(input.slugs) ? input.slugs : []).map((x) => text(x, 80)).filter(Boolean).slice(0, 6);
+  const listed = catalogueTotal(slugs);
+  const agreed = money(input.price);
+  const out = {
+    name: input.name, phone: input.phone, email: input.email,
+    packageSlug: input.packageSlug, packageName: input.packageName, slugs,
+    eventDate: input.eventDate, eventTime: input.eventTime, people: input.people,
+    occasion: input.occasion, note: input.note,
+    listPrice: listed, price: agreed || listed, dealNote: input.dealNote,
+  };
+  if (BOOKING_STATUSES.includes(input.status)) out.status = input.status;
+  return out;
+}
+
+app.put('/admin/api/bookings/:id', requireAuth, (req, res) => {
   const store = readBookings();
   const index = store.bookings.findIndex((b) => b.id === req.params.id);
   if (index < 0) return res.status(404).json({ error: 'Booking not found.' });
   const previous = store.bookings[index];
-  const updated = normaliseBooking(req.body || {}, previous);
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  if (!management && !(previous.createdById === req.user.id && can(req, 'bookings_add'))) {
+    return res.status(403).json({ error: 'Only the person who made this booking, or the admin, can change it.' });
+  }
+  const input = management ? (req.body || {}) : teamBookingFields(req.body || {});
+  if (!management && !input.packageSlug) return res.status(400).json({ error: 'Choose a package.' });
+  const updated = normaliseBooking(input, previous);
   updated.id = previous.id;
+  updated.updatedByName = whoIs(req);
   store.bookings[index] = updated;
   writeJSON(BOOKINGS_FILE, store);
   res.json({ ok: true, booking: withTotals(updated) });

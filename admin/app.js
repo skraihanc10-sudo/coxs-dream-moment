@@ -506,7 +506,7 @@ function bookingTable(list) {
     </tr></thead>
     <tbody>${list.map((b) => `
       <tr class="row-link" data-id="${esc(b.id)}">
-        <td><strong>${esc(b.id)}</strong><br><span style="font-size:11.5px;color:var(--muted)">${esc(b.source !== 'manual' ? 'From website' : 'Entered by ' + (b.createdByName || 'Admin'))}</span></td>
+        <td><strong>${esc(b.id)}</strong><br><span style="font-size:11.5px;color:var(--muted)">${esc((b.source !== 'manual' ? 'From website' : 'Entered by ' + (b.createdByName || 'Admin')) + (b.updatedByName && b.updatedByName !== b.createdByName ? ' · changed by ' + b.updatedByName : ''))}</span></td>
         <td>${esc(b.name)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(b.phone)}</span></td>
         <td>${esc(b.packageName || '—')}</td>
         <td>${esc(humanDate(b.eventDate) || '—')}<br><span style="font-size:11.5px;color:var(--muted)">${esc(prettyTime(b.eventTime))}</span></td>
@@ -2245,9 +2245,13 @@ function viewBooking(b) {
           <input id="rq-reason" placeholder="e.g. the customer rang and asked to move it"></div>
         <button type="button" class="btn btn-primary btn-sm" id="rq-send">Send the request</button>
         ` : ''}`,
-    extraFoot: `<a class="btn btn-sm" href="/admin/memo/${encodeURIComponent(b.id)}" target="_blank" rel="noopener">Memo</a>`
+    extraFoot: (b.mine && may('bookings_add') ? '<button type="button" class="btn btn-sm btn-primary" id="vb-edit">Change booking</button>' : '')
+      + `<a class="btn btn-sm" href="/admin/memo/${encodeURIComponent(b.id)}" target="_blank" rel="noopener">Memo</a>`
       + (wa ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''),
   });
+
+  const change = $('#vb-edit');
+  if (change) change.addEventListener('click', () => { $('#sheet').close(); staffBookingForm(b); });
 
   const send = $('#rq-send');
   if (!send) return;
@@ -2620,39 +2624,57 @@ async function renderCatalogue() {
 // on the beach. The price is the package's own; the server recomputes it and
 // records who entered it. Anything else (discounts, payments) is the admin's.
 
-async function staffNewBooking() {
+async function staffNewBooking() { return staffBookingForm(null); }
+
+/** One form for a team member's booking, new or changed later. The agreed
+ *  price starts at the packages' price and follows it until somebody types
+ *  their own; a lower price asks why. */
+async function staffBookingForm(existing) {
   let list = catalogueCache;
   try { if (!list) list = await loadCatalogue(); } catch (e) { toast(e.message, 'bad'); return; }
+  const b = existing || {};
+  const isNew = !existing;
   const setups = list.filter((p) => p.kind !== 'media');
   const media = list.filter((p) => p.kind === 'media');
-  const opt = (p) => { const pr = pkgPrice(p); return `<option value="${esc(p.slug)}">${p.code ? esc(p.code) + ' · ' : ''}${esc(p.name)} — ${pr.now ? tk(pr.now) : 'for contact'}</option>`; };
+  const chosenMedia = (b.slugs || []).find((s) => media.some((m) => m.slug === s)) || '';
+  const opt = (p, sel) => { const pr = pkgPrice(p); return `<option value="${esc(p.slug)}"${p.slug === sel ? ' selected' : ''}>${p.code ? esc(p.code) + ' · ' : ''}${esc(p.name)} — ${pr.now ? tk(pr.now) : 'for contact'}</option>`; };
+  const v = (x) => esc(x == null ? '' : x);
 
   openSheet({
-    title: 'New booking',
-    saveLabel: 'Enter booking',
+    title: isNew ? 'New booking' : `Change ${b.id}`,
+    saveLabel: isNew ? 'Enter booking' : 'Save changes',
     body: `
       <div class="field-row">
-        <div class="field"><label for="sn-name">Customer name</label><input id="sn-name" autocomplete="off"></div>
-        <div class="field"><label for="sn-phone">Mobile number</label><input id="sn-phone" inputmode="tel" placeholder="01XXXXXXXXX"></div>
+        <div class="field"><label for="sn-name">Customer name</label><input id="sn-name" autocomplete="off" value="${v(b.name)}"></div>
+        <div class="field"><label for="sn-phone">Mobile number</label><input id="sn-phone" inputmode="tel" placeholder="01XXXXXXXXX" value="${v(b.phone)}"></div>
       </div>
-      <div class="field"><label for="sn-email">Email (optional)</label><input id="sn-email" type="email"></div>
-      <div class="field"><label for="sn-pkg">Package</label><select id="sn-pkg"><option value="">Choose a package</option>${setups.map(opt).join('')}</select></div>
-      <div class="field"><label for="sn-media">Photo, video or drone (optional)</label><select id="sn-media"><option value="">None</option>${media.map(opt).join('')}</select></div>
+      <div class="field"><label for="sn-email">Email (optional)</label><input id="sn-email" type="email" value="${v(b.email)}"></div>
+      <div class="field"><label for="sn-pkg">Package</label><select id="sn-pkg"><option value="">Choose a package</option>${setups.map((p) => opt(p, b.packageSlug)).join('')}</select></div>
+      <div class="field"><label for="sn-media">Photo, video or drone (optional)</label><select id="sn-media"><option value="">None</option>${media.map((p) => opt(p, chosenMedia)).join('')}</select></div>
       <div class="field-row">
-        <div class="field"><label for="sn-date">Date</label><input id="sn-date" type="date"></div>
-        <div class="field"><label for="sn-time">Time</label><input id="sn-time" placeholder="e.g. Sunset, 5:30 pm"></div>
+        <div class="field"><label for="sn-date">Date</label><input id="sn-date" type="date" value="${v(b.eventDate)}"></div>
+        <div class="field"><label for="sn-time">Time</label><input id="sn-time" placeholder="e.g. Sunset, 5:30 pm" value="${v(b.eventTime)}"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label for="sn-people">People</label><input id="sn-people" type="number" min="1" max="500"></div>
-        <div class="field"><label for="sn-occ">Occasion</label><input id="sn-occ" placeholder="e.g. Proposal, Birthday"></div>
+        <div class="field"><label for="sn-people">People</label><input id="sn-people" type="number" min="1" max="500" value="${v(b.people || '')}"></div>
+        <div class="field"><label for="sn-occ">Occasion</label><input id="sn-occ" placeholder="e.g. Proposal, Birthday" value="${v(b.occasion)}"></div>
       </div>
-      <div class="field"><label for="sn-note">Note</label><textarea id="sn-note" rows="3"></textarea></div>
-      <div class="price-preview" id="sn-price"></div>
-      <div class="field-row" style="margin-top:12px">
+      <div class="field"><label for="sn-note">Note</label><textarea id="sn-note" rows="3">${v(b.note)}</textarea></div>
+
+      <div class="field-row" style="margin-top:6px">
+        <div class="field"><label>Package price (৳)</label><input id="sn-list" readonly tabindex="-1" style="background:var(--paper,#f6f2ea)"></div>
+        <div class="field"><label for="sn-agreed">Agreed price (৳)</label><input id="sn-agreed" type="number" min="0" step="100" value="${b.price ? v(b.price) : ''}"></div>
+      </div>
+      <div class="field" id="sn-deal-row" hidden><label for="sn-deal">Why the lower price</label>
+        <input id="sn-deal" placeholder="e.g. repeat customer, low season" value="${v(b.dealNote)}"></div>
+      ${isNew ? `
+      <div class="field-row">
         <div class="field"><label for="sn-adv">Paid now (৳)</label><input id="sn-adv" type="number" min="0" step="100" placeholder="0"></div>
         <div class="field"><label for="sn-advm">How</label><select id="sn-advm">${METHODS.map((m) => `<option>${m}</option>`).join('')}</select></div>
-      </div>
-      <p class="hint" style="margin:8px 0 0">The price is fixed by the packages. Only the admin can change it or give a discount. Your name is saved on this booking.</p>`,
+      </div>` : `
+      <div class="field"><label for="sn-status">Status</label><select id="sn-status">${STATUSES.map((s) => `<option value="${s.id}"${s.id === b.status ? ' selected' : ''}>${s.label}</option>`).join('')}</select></div>`}
+      <div class="price-preview" id="sn-price"></div>
+      <p class="hint" style="margin:8px 0 0">${isNew ? 'Your name is saved on this booking.' : `Paid so far ${tk(b.paid || 0)}. Payments are added with “+ Payment received”.`}</p>`,
     onSave: async (root) => {
       const slug = $('#sn-pkg', root).value;
       const extra = $('#sn-media', root).value;
@@ -2660,31 +2682,56 @@ async function staffNewBooking() {
       if (!name) { toast('Enter the customer name.', 'bad'); return false; }
       if ($('#sn-phone', root).value.replace(/\D/g, '').length < 10) { toast("Enter the customer's mobile number.", 'bad'); return false; }
       if (!slug) { toast('Choose a package.', 'bad'); return false; }
+      const listed = listTotal();
+      const agreed = Number($('#sn-agreed', root).value) || 0;
+      if (listed && agreed && agreed < listed && !$('#sn-deal', root).value.trim()) { toast('Say why the price is lower.', 'bad'); $('#sn-deal', root).focus(); return false; }
       const names = [slug, extra].filter(Boolean).map((s) => (list.find((p) => p.slug === s) || {}).name).filter(Boolean);
-      const r = await api('/admin/api/bookings', { method: 'POST', body: JSON.stringify({
+      const payload = {
         name, phone: $('#sn-phone', root).value, email: $('#sn-email', root).value.trim(),
         packageSlug: slug, packageName: names.join(' + '), slugs: [slug, extra].filter(Boolean),
         eventDate: $('#sn-date', root).value, eventTime: $('#sn-time', root).value,
         people: $('#sn-people', root).value, occasion: $('#sn-occ', root).value, note: $('#sn-note', root).value,
-        advance: $('#sn-adv', root).value, advanceMethod: $('#sn-advm', root).value,
-      }) });
-      await refresh();
-      go(currentView() === 'catalogue' ? 'catalogue' : 'bookings');
-      memoReady(r.booking);
+        price: agreed || listed, dealNote: $('#sn-deal', root).value.trim(),
+      };
+      if (isNew) {
+        payload.advance = $('#sn-adv', root).value; payload.advanceMethod = $('#sn-advm', root).value;
+        const r = await api('/admin/api/bookings', { method: 'POST', body: JSON.stringify(payload) });
+        await refresh();
+        go(currentView() === 'catalogue' ? 'catalogue' : 'bookings');
+        memoReady(r.booking);
+      } else {
+        payload.status = $('#sn-status', root).value;
+        await api('/admin/api/bookings/' + encodeURIComponent(b.id), { method: 'PUT', body: JSON.stringify(payload) });
+        await refresh();
+        go(VIEWS[currentView()] ? currentView() : 'bookings');
+        toast(`${b.id} updated`, 'good');
+      }
     },
   });
 
+  const listTotal = () => [$('#sn-pkg').value, $('#sn-media').value].filter(Boolean)
+    .map((s) => list.find((p) => p.slug === s)).filter(Boolean)
+    .reduce((sum, p) => sum + pkgPrice(p).now, 0);
+  // The agreed price follows the packages until it is typed by hand.
+  let typed = !isNew && b.price && b.price !== b.listPrice;
+  $('#sn-agreed').addEventListener('input', () => { typed = true; paint(); });
+
   const paint = () => {
-    const chosen = [$('#sn-pkg').value, $('#sn-media').value].filter(Boolean).map((s) => list.find((p) => p.slug === s)).filter(Boolean);
-    const total = chosen.reduce((sum, p) => sum + pkgPrice(p).now, 0);
-    const adv = Number($('#sn-adv').value) || 0;
-    $('#sn-price').innerHTML = chosen.length
-      ? `<span class="pp-label">Price</span><span class="pp-now">${total ? tk(total) : 'For contact'}</span>${total && adv ? `<span class="pp-save">due after this ${tk(Math.max(total - adv, 0))}</span>` : ''}`
-      : '<span class="pp-none">Choose a package to see the price.</span>';
+    const listed = listTotal();
+    $('#sn-list').value = listed ? listed.toLocaleString('en-IN') : 'For contact';
+    if (!typed) $('#sn-agreed').value = listed || '';
+    const agreed = Number($('#sn-agreed').value) || 0;
+    $('#sn-deal-row').hidden = !(listed && agreed && agreed < listed);
+    const paid = isNew ? (Number($('#sn-adv').value) || 0) : (b.paid || 0);
+    $('#sn-price').innerHTML = agreed
+      ? `<span class="pp-label">Customer pays</span>${listed > agreed ? `<span class="pp-old">${tk(listed)}</span>` : ''}<span class="pp-now">${tk(agreed)}</span>`
+        + (listed > agreed ? `<span class="pp-off">${tk(listed - agreed)} off</span>` : '')
+        + `<span class="pp-save">due ${tk(Math.max(agreed - paid, 0))}</span>`
+      : '<span class="pp-none">Choose a package, or type the agreed price.</span>';
   };
   $('#sn-pkg').addEventListener('change', paint);
   $('#sn-media').addEventListener('change', paint);
-  $('#sn-adv').addEventListener('input', paint);
+  if (isNew) $('#sn-adv').addEventListener('input', paint);
   paint();
 }
 
