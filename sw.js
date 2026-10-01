@@ -20,7 +20,7 @@
 
 // Bumping this name is what retires the old caches. It is the one thing to
 // change when a release must not be served from an old copy.
-const VERSION = 'cdm-v-logo-2';
+const VERSION = 'cdm-v-home-2up';
 const SHELL = `${VERSION}-shell`;
 const RUNTIME = `${VERSION}-runtime`;
 

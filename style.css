@@ -1953,3 +1953,32 @@ body { padding-bottom: 0; }
 .media-back { margin: 0 0 18px; font-size: 14px; }
 .media-back a { color: #9FB0C8; text-decoration: none; }
 .media-back a:hover, .media-back a:focus-visible { color: #fff; text-decoration: underline; }
+
+/* ==========================================================================
+   Home: the top two and the full decoration list, two large cards a row at
+   every screen width, phone included.
+   ========================================================================== */
+#shop-grid > .product-grid,
+.start-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+#shop-grid > .product-grid { padding-top: 8px; }
+#shop-grid .section-head,
+.start-here .section-head { max-width: 1080px; margin-inline: auto; }
+#decoration { scroll-margin-top: 90px; padding-top: 18px; }
+#shop-grid > .product-grid .product-thumb,
+.start-grid .product-thumb { aspect-ratio: 4 / 3; }
+@media (max-width: 620px) {
+  #shop-grid > .product-grid,
+  .start-grid { gap: 10px; }
+  #shop-grid > .product-grid .product-name,
+  .start-grid .product-name { font-size: 14px; }
+}
+.start-grid { padding: 8px 0 28px; }
+.start-here .section-head, #decoration { margin-bottom: 4px; }
+@media (max-width: 620px) {
+  #start-here, #shop-grid { padding-inline: 12px; }
+}

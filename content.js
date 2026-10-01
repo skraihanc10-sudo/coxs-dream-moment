@@ -166,12 +166,10 @@ function applyStartHere(packages, setups) {
   if (!section) return;
 
   const grid = section.querySelector('.product-grid');
-  const media = packages.filter(isMedia);
 
-  const setup = setups.find(p => p.featured) || setups[0];
-  const shoot = media.find(p => p.featured) || media[0];
-
-  const pair = [setup, shoot].filter(Boolean);
+  // The top two decoration packages: the ones marked Featured first, then
+  // the order set in the admin.
+  const pair = setups.filter(p => p.featured).concat(setups.filter(p => !p.featured)).slice(0, 2);
   if (!pair.length) {
     section.hidden = true;
     return;
@@ -403,29 +401,8 @@ function applyShopGrid(packages) {
 
   applyStartHere(packages, setups);
 
-  // The ones marked `featured` go in their own row above everything else:
-  // the owner decides what people should see first, and a customer looking
-  // for a place to start should not have to open every page to find one.
-  // Whatever is already in the Start here row is not repeated immediately
-  // below it.
-  const shown = setups.find(p => p.featured) || setups[0];
-  const featured = setups.filter(p => p.featured && p !== shown);
-  const rest = setups.filter(p => !p.featured);
-
-  const section = document.getElementById('featured-grid');
-  if (section) {
-    if (featured.length) {
-      section.hidden = false;
-      const grid = section.querySelector('.product-grid');
-      if (grid) grid.innerHTML = featured.map(p => productCardHTML(p, true)).join('');
-    } else {
-      section.hidden = true;
-    }
-  }
-
-  // With no featured section on the page, nothing is dropped - everything is
-  // shown in the main grid as before.
-  realGrid.innerHTML = (section ? rest : setups).map(p => productCardHTML(p)).join('');
+  // Every decoration package, in the admin's order, two to a row.
+  realGrid.innerHTML = setups.map(p => productCardHTML(p)).join('');
 
   window.initWishButtons();
   window.initShopFilters();
@@ -709,6 +686,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Lifted only once the live content is in place, so the first thing seen
     // is the real catalogue rather than the fallback baked into the HTML.
     if (window.__liftLoader) window.__liftLoader();
+    // A link such as /#decoration arrives before the packages exist; go to
+    // the section once they are in place.
+    if (location.hash === '#decoration') {
+      const target = document.getElementById('decoration');
+      if (target) requestAnimationFrame(() => target.scrollIntoView());
+    }
   });
 });
 

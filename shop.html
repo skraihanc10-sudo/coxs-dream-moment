@@ -114,7 +114,7 @@
 
   <div class="nav-bar">
     <div class="container">
-      <a href="/" class="nav-link active" data-cat="all">Decoration Packages</a>
+      <a href="/#decoration" class="nav-link active" data-cat="all">Decoration Packages</a>
       <a href="/drone" class="nav-link" data-cat="drone">Drone &amp; video</a>
       <a href="gallery" class="nav-link">Gallery</a>
       <a href="contact" class="nav-link">Contact</a>
@@ -128,7 +128,7 @@
   <button class="close-btn">&times;</button>
   <img class="mobile-menu-logo" src="images/logo.png" alt="Cox's Dream Moment"
        width="200" height="52" onerror="this.hidden=true;">
-  <a href="/">Decoration Packages</a>
+  <a href="/#decoration">Decoration Packages</a>
   <a href="/drone">Drone &amp; video</a>
   <div id="mm-categories"></div>
   <a href="gallery">Gallery</a>
@@ -148,7 +148,7 @@
     <h1 id="hero-heading">We set up the moment<br><span class="hero-accent">you propose</span></h1>
     <p class="sub" id="hero-sub">Golden light, flowers on the sand, and everything arranged before you arrive. Book your evening on Cox&rsquo;s Bazar beach.</p>
     <div class="hero-actions">
-      <a href="#featured-grid" class="btn-cta" id="hero-cta">See the packages</a>
+      <a href="#decoration" class="btn-cta" id="hero-cta">See the packages</a>
       <!-- Was "Check a date", which went to the contact form and asked people
            to do the same thing the packages already do. Photography is the
            second thing anyone wants, so that is what the second button is. -->
@@ -162,37 +162,21 @@
   </div>
 </section>
 
-<!-- Two cards, straight after the hero: one decoration setup and one
-     photography package, so the first thing on the page is the two things
-     we do rather than a row of near-identical setups. Filled by content.js;
-     hidden if there is nothing to put in it. -->
+<!-- The top two decoration packages (featured first, then the admin's order),
+     then every decoration package. Filled by content.js. -->
 <section class="container start-here" id="start-here" hidden>
   <div class="section-head">
-    <p class="eyebrow">Start here</p>
-    <h2>Two ways to begin</h2>
+    <h2>Top packages</h2>
   </div>
   <div class="product-grid start-grid"></div>
 </section>
 
-<!-- ===================== PRODUCT GRID ===================== -->
-<section class="container featured-section" id="featured-grid" hidden>
-  <div class="section-head">
-    <p class="eyebrow">Most popular</p>
-    <h2>Where most people start</h2>
-    <p>The ones people choose most often. Every setup can be arranged at sunset or after dark — you tell us which when you book.</p>
-  </div>
-  <div class="product-grid featured-row"></div>
-</section>
-
 <section class="container" id="shop-grid">
-  <div class="section-head" id="all-head">
-    <p class="eyebrow">The full range</p>
-    <h2>Every setup we do</h2>
-    <p>From the simplest corner on the sand to the largest layout. Drone and camera work can be added to any of them.</p>
+  <div class="section-head" id="decoration">
+    <h2>Decoration packages</h2>
   </div>
   <div class="product-grid">
-    <!-- Filled from content/packages.json by content.js. Kept empty in the
-         markup so a reload never shows a catalogue that has since changed. -->
+    <!-- Filled from content/packages.json by content.js. -->
   </div>
 </section>
 
@@ -274,7 +258,7 @@
       </div>
       <div class="footer-col">
         <h4>Pages</h4>
-        <a href="/">Decoration Packages</a>
+        <a href="/#decoration">Decoration Packages</a>
         <a href="gallery">Gallery</a>
         <a href="contact">Contact</a>
       </div>
