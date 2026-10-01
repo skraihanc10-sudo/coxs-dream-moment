@@ -2185,15 +2185,18 @@ app.post('/admin/api/bookings/:id/remind', requireOwner, async (req, res) => {
 })();
 
 app.get('/admin/api/bookings', requireAuth, (req, res) => {
-  if (!can(req, 'bookings_view')) return res.status(403).json({ error: 'You do not have access to that.' });
+  const seesAll = can(req, 'bookings_view');
+  const me = req.user.id || 'owner';
+  if (!seesAll && !can(req, 'bookings_add')) return res.status(403).json({ error: 'You do not have access to that.' });
 
   const store = readBookings();
   const seesMoney = can(req, 'bookings_money');
 
   res.json({
-    bookings: store.bookings.map((b) => {
-      const full = withTotals(b);
-      if (seesMoney) return full;
+    bookings: store.bookings.filter((b) => seesAll || b.createdById === me).map((b) => {
+      // Their own booking: they took it and its money, so they see it whole.
+      const full = { ...withTotals(b), mine: b.createdById === me };
+      if (seesMoney || full.mine) return full;
       // A staff member who may see the diary but not the takings gets the
       // diary: who, what, when, and nothing with a figure on it.
       return {
@@ -2222,6 +2225,10 @@ app.post('/admin/api/bookings', requireAuth, allow('bookings_add'), (req, res) =
       price: fixed, listPrice: fixed, status: 'new',
     };
   }
+  // The money handed over when the booking is made. Recorded against the
+  // person who took it, who holds it until it reaches the office.
+  const advance = money((req.body || {}).advance);
+  const advanceMethod = PAYMENT_METHODS.includes((req.body || {}).advanceMethod) ? req.body.advanceMethod : 'Cash';
   const booking = normaliseBooking(input, { source: 'manual' });
   if (!booking.name) return res.status(400).json({ error: 'A name is required.' });
   if (!management && String(booking.phone).replace(/\D/g, '').length < 10) {
@@ -2234,6 +2241,13 @@ app.post('/admin/api/bookings', requireAuth, allow('bookings_add'), (req, res) =
   booking.createdById = req.user.id || 'owner';
   booking.createdByName = whoIs(req);
   booking.createdByRole = req.user.role;
+  if (advance > 0) {
+    booking.payments = (booking.payments || []).concat({
+      id: 'p' + Date.now(), date: new Date().toISOString().slice(0, 10), amount: advance,
+      method: advanceMethod, note: 'Paid at booking',
+      heldById: req.user.id || 'owner', heldByName: booking.createdByName, takenAt: new Date().toISOString(),
+    });
+  }
   // Every booking gets the customer an account, so they can open it under
   // My bookings with the same number.
   if (booking.phone || booking.email) {
@@ -2242,6 +2256,7 @@ app.post('/admin/api/bookings', requireAuth, allow('bookings_add'), (req, res) =
   store.bookings.unshift(booking);
   writeJSON(BOOKINGS_FILE, store);
   res.json({ ok: true, booking: withTotals(booking) });
+  mailMemo(booking).catch(() => {});
 });
 
 /** The name shown next to anything a person did in the Control Room. */
@@ -3245,10 +3260,8 @@ app.post('/admin/api/chats/:customerId', requireAuth, allow('chat'), async (req,
  *  customer has paid, and a second place to keep it would be a second place
  *  for it to be wrong. */
 app.post('/admin/api/bookings/:id/payment', requireAuth, async (req, res) => {
-  // Anyone who may record a cost may record money coming in: on a beach it
-  // is whoever is standing there who takes it. Who took it is recorded, and
-  // they hold it until they hand it over.
-  if (!can(req, 'costs_add')) return res.status(403).json({ error: 'You do not have access to that.' });
+  // Money against a booking is taken by the person who made that booking,
+  // or by management. Costs stay open to everyone allowed to record them.
   const body = req.body || {};
   const amount = money(body.amount);
   if (!amount) return res.status(400).json({ error: 'Enter an amount.' });
@@ -3256,6 +3269,10 @@ app.post('/admin/api/bookings/:id/payment', requireAuth, async (req, res) => {
   const store = readBookings();
   const index = store.bookings.findIndex((b) => b.id === req.params.id);
   if (index < 0) return res.status(404).json({ error: 'Booking not found.' });
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  if (!management && store.bookings[index].createdById !== req.user.id) {
+    return res.status(403).json({ error: 'Only the person who made this booking, or the admin, can add a payment to it.' });
+  }
 
   const previous = JSON.parse(JSON.stringify(store.bookings[index]));
   const booking = store.bookings[index];
@@ -3286,6 +3303,169 @@ app.post('/admin/api/bookings/:id/payment', requireAuth, async (req, res) => {
       tag: 'booking-' + booking.id,
     });
   }
+});
+
+// ---------------------------------------------------------------- booking memo
+//
+// The receipt for a booking: what was ordered, at what price, what has been
+// paid and what is still due. One piece of HTML with inline styles, so the
+// same memo is emailed to the customer and shown in the Control Room, where
+// it can be saved as a JPG.
+
+function memoHtml(b, absolute = true) {
+  const e = escapeHtml;
+  const s = readJSON(SETTINGS_FILE, {});
+  const catalogue = readJSON(PACKAGES_FILE, { packages: [] }).packages || [];
+  const tk = (n) => '৳' + money(n).toLocaleString('en-IN');
+  const day = (d) => (d ? new Date(String(d).slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '');
+  const full = withTotals(b);
+
+  // One line per chosen package, priced from the catalogue; the agreed price
+  // below is what counts.
+  const lines = (b.slugs || []).map((slug) => catalogue.find((p) => p.slug === slug)).filter(Boolean).map((p) => {
+    const amt = Number(p.price_amount) || 0;
+    const pct = Math.min(Math.max(Number(p.discount_percent) || 0, 0), 95);
+    return { code: p.code || '', name: p.name, amount: amt ? Math.round(amt * (1 - pct / 100)) : 0 };
+  });
+  if (!lines.length) lines.push({ code: '', name: b.packageName || 'Beach setup', amount: money(b.listPrice) || money(b.price) });
+  const listTotal = money(b.listPrice) || lines.reduce((sum, l) => sum + l.amount, 0);
+  const discount = Math.max(listTotal - money(b.price), 0);
+  const stamp = full.due === 0 && full.paid > 0 ? ['PAID IN FULL', '#0F8A5F'] : full.paid > 0 ? ['ADVANCE RECEIVED', '#C2410C'] : ['PAYMENT DUE', '#B91C1C'];
+  const td = 'padding:10px 12px;border-bottom:1px solid #EDE4D6;font-size:14px;';
+  const issued = day(b.createdAt) || day(new Date().toISOString());
+
+  return `<div style="width:100%;max-width:720px;margin:0 auto;background:#FFFFFF;font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#0D1B2A;border:1px solid #E7DCCB;border-radius:14px;overflow:hidden">
+  <div style="background:#0D1B2A;padding:22px 28px;color:#FFFFFF">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:middle">
+        <img src="${absolute ? SITE_URL : ""}/images/logo.png" alt="" width="54" height="54" style="vertical-align:middle;border-radius:10px;background:#fff;margin-right:12px">
+        <span style="display:inline-block;vertical-align:middle">
+          <strong style="font-size:20px;letter-spacing:.3px">Cox's Dream Moment</strong><br>
+          <span style="font-size:12px;color:#E8B86D;letter-spacing:2px;text-transform:uppercase">Beach proposal &amp; decor</span>
+        </span>
+      </td>
+      <td style="text-align:right;vertical-align:middle">
+        <div style="font-size:12px;letter-spacing:2px;color:#AFC0D6;text-transform:uppercase">Booking memo</div>
+        <div style="font-size:22px;font-weight:800">${e(b.id)}</div>
+        <div style="font-size:12px;color:#AFC0D6">Issued ${e(issued)}</div>
+      </td>
+    </tr></table>
+  </div>
+
+  <div style="padding:22px 28px 6px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:top;width:55%">
+        <div style="font-size:11px;letter-spacing:1.5px;color:#8A7B66;text-transform:uppercase;margin-bottom:4px">Billed to</div>
+        <div style="font-size:17px;font-weight:700">${e(b.name)}</div>
+        <div style="font-size:14px;color:#3D4B5C">${e(b.phone || '')}${b.email ? '<br>' + e(b.email) : ''}</div>
+      </td>
+      <td style="vertical-align:top;text-align:right">
+        <div style="font-size:11px;letter-spacing:1.5px;color:#8A7B66;text-transform:uppercase;margin-bottom:4px">Event</div>
+        <div style="font-size:15px;font-weight:700">${e(day(b.eventDate) || 'Date to be fixed')}</div>
+        <div style="font-size:14px;color:#3D4B5C">${e(b.eventTime || '')}${b.people ? (b.eventTime ? ' · ' : '') + e(b.people) + ' people' : ''}${b.occasion ? '<br>' + e(b.occasion) : ''}</div>
+      </td>
+    </tr></table>
+  </div>
+
+  <div style="padding:12px 28px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+      <tr style="background:#FBF7F1">
+        <th style="${td}text-align:left;font-size:11px;letter-spacing:1px;color:#8A7B66;text-transform:uppercase">Code</th>
+        <th style="${td}text-align:left;font-size:11px;letter-spacing:1px;color:#8A7B66;text-transform:uppercase">Package</th>
+        <th style="${td}text-align:right;font-size:11px;letter-spacing:1px;color:#8A7B66;text-transform:uppercase">Amount</th>
+      </tr>
+      ${lines.map((l) => `<tr><td style="${td}white-space:nowrap;font-weight:700;color:#8A5A1E">${e(l.code)}</td><td style="${td}">${e(l.name)}</td><td style="${td}text-align:right;white-space:nowrap">${l.amount ? tk(l.amount) : 'As agreed'}</td></tr>`).join('')}
+    </table>
+  </div>
+
+  <div style="padding:4px 28px 18px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:top;width:50%;padding-top:8px">
+        <div style="display:inline-block;border:2px solid ${stamp[1]};color:${stamp[1]};font-weight:800;letter-spacing:2px;font-size:13px;padding:7px 14px;border-radius:8px;transform:rotate(-4deg)">${stamp[0]}</div>
+        ${(b.payments || []).length ? `<div style="margin-top:14px;font-size:12.5px;color:#3D4B5C;line-height:1.7">${b.payments.map((p) => `${e(day(p.date))} · ${e(p.method)} · <strong>${tk(p.amount)}</strong>${p.heldByName ? ' · received by ' + e(p.heldByName) : ''}`).join('<br>')}</div>` : ''}
+      </td>
+      <td style="vertical-align:top">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
+          ${discount ? `<tr><td style="padding:5px 0;color:#3D4B5C">Package total</td><td style="padding:5px 0;text-align:right">${tk(listTotal)}</td></tr>
+          <tr><td style="padding:5px 0;color:#3D4B5C">Discount</td><td style="padding:5px 0;text-align:right">− ${tk(discount)}</td></tr>` : ''}
+          <tr><td style="padding:8px 0;font-weight:700;border-top:1px solid #EDE4D6">Total</td><td style="padding:8px 0;text-align:right;font-weight:700;border-top:1px solid #EDE4D6">${money(b.price) ? tk(b.price) : 'As agreed'}</td></tr>
+          <tr><td style="padding:5px 0;color:#0F8A5F">Paid</td><td style="padding:5px 0;text-align:right;color:#0F8A5F">${tk(full.paid)}</td></tr>
+          <tr><td style="padding:10px 12px;background:#0D1B2A;color:#fff;font-weight:800;border-radius:8px 0 0 8px">Due</td><td style="padding:10px 12px;background:#0D1B2A;color:#E8B86D;font-weight:800;text-align:right;font-size:17px;border-radius:0 8px 8px 0">${tk(full.due)}</td></tr>
+        </table>
+      </td>
+    </tr></table>
+  </div>
+
+  ${b.note ? `<div style="margin:0 28px 16px;padding:12px 14px;background:#FBF7F1;border-radius:10px;font-size:13px;line-height:1.6"><strong>Note:</strong> ${e(b.note)}</div>` : ''}
+
+  <div style="padding:14px 28px 20px;border-top:1px dashed #E7DCCB;font-size:12px;color:#5B6878;line-height:1.7">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:top">
+        ${[s.phone_display && 'Phone: ' + e(s.phone_display), s.email && e(s.email), s.address && e(s.address)].filter(Boolean).join('<br>')}
+        <br>coxsdreammoment.shop
+      </td>
+      <td style="vertical-align:bottom;text-align:right">
+        <div style="font-size:12px">Booked by <strong>${e(b.source === 'manual' ? (b.createdByName || 'Admin') : 'Website')}</strong></div>
+        <div style="margin-top:6px;color:#8A7B66">Thank you for choosing Cox's Dream Moment.</div>
+      </td>
+    </tr></table>
+  </div>
+</div>`;
+}
+
+async function mailMemo(booking) {
+  if (!booking.email) { recordNotice(booking.id, 'memo', { skipped: 'no email address' }); return; }
+  const html = `<!doctype html><html><body style="margin:0;padding:24px 10px;background:#FBF7F1">${memoHtml(booking)}
+    <p style="text-align:center;font-family:Arial,sans-serif;font-size:13px;color:#6B7A93;margin:18px 0 0">
+      See your booking any time at <a href="${SITE_URL}/my-bookings" style="color:#C2410C">${SITE_URL.replace(/^https?:\/\//, '')}/my-bookings</a></p></body></html>`;
+  const result = await sendMail(booking.email, `Your booking memo — ${booking.id}`, html);
+  recordNotice(booking.id, 'memo', result);
+}
+
+// The memo in the Control Room: for management, anyone who may see bookings,
+// and the person who made it. Downloads as a JPG for WhatsApp or the files.
+app.get('/admin/memo/:id', (req, res) => {
+  const user = currentUser(req);
+  if (!user || user.role === 'customer') return res.redirect('/admin/');
+  req.user = user;
+  const b = readBookings().bookings.find((x) => x.id === req.params.id);
+  const mayView = b && (user.role !== 'staff' || can(req, 'bookings_view') || b.createdById === user.id);
+  if (!mayView) return res.status(404).send('Booking not found');
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
+  res.send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Memo ${escapeHtml(b.id)}</title><meta name="robots" content="noindex">
+<style>body{margin:0;background:#EFE8DC;font-family:'Segoe UI',Roboto,Arial,sans-serif;padding:20px 12px 40px}
+.bar{max-width:720px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.bar button,.bar a{font:700 14px 'Segoe UI',Arial,sans-serif;padding:10px 16px;border-radius:9px;border:1px solid #0D1B2A;background:#fff;color:#0D1B2A;cursor:pointer;text-decoration:none}
+.bar .go{background:#0D1B2A;color:#fff}
+#memo{max-width:720px;margin:0 auto;background:#fff}
+@media print{.bar{display:none}body{background:#fff;padding:0}}</style></head>
+<body><div class="bar"><a href="/admin/">Back</a><button onclick="window.print()">Print / PDF</button><button class="go" id="jpg">Download JPG</button></div>
+<div id="memo">${memoHtml(b, false)}</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+document.getElementById('jpg').addEventListener('click', function () {
+  var btn = this; btn.disabled = true; btn.textContent = 'Preparing…';
+  html2canvas(document.getElementById('memo'), { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function (c) {
+    var a = document.createElement('a');
+    a.download = 'Memo-${escapeHtml(b.id)}.jpg';
+    a.href = c.toDataURL('image/jpeg', 0.92);
+    a.click();
+  }).catch(function () { alert('Could not make the image. Use Print / PDF instead.'); })
+    .finally(function () { btn.disabled = false; btn.textContent = 'Download JPG'; });
+});
+</script></body></html>`);
+});
+
+// Sends the memo again (for example after a payment).
+app.post('/admin/api/bookings/:id/memo-mail', requireAuth, async (req, res) => {
+  const b = readBookings().bookings.find((x) => x.id === req.params.id);
+  const management = req.user.role === 'owner' || req.user.role === 'super';
+  if (!b || !(management || b.createdById === req.user.id)) return res.status(404).json({ error: 'Booking not found.' });
+  if (!b.email) return res.status(400).json({ error: 'This booking has no email address.' });
+  await mailMemo(b);
+  const sent = (readBookings().bookings.find((x) => x.id === b.id).notified || []).slice(-1)[0];
+  res.json({ ok: sent && sent.state === 'sent', state: sent ? sent.state : '' });
 });
 
 // ---------------------------------------------------------------- recycle bin

@@ -254,7 +254,7 @@ async function refresh() {
     state.staffSummary = await api('/admin/api/staff-summary');
     state.bookings = [];
     state.customers = state.customers || [];
-    if (may('bookings_view')) {
+    if (may('bookings_view|bookings_add')) {
       try { state.bookings = (await api('/admin/api/bookings')).bookings || []; } catch (e) { /* permission just removed */ }
     }
     const staffNew = $('#nav-new');
@@ -728,6 +728,7 @@ async function editBooking(booking) {
   const extraFoot = isNew ? '' :
     `${b.status === 'new' ? '<button type="button" class="btn btn-sm btn-primary" data-approve-now>Approve &amp; notify</button>' : ''}
      ${wa ? `<a class="btn btn-sm ${noEmail ? 'btn-primary' : ''}" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}
+     <a class="btn btn-sm" href="/admin/memo/${encodeURIComponent(b.id)}" target="_blank" rel="noopener">Memo</a>
      <button type="button" class="btn btn-sm btn-danger" data-delete>Delete</button>`;
 
   const sheet = openSheet({
@@ -769,12 +770,14 @@ async function editBooking(booking) {
       };
       if (!payload.name.trim()) { toast('Enter the customer name.', 'bad'); return false; }
 
-      if (isNew) await api('/admin/api/bookings', { method: 'POST', body: JSON.stringify(payload) });
+      let created = null;
+      if (isNew) created = (await api('/admin/api/bookings', { method: 'POST', body: JSON.stringify(payload) })).booking;
       else await api('/admin/api/bookings/' + encodeURIComponent(b.id), { method: 'PUT', body: JSON.stringify(payload) });
 
       await refresh();
       go(VIEWS[currentView()] ? currentView() : 'bookings');
-      toast(isNew ? 'Booking created' : 'Booking saved', 'good');
+      if (created) memoReady(created);
+      else toast('Booking saved', 'good');
     },
   });
 
@@ -1033,7 +1036,7 @@ async function renderStaffHome() {
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      ${may('costs_add') ? '<button class="btn btn-primary" id="sh-pay">+ Payment received</button>' : ''}
+      ${may('bookings_add') ? '<button class="btn btn-primary" id="sh-pay">+ Payment received</button>' : ''}
       ${may('costs_add') ? '<button class="btn" id="sh-cost">+ Cost</button>' : ''}
       ${may('chat') ? `<button class="btn" data-go="messages">Messages${state.chatUnread ? ' (' + state.chatUnread + ')' : ''}</button>` : ''}
       ${may('bookings_view|bookings_add') ? '<button class="btn" data-go="bookings">Bookings</button>' : ''}
@@ -2040,8 +2043,8 @@ function editPayment(bookingId, p, after) {
  *  customer has paid, and a second place to keep it would be a second place
  *  for it to be wrong. */
 function addPayment(after) {
-  const open = state.bookings.filter((b) => b.status !== 'cancelled');
-  if (!open.length) { toast('No bookings to record a payment against.', 'bad'); return; }
+  const open = state.bookings.filter((b) => b.status !== 'cancelled' && (isOwner() || b.mine));
+  if (!open.length) { toast(isOwner() ? 'No bookings to record a payment against.' : 'You can add payments only to bookings you made yourself.', 'bad'); return; }
 
   const owing = open.filter((b) => b.due > 0);
   const list = owing.length ? owing : open;
@@ -2242,9 +2245,8 @@ function viewBooking(b) {
           <input id="rq-reason" placeholder="e.g. the customer rang and asked to move it"></div>
         <button type="button" class="btn btn-primary btn-sm" id="rq-send">Send the request</button>
         ` : ''}`,
-    extraFoot: wa
-      ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>`
-      : '',
+    extraFoot: `<a class="btn btn-sm" href="/admin/memo/${encodeURIComponent(b.id)}" target="_blank" rel="noopener">Memo</a>`
+      + (wa ? `<a class="btn btn-sm" href="https://wa.me/${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''),
   });
 
   const send = $('#rq-send');
@@ -2646,6 +2648,10 @@ async function staffNewBooking() {
       </div>
       <div class="field"><label for="sn-note">Note</label><textarea id="sn-note" rows="3"></textarea></div>
       <div class="price-preview" id="sn-price"></div>
+      <div class="field-row" style="margin-top:12px">
+        <div class="field"><label for="sn-adv">Paid now (৳)</label><input id="sn-adv" type="number" min="0" step="100" placeholder="0"></div>
+        <div class="field"><label for="sn-advm">How</label><select id="sn-advm">${METHODS.map((m) => `<option>${m}</option>`).join('')}</select></div>
+      </div>
       <p class="hint" style="margin:8px 0 0">The price is fixed by the packages. Only the admin can change it or give a discount. Your name is saved on this booking.</p>`,
     onSave: async (root) => {
       const slug = $('#sn-pkg', root).value;
@@ -2660,22 +2666,25 @@ async function staffNewBooking() {
         packageSlug: slug, packageName: names.join(' + '), slugs: [slug, extra].filter(Boolean),
         eventDate: $('#sn-date', root).value, eventTime: $('#sn-time', root).value,
         people: $('#sn-people', root).value, occasion: $('#sn-occ', root).value, note: $('#sn-note', root).value,
+        advance: $('#sn-adv', root).value, advanceMethod: $('#sn-advm', root).value,
       }) });
       await refresh();
-      go(currentView() === 'catalogue' ? 'catalogue' : (may('bookings_view') ? 'bookings' : 'profile'));
-      toast(`Booking ${r.booking.id} entered`, 'good');
+      go(currentView() === 'catalogue' ? 'catalogue' : 'bookings');
+      memoReady(r.booking);
     },
   });
 
   const paint = () => {
     const chosen = [$('#sn-pkg').value, $('#sn-media').value].filter(Boolean).map((s) => list.find((p) => p.slug === s)).filter(Boolean);
     const total = chosen.reduce((sum, p) => sum + pkgPrice(p).now, 0);
+    const adv = Number($('#sn-adv').value) || 0;
     $('#sn-price').innerHTML = chosen.length
-      ? `<span class="pp-label">Price</span><span class="pp-now">${total ? tk(total) : 'For contact'}</span>`
+      ? `<span class="pp-label">Price</span><span class="pp-now">${total ? tk(total) : 'For contact'}</span>${total && adv ? `<span class="pp-save">due after this ${tk(Math.max(total - adv, 0))}</span>` : ''}`
       : '<span class="pp-none">Choose a package to see the price.</span>';
   };
   $('#sn-pkg').addEventListener('change', paint);
   $('#sn-media').addEventListener('change', paint);
+  $('#sn-adv').addEventListener('input', paint);
   paint();
 }
 
@@ -2791,4 +2800,33 @@ async function staffProfile(id) {
     extraFoot: `<button type="button" class="btn btn-sm" id="sp-edit">Edit permissions</button>`,
   });
   $('#sp-edit').addEventListener('click', () => { $('#sheet').close(); staffForm(state.staff.find((x) => x.id === id)); });
+}
+
+
+// ================================================================ MEMO
+//
+// Shown straight after a booking is made: the memo is ready, it has been
+// emailed if the customer gave an address, and it can be opened or saved.
+
+function memoReady(b) {
+  const url = '/admin/memo/' + encodeURIComponent(b.id);
+  openSheet({
+    title: `Booking ${b.id} created`,
+    body: `
+      <p style="margin:0 0 10px;line-height:1.6"><strong>${esc(b.name)}</strong> — ${esc(b.packageName || 'package not chosen')}</p>
+      <div class="price-preview"><span class="pp-label">Total</span><span class="pp-now">${b.price ? tk(b.price) : 'As agreed'}</span>
+        <span class="pp-save">paid ${tk(b.paid || 0)} · due ${tk(b.due || 0)}</span></div>
+      <p class="hint" style="margin:12px 0 0">${b.email ? `The memo has been emailed to ${esc(b.email)}.` : 'No email address was given, so the memo was not emailed. Download it as a JPG and send it on WhatsApp.'}</p>`,
+    extraFoot: `<a class="btn btn-sm btn-primary" href="${url}" target="_blank" rel="noopener">Open memo / Download JPG</a>
+      ${b.email ? '<button type="button" class="btn btn-sm" id="memo-resend">Email again</button>' : ''}`,
+  });
+  const again = $('#memo-resend');
+  if (again) again.addEventListener('click', async () => {
+    again.disabled = true;
+    try {
+      const r = await api(`/admin/api/bookings/${encodeURIComponent(b.id)}/memo-mail`, { method: 'POST' });
+      toast(r.ok ? 'Memo emailed' : 'Email is not set up, so it could not be sent', r.ok ? 'good' : 'bad');
+    } catch (e) { toast(e.message, 'bad'); }
+    again.disabled = false;
+  });
 }
