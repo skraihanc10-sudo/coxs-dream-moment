@@ -253,7 +253,7 @@ window.ContentEditor = (function () {
         <h2 class="section-title" style="margin:0 0 4px">Decoration packages</h2>
         <p class="hint" style="margin:0 0 12px">
           The order here is the order on the site. Put what you want people to see first at the top,
-          and tick <strong>Featured</strong> to lift it into the row above the grid.</p>
+          and tick <strong>Featured</strong> to put it in the top two on the home page.</p>
         <div id="pk-list"></div>
       </div>
 

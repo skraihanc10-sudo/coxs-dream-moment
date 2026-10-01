@@ -1653,12 +1653,7 @@ app.put('/admin/api/packages', requireOwner, (req, res) => {
 
   // The featured row is the first thing on the shop page. More than a handful
   // and it stops being a recommendation.
-  const featuredCount = body.packages.filter(p => p.featured).length;
-  if (featuredCount > 5) {
-    return res.status(400).json({
-      error: `${featuredCount} packages are marked Featured. Keep it to five or fewer — the top row is a recommendation, not a second catalogue.`,
-    });
-  }
+  // Featured only decides which two lead the home page; any number may be ticked.
 
   // Fill in any package saved without a code, reusing the same numbering
   // rule as the boot-time backfill.
@@ -3414,11 +3409,10 @@ function memoHtml(b, absolute = true) {
   <div style="padding:12px 28px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
       <tr style="background:#FBF7F1">
-        <th style="${td}text-align:left;font-size:11px;letter-spacing:1px;color:#8A7B66;text-transform:uppercase">Code</th>
         <th style="${td}text-align:left;font-size:11px;letter-spacing:1px;color:#8A7B66;text-transform:uppercase">Package</th>
         <th style="${td}text-align:right;font-size:11px;letter-spacing:1px;color:#8A7B66;text-transform:uppercase">Amount</th>
       </tr>
-      ${lines.map((l) => `<tr><td style="${td}white-space:nowrap;font-weight:700;color:#8A5A1E">${e(l.code)}</td><td style="${td}">${e(l.name)}</td><td style="${td}text-align:right;white-space:nowrap">${l.amount ? tk(l.amount) : 'As agreed'}</td></tr>`).join('')}
+      ${lines.map((l) => `<tr><td style="${td}">${e(l.name)}</td><td style="${td}text-align:right;white-space:nowrap">${l.amount ? tk(l.amount) : 'As agreed'}</td></tr>`).join('')}
     </table>
   </div>
 
