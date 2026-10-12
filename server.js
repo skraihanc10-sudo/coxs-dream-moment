@@ -883,6 +883,47 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 // content + images come from DATA_DIR (writable) and take priority over
 // the checkout's own copies of the same folders
 app.use('/content', express.static(CONTENT_DIR, { maxAge: 0 }));
+// ---------------------------------------------------------------- fast images
+//
+// /img/<width>/images/<file> serves a resized WebP of any photo, made once
+// and kept in DATA_DIR/img-cache. A card asks for 640 pixels instead of a
+// 3 MB original, which is most of what made the photos slow. Without sharp
+// (or for a GIF) the original is sent, so nothing ever breaks.
+let sharp = null;
+try { sharp = require('sharp'); sharp.concurrency(1); sharp.cache(false); } catch (e) { console.warn('[img] sharp not available, serving originals'); }
+const IMG_CACHE = path.join(DATA_DIR, 'img-cache');
+const IMG_WIDTHS = [160, 320, 640, 960, 1600];
+const imgJobs = new Map();
+app.get(/^\/img\/(\d+)\/images\/([^/]+)$/, async (req, res) => {
+  const w = Number(req.params[0]);
+  let name = '';
+  try { name = path.basename(decodeURIComponent(req.params[1])); } catch (e) { /* bad escape */ }
+  if (!IMG_WIDTHS.includes(w) || !/\.(jpe?g|png|webp|gif)$/i.test(name)) return res.status(404).end();
+  const src = [path.join(IMAGES_DIR, name), path.join(APP_DIR, 'images', name)].find((p) => fs.existsSync(p));
+  if (!src) return res.status(404).end();
+  res.set('Cache-Control', 'public, max-age=2592000');
+  if (!sharp || /\.gif$/i.test(name)) return res.sendFile(src);
+  const st = fs.statSync(src);
+  const out = path.join(IMG_CACHE, crypto.createHash('sha1').update(`${src}|${st.size}|${st.mtimeMs}|${w}`).digest('hex') + '.webp');
+  try {
+    if (!fs.existsSync(out)) {
+      // Two visitors asking for the same new size share one conversion.
+      if (!imgJobs.has(out)) {
+        imgJobs.set(out, (async () => {
+          fs.mkdirSync(IMG_CACHE, { recursive: true });
+          const tmp = `${out}.${process.pid}.${Date.now()}.tmp`;
+          await sharp(src, { failOn: 'none' }).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 78, effort: 4 }).toFile(tmp);
+          fs.renameSync(tmp, out);
+        })().finally(() => imgJobs.delete(out)));
+      }
+      await imgJobs.get(out);
+    }
+    res.type('image/webp').sendFile(out);
+  } catch (e) {
+    console.warn('[img]', name, e.message);
+    res.sendFile(src);
+  }
+});
 app.use('/images', express.static(IMAGES_DIR, { maxAge: '7d' }));
 
 // ---------------------------------------------------------------- sign in
@@ -3803,7 +3844,14 @@ app.post('/admin/api/upload', requireOwner, (req, res) => {
       return res.status(400).json({ error: big ? 'That photo is larger than 15 MB. Choose a smaller one.' : 'Upload failed. Try again.' });
     }
     if (!req.file) return res.status(400).json({ error: 'Only JPG, PNG, WebP or GIF photos can be uploaded. iPhone HEIC photos must be saved as JPG first.' });
-    res.json({ path: `images/${req.file.filename}` });
+    if (!sharp || /\.gif$/i.test(req.file.filename)) return res.json({ path: `images/${req.file.filename}` });
+    // Kept at up to 2000 pixels wide, as WebP: plenty for the largest view,
+    // a fraction of the original's weight.
+    const from = req.file.path;
+    const name = req.file.filename.replace(/\.[a-z0-9]+$/i, '') + '.webp';
+    sharp(from, { failOn: 'none' }).rotate().resize({ width: 2000, withoutEnlargement: true }).webp({ quality: 82 }).toFile(path.join(IMAGES_DIR, name))
+      .then(() => { fs.rm(from, { force: true }, () => {}); res.json({ path: `images/${name}` }); })
+      .catch(() => res.json({ path: `images/${req.file.filename}` }));
   });
 });
 

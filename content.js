@@ -76,6 +76,22 @@ function imageOrPlaceholder(src) {
   return src || PLACEHOLDER;
 }
 
+// Photos are fetched through /img/<width>/, which returns a small WebP made
+// from the original. srcset lets the phone take the small one and a wide
+// screen the larger; if anything fails the original is loaded instead.
+function imgAt(src, w) {
+  const s = String(src || '').replace(/^\//, '');
+  return /^images\/[^/]+\.(jpe?g|png|webp)$/i.test(s) ? `/img/${w}/${s}` : (src || PLACEHOLDER);
+}
+function imgTag(src, alt, { w = 640, set = [320, 640, 960], sizes = '(max-width: 620px) 50vw, 520px', lazy = true, cls = '' } = {}) {
+  const original = imageOrPlaceholder(src);
+  const fast = imgAt(original, w);
+  const srcset = fast !== original ? ` srcset="${set.map(x => `${imgAt(original, x)} ${x}w`).join(', ')}" sizes="${sizes}"` : '';
+  return `<img${cls ? ` class="${cls}"` : ''} src="${fast}"${srcset} alt="${alt || ''}"${lazy ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async"` +
+    ` onerror="this.onerror=null;this.removeAttribute('srcset');this.src='${original}'">`;
+}
+const thumbSrc = (t) => (typeof t === 'string' ? t : (t && t.image) || '');
+
 function productCardHTML(pkg, isFeatured) {
   const url = packageUrl(pkg);
   const code = pkg.code
@@ -94,7 +110,7 @@ function productCardHTML(pkg, isFeatured) {
     `<div class="product-card${isFeatured ? ' is-featured' : ''}" data-cat="${pkg.categories.join(' ')}">` +
     `<a href="${url}"><div class="product-thumb">` +
     badge + discount +
-    `<img class="${pkg.main_image ? '' : 'is-placeholder'}" src="${imageOrPlaceholder(pkg.main_image)}" alt="${pkg.name}"></div></a>` +
+    imgTag(pkg.main_image, pkg.name, { cls: pkg.main_image ? '' : 'is-placeholder', lazy: !isFeatured }) + `</div></a>` +
     `<div class="product-body">` +
     `<a href="${url}"><h3 class="product-name">${pkg.name}</h3></a>` +
     code +
@@ -524,15 +540,23 @@ function applyProductDetail(packages) {
 
   const mainImg = document.querySelector('.pd-main-img img');
   if (mainImg) {
-    mainImg.setAttribute('src', imageOrPlaceholder(pkg.main_image));
+    mainImg.setAttribute('src', imgAt(imageOrPlaceholder(pkg.main_image), 960));
+    mainImg.setAttribute('srcset', `${imgAt(imageOrPlaceholder(pkg.main_image), 640)} 640w, ${imgAt(imageOrPlaceholder(pkg.main_image), 960)} 960w, ${imgAt(imageOrPlaceholder(pkg.main_image), 1600)} 1600w`);
+    mainImg.setAttribute('sizes', '(max-width: 900px) 100vw, 640px');
+    mainImg.setAttribute('fetchpriority', 'high');
+    mainImg.onerror = function () { this.onerror = null; this.removeAttribute('srcset'); this.src = imageOrPlaceholder(pkg.main_image); };
     mainImg.setAttribute('alt', pkg.name);
     mainImg.classList.toggle('is-placeholder', !pkg.main_image);
   }
   const thumbs = document.querySelector('.pd-thumbs');
   if (thumbs) {
-    thumbs.innerHTML = pkg.thumbnails.map((t, i) =>
-      `<div class="pd-thumb${i === 0 ? ' active' : ''}"><img src="${t.image}" alt="${t.alt}"></div>`
-    ).join('');
+    // Thumbnails are saved as plain paths by the admin panel (older content
+    // used {image, alt}); both are read. The main photo leads the strip.
+    const shots = [pkg.main_image, ...(pkg.thumbnails || []).map(thumbSrc)].filter(Boolean);
+    thumbs.innerHTML = shots.length > 1 ? shots.map((src, i) =>
+      `<div class="pd-thumb${i === 0 ? ' active' : ''}" data-full="${imgAt(src, 1600)}" data-mid="${imgAt(src, 960)}">` +
+      imgTag(src, pkg.name, { w: 160, set: [160, 320], sizes: '96px' }) + `</div>`
+    ).join('') : '';
     window.initPdThumbs();
   }
 
@@ -592,7 +616,7 @@ function applyGallery(gallery) {
     grid.classList.remove('is-empty');
     grid.innerHTML = items.map(item =>
       `<figure class="gal-item${item.size ? ' ' + item.size : ''}">` +
-      `<img src="${item.image}" alt="${item.alt || ''}" loading="lazy">` +
+      imgTag(item.image, item.alt, { w: 640, set: [320, 640, 960, 1600], sizes: '(max-width: 620px) 100vw, 33vw' }) +
       (item.caption ? `<figcaption>${item.caption}</figcaption>` : '') +
       `</figure>`
     ).join('');
@@ -723,7 +747,7 @@ function setupAddons(pkg, packages) {
   wrap.innerHTML = extras.map((extra, i) => {
     const money = priceOf(extra);
     const photo = extra.main_image
-      ? `<img src="${extra.main_image}" alt="">`
+      ? imgTag(extra.main_image, '', { w: 160, set: [160, 320], sizes: '80px' })
       : `<img class="is-placeholder" src="${PLACEHOLDER}" alt="">`;
     const fee = money.has
       ? `<span class="bb-addon-fee">+${money.now}</span>`

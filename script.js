@@ -139,8 +139,14 @@ window.initPdThumbs = function () {
       document.querySelectorAll('.pd-thumb').forEach(t => t.classList.remove('active'));
       thumb.classList.add('active');
       const mainImg = document.querySelector('.pd-main-img img');
-      const newSrc = thumb.querySelector('img').getAttribute('src');
-      if (mainImg) mainImg.setAttribute('src', newSrc);
+      // The thumbnail itself is tiny; the main view takes the large version.
+      if (mainImg && thumb.dataset.full) {
+        mainImg.setAttribute('srcset', `${thumb.dataset.mid} 960w, ${thumb.dataset.full} 1600w`);
+        mainImg.setAttribute('src', thumb.dataset.mid);
+      } else if (mainImg) {
+        mainImg.removeAttribute('srcset');
+        mainImg.setAttribute('src', thumb.querySelector('img').getAttribute('src'));
+      }
     });
   });
 };
